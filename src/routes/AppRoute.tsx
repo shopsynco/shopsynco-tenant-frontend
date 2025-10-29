@@ -11,7 +11,6 @@ import PasswordResetSuccess from "../pages/auth/ForgetPasswordSuccess";
 import ChoosePlanPage from "../pages/MainPagess/ChoosePlanPage";
 import PaymentPage from "../pages/MainPagess/PaymentPage";
 import PaymentSuccessPage from "../pages/MainPagess/PaymentSuccessfulPage";
-import { StoreIcon } from "lucide-react";
 import StoreSetupPage from "../pages/MainPagess/createStore/setupStorePage";
 import StoreSuccessPage from "../pages/MainPagess/createStore/storeSuccess";
 import StoreSetupContactPage from "../pages/MainPagess/createStore/storeLocation&Contact";

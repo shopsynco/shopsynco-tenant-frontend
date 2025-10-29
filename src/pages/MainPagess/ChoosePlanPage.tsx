@@ -1,49 +1,37 @@
-import { useState } from "react";
+import  { useState, useEffect } from "react";
 import { Check } from "lucide-react";
+import { fetchPlans } from "../../api/mainapi/planapi"; 
 
 interface Plan {
   id: string;
   name: string;
   price: number;
-  color: string;
-  border: string;
-  features: string[];
-  description: string;
+  billing_cycle: string;
+  is_active: boolean;
+  date_added: string;
 }
 
-const plans: Plan[] = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 1899,
-    color: "text-green-600",
-    border: "border-green-400",
-    description: "Perfect for small hotels",
-    features: ["Up to 30 Shops", "Basic Support", "Essential Features"],
-  },
-  {
-    id: "professional",
-    name: "Professional",
-    price: 4000,
-    color: "text-blue-600",
-    border: "border-blue-400",
-    description: "Most popular for growing hotels",
-    features: ["Up to 30 Shops", "Priority Support", "Advanced Analytics"],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 9999,
-    color: "text-amber-600",
-    border: "border-amber-400",
-    description: "For hotel chains and large properties",
-    features: ["Unlimited Shops", "Dedicated Manager", "Custom Solutions"],
-  },
-];
-
 export default function ChoosePlanPage() {
-  const [selectedPlan, setSelectedPlan] = useState<Plan>(plans[0]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [billingPeriod, setBillingPeriod] = useState("48");
+
+  // Fetch plans data from the API
+  useEffect(() => {
+    const getPlans = async () => {
+      try {
+        const fetchedPlans = await fetchPlans(); // Call the API service
+        setPlans(fetchedPlans);
+        if (fetchedPlans.length > 0) {
+          setSelectedPlan(fetchedPlans[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching plans:", error);
+      }
+    };
+
+    getPlans();
+  }, []); // Empty dependency array to run the effect only once
 
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center items-start py-16 px-12">
@@ -64,26 +52,24 @@ export default function ChoosePlanPage() {
                 key={plan.id}
                 onClick={() => setSelectedPlan(plan)}
                 className={`cursor-pointer border rounded-2xl p-6 hover:shadow-md transition relative ${
-                  selectedPlan.id === plan.id
-                    ? `${plan.border} border-2`
+                  selectedPlan?.id === plan.id
+                    ? "border-2 border-purple-400"
                     : "border-gray-200"
                 }`}
               >
-                <h2 className={`text-2xl font-bold ${plan.color}`}>
+                <h2 className="text-2xl font-bold text-gray-900">
                   ₹{plan.price}
                   <span className="text-gray-500 text-base font-normal">
-                    /month
+                    /{plan.billing_cycle}
                   </span>
                 </h2>
                 <h3 className="text-lg font-semibold mt-2">{plan.name}</h3>
-                <p className="text-gray-500 text-sm mb-4">{plan.description}</p>
 
                 <ul className="space-y-1 mb-4 text-sm text-gray-700">
-                  {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <Check size={14} className="text-green-500" /> {f}
-                    </li>
-                  ))}
+                  <li className="flex items-center gap-2">
+                    <Check size={14} className="text-green-500" />
+                    Active Plan
+                  </li>
                 </ul>
 
                 <a
@@ -102,42 +88,41 @@ export default function ChoosePlanPage() {
           </h3>
 
           <div className="space-y-4">
-            {[
-              { months: "48", price: 1699, save: "Save Up To 30%" },
+            {[{ months: "48", price: 1699, save: "Save Up To 30%" },
               { months: "24", price: 1799, save: "Save Up To 20%" },
-              { months: "12", price: 1899, save: "" },
-            ].map((option) => (
-              <label
-                key={option.months}
-                className={`flex items-center justify-between border rounded-xl px-5 py-4 cursor-pointer transition ${
-                  billingPeriod === option.months
-                    ? "border-purple-400 bg-purple-50"
-                    : "border-gray-200 hover:border-purple-300"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="billing"
-                    checked={billingPeriod === option.months}
-                    onChange={() => setBillingPeriod(option.months)}
-                    className="accent-purple-500 w-4 h-4"
-                  />
-                  <span className="font-semibold text-gray-800">
-                    {option.months} Months
-                  </span>
-                  {option.save && (
-                    <span className="ml-2 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-                      {option.save}
+              { months: "12", price: 1899, save: "" }]
+              .map((option) => (
+                <label
+                  key={option.months}
+                  className={`flex items-center justify-between border rounded-xl px-5 py-4 cursor-pointer transition ${
+                    billingPeriod === option.months
+                      ? "border-purple-400 bg-purple-50"
+                      : "border-gray-200 hover:border-purple-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="billing"
+                      checked={billingPeriod === option.months}
+                      onChange={() => setBillingPeriod(option.months)}
+                      className="accent-purple-500 w-4 h-4"
+                    />
+                    <span className="font-semibold text-gray-800">
+                      {option.months} Months
                     </span>
-                  )}
-                </div>
-                <span className="font-semibold text-gray-800">
-                  ₹{option.price}
-                  <span className="text-sm text-gray-500">/month</span>
-                </span>
-              </label>
-            ))}
+                    {option.save && (
+                      <span className="ml-2 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                        {option.save}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-semibold text-gray-800">
+                    ₹{option.price}
+                    <span className="text-sm text-gray-500">/month</span>
+                  </span>
+                </label>
+              ))}
           </div>
         </div>
 

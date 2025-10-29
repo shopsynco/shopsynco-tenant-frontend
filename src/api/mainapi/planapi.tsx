@@ -1,15 +1,14 @@
-// src/services/api.ts
+import axiosInstance from "../../refreshToken/tokenUtils";
 
-import { BASE_URL } from "../../axios_config";
 
 export const fetchPlans = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/api/platform-admin/plans/available/`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch plans");
-    }
-    const data = await response.json();
-    return data.plans; // Return the plans array
+    // Making the GET request using Axios
+    const response = await axiosInstance.get("api/platform-admin/plans/available/");
+    
+    // Return the plans array from the response
+    return response.data.plans; // Assuming the API response has 'plans' field
+    
   } catch (error) {
     console.error("Error fetching plans:", error);
     throw error; // Rethrow error to handle it in the calling component
