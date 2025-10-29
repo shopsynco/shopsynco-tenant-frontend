@@ -29,34 +29,7 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      {/* ✅ Main Layout - Two Columns */}
-      <div className="flex w-full justify-between items-center -mt-10 px-20">
-        {/* Left Section */}
-        <div className="w-1/2 flex flex-col justify-center items-center">
-          <h1 className="text-4xl font-extrabold text-purple-800 leading-snug text-center mb-4">
-            START FRESH.
-            <br />
-            DREAM BOLD.
-          </h1>
-
-          <p className="text-gray-700 text-center max-w-md mb-8">
-            ShopSynco is where ideas turn into businesses. Whether you’re
-            opening your first store or scaling your tenth, we help you build,
-            connect, and grow — all in one place.
-            <br />
-            <span className="block mt-2 text-sm text-gray-600">
-              Your journey to something bigger starts here.
-            </span>
-          </p>
-
-          <button
-            className="px-6 py-2 bg-[#7658A033] text-[#7658A0] font-semibold rounded-full 
-             border border-[#7658A033] shadow-md hover:bg-[#7658A040] 
-             transition-colors duration-300"
-          >
-            Visit Website
-          </button>
-        </div>
+      {/* ✅ Login Form (Right Side) */}
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-md p-12 rounded-3xl
@@ -72,7 +45,7 @@ export default function LoginPage() {
           Login
         </h2>
 
-        {/* Email */}
+        {/* Email Input */}
         <input
           type="email"
           placeholder="Email"
@@ -85,7 +58,7 @@ export default function LoginPage() {
           required
         />
 
-        {/* Password */}
+        {/* Password Input */}
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
@@ -107,16 +80,20 @@ export default function LoginPage() {
           </button>
         </div>
 
+        {/* Forgot Password */}
         <div className="text-right">
-          <a
-            href="#"
+          <button
+            type="button"
+            onClick={() =>
+              navigate(`/forgot-password?email=${encodeURIComponent(email)}`)
+            }
             className="text-[#4A5C74] hover:text-[#6A9ECF] hover:underline text-sm font-medium transition"
-            onClick={() => navigate("/forgot-password")}
           >
             Forgot Password?
-          </a>
+          </button>
         </div>
 
+        {/* Login Button */}
         <button
           type="submit"
           disabled={loading}
@@ -127,17 +104,18 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Login"}
         </button>
 
+        {/* Sign Up Link */}
         <p className="text-center text-sm text-[#4A5C74] mt-2">
           Don’t have an account?{" "}
           <a
             href="#"
             className="text-[#6A9ECF] font-medium hover:underline transition"
+            onClick={() => navigate("/signup")}
           >
             Sign Up
           </a>
         </p>
       </form>
-      </div>
     </AuthLayout>
   );
 }

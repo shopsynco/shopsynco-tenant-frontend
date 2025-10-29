@@ -1,17 +1,24 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import AuthLayout from "../../layout/AuthLayout";
 import { authApi } from "../../api/auth/authapi";
 
 export default function ForgotPasswordPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+
+  // ✅ Prefill email if passed in query params
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const emailParam = params.get("email");
+    if (emailParam) setEmail(emailParam);
+  }, [location.search]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!email) {
       Swal.fire("Error", "Please enter your email", "error");
       return;
@@ -20,7 +27,6 @@ export default function ForgotPasswordPage() {
     try {
       setLoading(true);
       await authApi.forgotPassword(email);
-
       Swal.fire(
         "Success",
         "If this email is registered, a reset code has been sent.",
