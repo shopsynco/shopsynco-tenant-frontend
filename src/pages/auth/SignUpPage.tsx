@@ -1,32 +1,30 @@
 import React, { useState } from "react";
-import bgImage from "../../assets/authbackground.png";
 import Swal from "sweetalert2";
-import { registerUser, discoverTenant } from "../../api/auth/authapi";
-import { checkDomainAvailability } from "../../api/auth/domainapi";
+import { registerUser } from "../../api/auth/authapi";
 import { useNavigate } from "react-router-dom";
+import bgImage from "../../assets/authbackground.png";
 
 interface RegisterFormData {
-  firstName: string;
-  companyName: string;
+  first_name: string;
+  company_name: string;
   email: string;
   phone: string;
-  domain: string;
   password: string;
+  confirmPassword: string;
 }
 
 export default function RegisterPage() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<RegisterFormData>({
-    firstName: "",
-    companyName: "",
+    first_name: "",
+    company_name: "",
     email: "",
     phone: "",
-    domain: "",
     password: "",
+    confirmPassword: "",
   });
 
-  const [checkingDomain, setCheckingDomain] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -38,58 +36,54 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      // ✅ Ensure valid domain format
-      const formattedDomain = formData.domain.includes(".")
-        ? formData.domain
-        : `${formData.domain}.localhost`;
+    // Check if passwords match
+    if (formData.password !== formData.confirmPassword) {
+      Swal.fire("Error", "Passwords do not match!", "error");
+      setLoading(false);
+      return;
+    }
 
+    try {
+      // Prepare the payload for registration - use confirm_password instead of confirmPassword
       const payload = {
-        name: formData.companyName,
-        domain: formattedDomain,
-        admin_email: formData.email,
-        admin_password: formData.password,
+        first_name: formData.first_name,
+        company_name: formData.company_name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        confirm_password: formData.confirmPassword,
       };
 
       console.log("Signup payload:", payload);
 
-      // ✅ Step 1: Register tenant
+      // Register user
       const signupRes = await registerUser(payload);
       console.log("Signup response:", signupRes);
 
-      // ✅ Step 2: Discover tenant slug
-      const discoverRes = await discoverTenant(formattedDomain);
-      console.log("Discover response:", discoverRes);
+      // Show success message
+      Swal.fire(
+        "Success",
+        "Account created successfully! Please check your email to verify your account.",
+        "success"
+      );
 
-      const tenantSlug =
-        discoverRes?.schema_name ||
-        discoverRes?.tenant?.schema_name ||
-        discoverRes?.tenant?.domain ||
-        null;
+      // Redirect to login page directly
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
 
-      Swal.fire("Success", "Account created successfully!", "success");
-
-      // ✅ Step 3: Redirect with tenant slug
-      if (tenantSlug) {
-        navigate(`/verify-email?slug=${tenantSlug}&email=${formData.email}`);
-      } else {
-        Swal.fire("Warning", "Could not get tenant slug.", "info");
-      }
-
-      // ✅ Reset form
+      // Reset form data
       setFormData({
-        firstName: "",
-        companyName: "",
+        first_name: "",
+        company_name: "",
         email: "",
         phone: "",
-        domain: "",
         password: "",
+        confirmPassword: "",
       });
     } catch (error: any) {
-      console.error("Signup/Discover error:", error.response?.data || error.message);
+      console.error("Signup error:", error.response?.data || error.message);
       Swal.fire(
         "Error",
-        error.response?.data?.message || "Signup failed. Please check your details.",
+        error.response?.data?.message || "Signup failed. Please try again.",
         "error"
       );
     } finally {
@@ -97,150 +91,191 @@ export default function RegisterPage() {
     }
   };
 
-  const handleDomainCheck = async (): Promise<void> => {
-    if (!formData.domain) {
-      Swal.fire("Error", "Please enter a domain name", "error");
-      return;
-    }
-
-    setCheckingDomain(true);
-    try {
-      const result = await checkDomainAvailability(formData.domain);
-      console.log("Domain check result:", result);
-
-      const availableDomains = result.domains?.filter((d: any) => d.available);
-      if (availableDomains?.length > 0) {
-        Swal.fire(
-          "Available ✅",
-          `${availableDomains[0].domain} is available!`,
-          "success"
-        );
-      } else {
-        Swal.fire(
-          "Unavailable ❌",
-          "Domain not available. Try another name.",
-          "error"
-        );
-      }
-    } catch (err: any) {
-      Swal.fire("Error", err.message, "error");
-    } finally {
-      setCheckingDomain(false);
-    }
-  };
-
   return (
     <div
       className="flex items-center justify-center min-h-screen bg-cover bg-center bg-no-repeat"
-      style={{
-        backgroundImage: `url(${bgImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+      style={{ backgroundImage: `url(${bgImage})` }}
     >
-      {/* Logo */}
-      <div className="absolute top-6 left-10">
-        <img src="/logo.svg" alt="ShopSynco" className="w-36" />
-      </div>
-
-      {/* Form Container */}
       <div
-        className="w-full max-w-2xl p-12 rounded-3xl shadow-2xl 
-        backdrop-blur-sm border border-white/50 
-        shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]
-        flex flex-col gap-6"
+        className="w-full max-w-2xl p-12 rounded-3xl shadow-2xl backdrop-blur-sm border border-white/50 flex flex-col gap-6"
         style={{
-          background:
-            "linear-gradient(112.13deg, rgba(255,255,255,0.6) 0%, rgba(113,156,191,0.25) 98.3%)",
+          boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.1)",
         }}
       >
-        <h2 className="text-3xl font-bold text-center text-[#4A5C74] mb-2">
+        <h2
+          className="text-3xl font-bold text-center text-[#719CBF] mb-2"
+          style={{
+            fontFamily: "Raleway, sans-serif",
+            fontWeight: 700,
+            fontSize: "32px",
+            lineHeight: "100%",
+          }}
+        >
           Create Your Account
         </h2>
-
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           {/* Row 1: First Name & Company Name */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              name="firstName"
-              placeholder="Your First Name"
-              value={formData.firstName}
-              onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-[#124B7A24] text-black placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              required
-            />
-            <input
-              type="text"
-              name="companyName"
-              placeholder="Your Company Name"
-              value={formData.companyName}
-              onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-[#124B7A24] text-black placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              required
-            />
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="first_name"
+                className="text-[#719CBF] font-semibold text-base"
+                style={{
+                  fontFamily: "Poppins, sans-serif",
+                  fontWeight: 500,
+                  fontSize: "16px",
+                  lineHeight: "100%",
+                }}
+              >
+                First Name
+              </label>
+              <input
+                type="text"
+                name="first_name"
+                id="first_name"
+                placeholder="Your First Name"
+                value={formData.first_name}
+                onChange={handleChange}
+                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="company_name"
+                className="text-[#719CBF] font-semibold text-base"
+                style={{
+                  fontFamily: "Poppins, sans-serif",
+                  fontWeight: 500,
+                  fontSize: "16px",
+                  lineHeight: "100%",
+                }}
+              >
+                Company Name
+              </label>
+              <input
+                type="text"
+                name="company_name"
+                id="company_name"
+                placeholder="Your Company Name"
+                value={formData.company_name}
+                onChange={handleChange}
+                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                required
+              />
+            </div>
           </div>
 
           {/* Row 2: Email & Phone */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="email"
-              name="email"
-              placeholder="Your Email Address"
-              value={formData.email}
-              onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-[#124B7A24] text-black placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              required
-            />
-            <input
-              type="tel"
-              name="phone"
-              placeholder="Your Phone Number"
-              value={formData.phone}
-              onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-[#124B7A24] text-black placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-            />
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="email"
+                className="text-[#719CBF] font-semibold text-base"
+                style={{
+                  fontFamily: "Poppins, sans-serif",
+                  fontWeight: 500,
+                  fontSize: "16px",
+                  lineHeight: "100%",
+                }}
+              >
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email"
+                id="email"
+                placeholder="Your Email Address"
+                value={formData.email}
+                onChange={handleChange}
+                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="phone"
+                className="text-[#719CBF] font-semibold text-base"
+                style={{
+                  fontFamily: "Poppins, sans-serif",
+                  fontWeight: 500,
+                  fontSize: "16px",
+                  lineHeight: "100%",
+                }}
+              >
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                id="phone"
+                placeholder="Your Phone Number"
+                value={formData.phone}
+                onChange={handleChange}
+                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                required
+              />
+            </div>
           </div>
 
-          {/* Row 3: Domain with Check Availability */}
-          <div className="grid grid-cols-[2fr_1fr] gap-4">
-            <input
-              type="text"
-              name="domain"
-              placeholder="Your Domain"
-              value={formData.domain}
-              onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-[#124B7A24] text-black placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              required
-            />
-            <button
-              type="button"
-              onClick={handleDomainCheck}
-              disabled={checkingDomain}
-              className="rounded-xl bg-[#6A9ECF] hover:bg-[#5c91c4] text-white font-medium transition"
+          {/* Password Fields */}
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="password"
+              className="text-[#719CBF] font-semibold text-base"
+              style={{
+                fontFamily: "Poppins, sans-serif",
+                fontWeight: 500,
+                fontSize: "16px",
+                lineHeight: "100%",
+              }}
             >
-              {checkingDomain ? "Checking..." : "Check"}
-            </button>
+              Create Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              id="password"
+              placeholder="Create a strong password (min 8 characters)"
+              value={formData.password}
+              onChange={handleChange}
+              className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              required
+            />
           </div>
 
-          {/* Password */}
-          <input
-            type="password"
-            name="password"
-            placeholder="Create a strong password (min 8 characters)"
-            value={formData.password}
-            onChange={handleChange}
-            className="rounded-xl px-5 py-3 bg-[#124B7A24] text-black placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-            required
-          />
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="confirmPassword"
+              className="text-[#719CBF] font-semibold text-base"
+              style={{
+                fontFamily: "Poppins, sans-serif",
+                fontWeight: 500,
+                fontSize: "16px",
+                lineHeight: "100%",
+              }}
+            >
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              name="confirmPassword"
+              id="confirmPassword"
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              required
+            />
+          </div>
 
           {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full py-4 rounded-xl font-bold text-white
-              bg-[#6A9ECF] hover:bg-[#5c91c4] shadow-lg border border-white/30
-              transition"
+            className="mt-2 w-full py-4 rounded-xl font-bold text-white bg-[#6A9ECF] hover:bg-[#5c91c4] shadow-lg border border-white/30 transition"
           >
             {loading ? "Creating Account..." : "Next"}
           </button>

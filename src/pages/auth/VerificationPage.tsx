@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import bgImage from "../../assets/commonbackground.png";
-import { verifyResetCode, resendVerificationCode } from "../../api/auth/authapi"; 
+import {
+  verifyResetCode,
+  resendVerificationCode,
+} from "../../api/auth/authapi";
 
 const VerificationPage: React.FC = () => {
   const [code, setCode] = useState<string[]>(Array(5).fill(""));
@@ -11,7 +14,7 @@ const VerificationPage: React.FC = () => {
   const location = useLocation();
 
   const queryParams = new URLSearchParams(location.search);
-  const email:String = queryParams.get("email")||"";
+  const email: string = queryParams.get("email") || "";
 
   useEffect(() => {
     if (timer > 0) {
@@ -52,7 +55,10 @@ const VerificationPage: React.FC = () => {
       Swal.fire({
         icon: "error",
         title: "Resend Failed",
-        text: error instanceof Error ? error.message : "Unable to resend code. Try again later.",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Unable to resend code. Try again later.",
         confirmButtonColor: "#6A9ECF",
       });
     }
@@ -66,7 +72,11 @@ const VerificationPage: React.FC = () => {
     }
 
     if (!email) {
-      Swal.fire("Error", "Email not found in request. Please go back.", "error");
+      Swal.fire(
+        "Error",
+        "Email not found in request. Please go back.",
+        "error"
+      );
       return;
     }
 
@@ -78,13 +88,15 @@ const VerificationPage: React.FC = () => {
         text: "Your verification code is correct. You can now reset your password.",
         confirmButtonColor: "#6A9ECF",
       });
-      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      navigate(`/terms&condition`);
     } catch (error: unknown) {
       Swal.fire({
         icon: "error",
         title: "Invalid Code",
         text:
-          (error instanceof Error ? error.message : "The verification code you entered is invalid or expired."),
+          error instanceof Error
+            ? error.message
+            : "The verification code you entered is invalid or expired.",
         confirmButtonColor: "#6A9ECF",
       });
     }

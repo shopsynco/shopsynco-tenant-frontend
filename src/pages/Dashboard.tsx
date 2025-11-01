@@ -51,7 +51,7 @@ export default function Dashboard() {
         {/* LEFT - PLAN SELECTION */}
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Choose Your Plan
+            checkk 
           </h1>
           <p className="text-gray-600 mb-8">
             Pick the plan and billing period that fit your business best.

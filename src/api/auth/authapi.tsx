@@ -20,25 +20,6 @@ export const forgotPassword = async (email: string) => {
 };
 
 // -----------------------------
-// 🔹 Verify Reset Code API
-// -----------------------------
-export const verifyResetCode = async (email: string, code: string) => {
-  try {
-    const response = await axios.post(
-      `${BASE_URL}api/user/auth/verify-reset-code/`,
-      { email, code },
-      { headers: { "Content-Type": "application/json" } }
-    );
-    return response.data;
-  } catch (error: any) {
-    const detail =
-      error.response?.data?.detail ||
-      "Invalid or expired verification code. Please try again.";
-    throw new Error(detail);
-  }
-};
-
-// -----------------------------
 // 🔹 Reset Password API
 // -----------------------------
 export const resetPassword = async (
@@ -60,10 +41,29 @@ export const resetPassword = async (
   }
 };
 
-// -----------------------------
-// 🔹 Resend Verification Code API
-// -----------------------------
-export const resendVerificationCode = async (email: string) => {
+export const verifyResetCode = async ({
+  email,
+  code,
+}: {
+  email: string;
+  code: string;
+}) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}api/user/auth/verify-reset-code/`,
+      { email, code },
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return response.data;
+  } catch (error: any) {
+    const detail =
+      error.response?.data?.detail ||
+      "Invalid or expired verification code. Please try again.";
+    throw new Error(detail);
+  }
+};
+
+export const resendVerificationCode = async ({ email }: { email: string }) => {
   try {
     const response = await axios.post(
       `${BASE_URL}api/user/auth/resend-verification-code/`,
@@ -72,10 +72,9 @@ export const resendVerificationCode = async (email: string) => {
     );
     return response.data;
   } catch (error: any) {
-    const detail =
-      error.response?.data?.detail ||
-      "Failed to resend verification code. Try again.";
-    throw new Error(detail);
+    const message =
+      error.response?.data?.message || "Unable to resend verification code.";
+    throw new Error(message);
   }
 };
 
@@ -86,26 +85,23 @@ export const authApi = {
   resetPassword,
   resendVerificationCode,
 };
+// In your authapi.tsx
 export interface RegisterPayload {
-  name: string;
+  first_name: string;
   company_name: string;
-  admin_email: string;
-  phone?: string;
-  domain: string;
-  admin_password: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirm_password: string; // Change from confirmPassword to confirm_password
 }
 
 export const registerUser = async (data: RegisterPayload) => {
   try {
-    const response = await axios.post(
-      `${BASE_URL}api/tenants/signup/`,
-      data,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await axios.post(`${BASE_URL}api/tenants/signup/`, data, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
     return response.data;
   } catch (error: any) {
     const message =
@@ -116,6 +112,8 @@ export const registerUser = async (data: RegisterPayload) => {
   }
 };
 export const discoverTenant = async (domain: string) => {
-  const response = await axios.post(`${BASE_URL}api/tenants/discover/`, { domain });
+  const response = await axios.post(`${BASE_URL}api/tenants/discover/`, {
+    domain,
+  });
   return response.data;
 };

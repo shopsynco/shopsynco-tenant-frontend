@@ -22,7 +22,7 @@ const AppRoutes = () => {
         <Route path="/signup" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forget-password" element={<ForgotPasswordPage />} />
-        <Route path="/verify-code" element={<VerificationPage />} />
+        <Route path="/verify-email" element={<VerificationPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/Resetpassword-Success"

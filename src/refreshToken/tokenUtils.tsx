@@ -3,7 +3,7 @@ import { BASE_URL } from "../axios_config";
 
 
 // ✅ Tenant PQRS Endpoints
-const LOGIN_URL = `${BASE_URL}api/tenant/pqrs_company/auth/login/`;
+const LOGIN_URL = `${BASE_URL}api/tenants/auth/login/`;
 const REFRESH_URL = `${BASE_URL}api/jwt/refresh/`;
 
 const axiosInstance = axios.create({
