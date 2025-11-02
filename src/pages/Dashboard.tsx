@@ -1,195 +1,330 @@
 import React, { useState } from "react";
-import { Check } from "lucide-react";
-
-interface Plan {
-  id: string;
-  name: string;
-  price: number;
-  color: string;
-  border: string;
-  features: string[];
-  description: string;
-}
-
-const plans: Plan[] = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 1899,
-    color: "text-green-600",
-    border: "border-green-400",
-    description: "Perfect for small hotels",
-    features: ["Up to 30 Shops", "Basic Support", "Essential Features"],
-  },
-  {
-    id: "professional",
-    name: "Professional",
-    price: 4000,
-    color: "text-blue-600",
-    border: "border-blue-400",
-    description: "Most popular for growing hotels",
-    features: ["Up to 30 Shops", "Priority Support", "Advanced Analytics"],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 9999,
-    color: "text-amber-600",
-    border: "border-amber-400",
-    description: "For hotel chains and large properties",
-    features: ["Unlimited Shops", "Dedicated Manager", "Custom Solutions"],
-  },
-];
+import { Bell, LogOut, ArrowUpRight, ArrowLeft, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/Name-Logo.png";
 
 export default function Dashboard() {
-  const [selectedPlan, setSelectedPlan] = useState<Plan>(plans[0]);
-  const [billingPeriod, setBillingPeriod] = useState("48");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
+  };
+
+  const notifications = [
+    {
+      title: "New Feature Available",
+      text: "Explore Smart Analytics – now in your dashboard.",
+      time: "1 hour ago",
+    },
+    {
+      title: "Payment Method Updated",
+      text: "Your saved payment details were successfully updated.",
+      time: "3 hours ago",
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center items-start py-16 px-12">
-      <div className="max-w-6xl w-full bg-white rounded-3xl shadow-lg p-10 flex gap-10">
-        {/* LEFT - PLAN SELECTION */}
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            checkk 
-          </h1>
-          <p className="text-gray-600 mb-8">
-            Pick the plan and billing period that fit your business best.
-          </p>
+    <div className="min-h-screen bg-white text-gray-800 relative">
+      {/* HEADER */}
+      <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <img src={logo} alt="ShopSynco" className="h-8" />
+        </div>
 
-          {/* Plans */}
-          <div className="grid grid-cols-3 gap-6 mb-10">
-            {plans.map((plan) => (
-              <div
-                key={plan.id}
-                onClick={() => setSelectedPlan(plan)}
-                className={`cursor-pointer border rounded-2xl p-6 hover:shadow-md transition relative ${
-                  selectedPlan.id === plan.id
-                    ? `${plan.border} border-2`
-                    : "border-gray-200"
-                }`}
-              >
-                <h2 className={`text-2xl font-bold ${plan.color}`}>
-                  ₹{plan.price}
-                  <span className="text-gray-500 text-base font-normal">
-                    /month
-                  </span>
-                </h2>
-                <h3 className="text-lg font-semibold mt-2">{plan.name}</h3>
-                <p className="text-gray-500 text-sm mb-4">{plan.description}</p>
+        <div className="flex items-center gap-4 relative">
+          {/* Notifications */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setNotifOpen(!notifOpen);
+                setProfileOpen(false);
+              }}
+              className="p-2 rounded-full hover:bg-gray-100 relative"
+            >
+              <Bell size={20} className="text-gray-600" />
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#6A3CB1] rounded-full"></span>
+            </button>
 
-                <ul className="space-y-1 mb-4 text-sm text-gray-700">
-                  {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <Check size={14} className="text-green-500" /> {f}
-                    </li>
+            {notifOpen && (
+              <div className="hidden lg:block absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden z-50">
+                <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Notifications
+                  </h3>
+                  <button className="text-xs text-[#6A3CB1] hover:underline font-medium">
+                    Clear All
+                  </button>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+                  {notifications.map((n, i) => (
+                    <div
+                      key={i}
+                      className="px-4 py-3 hover:bg-gray-50 text-sm text-gray-700"
+                    >
+                      <p className="font-semibold">{n.title}</p>
+                      <p className="text-xs text-gray-500">{n.text}</p>
+                      <p className="text-[11px] text-gray-400 mt-1">{n.time}</p>
+                    </div>
                   ))}
-                </ul>
-
-                <a
-                  href="#"
-                  className="absolute bottom-4 right-5 text-xs text-gray-500 hover:text-gray-700"
-                >
-                  More info
-                </a>
+                </div>
               </div>
-            ))}
+            )}
           </div>
 
-          {/* Billing Period */}
-          <h3 className="text-md font-semibold mb-4 text-gray-700">
-            Select billing period
-          </h3>
-
-          <div className="space-y-4">
-            {[
-              { months: "48", price: 1699, save: "Save Up To 30%" },
-              { months: "24", price: 1799, save: "Save Up To 20%" },
-              { months: "12", price: 1899, save: "" },
-            ].map((option) => (
-              <label
-                key={option.months}
-                className={`flex items-center justify-between border rounded-xl px-5 py-4 cursor-pointer transition ${
-                  billingPeriod === option.months
-                    ? "border-purple-400 bg-purple-50"
-                    : "border-gray-200 hover:border-purple-300"
-                }`}
+          {/* Profile Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setProfileOpen(!profileOpen);
+                setNotifOpen(false);
+              }}
+              className="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-100 transition bg-gray-50"
+            >
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-800">
+                  Manoj Basker
+                </p>
+                <p className="text-xs text-gray-500">Manoj123@gmail.com</p>
+              </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4 text-gray-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="billing"
-                    checked={billingPeriod === option.months}
-                    onChange={() => setBillingPeriod(option.months)}
-                    className="accent-purple-500 w-4 h-4"
-                  />
-                  <span className="font-semibold text-gray-800">
-                    {option.months} Months
-                  </span>
-                  {option.save && (
-                    <span className="ml-2 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-                      {option.save}
-                    </span>
-                  )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white shadow-md rounded-lg py-2 border border-gray-100 z-50">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* MOBILE NOTIFICATION PAGE */}
+      {notifOpen && (
+        <div className="fixed inset-0 bg-white z-50 p-6 overflow-y-auto lg:hidden">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setNotifOpen(false)}
+                className="p-2 rounded-md hover:bg-gray-100"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Notifications
+              </h3>
+            </div>
+            <button className="text-sm text-[#6A3CB1] hover:underline font-medium">
+              Clear All
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {notifications.map((n, i) => (
+              <div
+                key={i}
+                className="border border-gray-200 rounded-xl p-4 shadow-sm hover:bg-gray-50"
+              >
+                <p className="font-semibold text-gray-800">{n.title}</p>
+                <p className="text-sm text-gray-500 mt-1">{n.text}</p>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-xs text-gray-400">{n.time}</span>
+                  <button className="text-xs text-[#6A3CB1] font-medium hover:underline">
+                    View
+                  </button>
                 </div>
-                <span className="font-semibold text-gray-800">
-                  ₹{option.price}
-                  <span className="text-sm text-gray-500">/month</span>
-                </span>
-              </label>
+              </div>
             ))}
           </div>
         </div>
+      )}
 
-        {/* RIGHT - ORDER SUMMARY */}
-        <div className="w-80 bg-purple-50 rounded-2xl p-6 flex flex-col justify-between">
+      {/* MAIN DASHBOARD */}
+      <main className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-10 flex flex-col gap-8">
+        {/* WELCOME SECTION */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">
-              Order Summary
-            </h3>
-            <div className="space-y-3 text-sm text-gray-700">
-              <div className="flex justify-between">
-                <span>Base Price</span>
-                <span>₹{1699}</span>
+            <h1 className="text-3xl font-semibold text-gray-900">
+              Welcome, Manoj!
+            </h1>
+            <p className="text-gray-500">
+              Here’s an overview of your account and subscription.
+            </p>
+          </div>
+
+          <div className="bg-[#F5F1FF] border border-[#E2DAFF] rounded-2xl px-6 py-4 shadow-sm w-full sm:w-auto lg:min-w-[280px]">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock size={16} className="text-gray-600" />
+              <p className="text-sm text-gray-700">
+                <span className="font-medium text-gray-800">Current Plan:</span>{" "}
+                <span className="text-[#6A3CB1] font-semibold">Starter</span>
+              </p>
+            </div>
+            <p className="text-sm text-gray-500">
+              Renews yearly on{" "}
+              <span className="text-[#6A3CB1] font-medium">Aug 25</span>
+            </p>
+          </div>
+        </div>
+
+        {/* ACCOUNT SUMMARY */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* LEFT SIDE */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-[#c9b8ff] shadow-sm p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+              <h2 className="text-lg font-semibold text-[#6A3CB1]">
+                Account Summary
+              </h2>
+              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                Active
+              </span>
+            </div>
+
+            {/* DOMAIN */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6 border-b border-gray-200 pb-4">
+              <div>
+                <p className="font-medium text-gray-700 mb-1">🌐 Your Domain</p>
+                <a
+                  href="#"
+                  className="text-[#6A3CB1] hover:underline text-sm break-all"
+                >
+                  yourcompany.shopsynco.com
+                </a>
               </div>
-              <div className="flex justify-between">
-                <span>Taxes & Fees</span>
-                <span>₹270</span>
+              <button className="text-xs bg-white border border-gray-300 rounded-lg px-3 py-1 hover:bg-gray-50 whitespace-nowrap">
+                Go To SaaS Dashboard ↗
+              </button>
+            </div>
+
+            {/* BILLING + PLAN FEATURES */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10  ">
+              {/* LEFT */}
+              <div className="space-y-6">
+                <div>
+                  <p className="flex items-center gap-2 font-semibold text-gray-700">
+                    <span className="text-[#6A3CB1] text-lg">📄</span> Billing
+                    Summary
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Last payment: ₹1899 on Aug 25, 2025
+                  </p>
+                  <button className="mt-2 text-xs sm:text-sm flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-md text-[#6A3CB1] hover:bg-[#F5F1FF] transition font-medium">
+                    Download Invoice
+                  </button>
+                </div>
+
+                <div>
+                  <p className="flex items-center gap-2 font-semibold text-gray-700">
+                    <span className="text-[#6A3CB1] text-lg">💳</span> Payment
+                    Method
+                  </p>
+                  <p className="text-green-600 font-semibold text-sm mt-1">
+                    VISA **** **** **** 4526
+                  </p>
+                </div>
+
+                <div>
+                  <p className="flex items-center gap-2 font-semibold text-gray-700">
+                    <span className="text-[#6A3CB1] text-lg">📅</span> Next
+                    Renewal
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Next payment: ₹1899 on Aug 25, 2026
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between items-center border-b border-purple-200 pb-3">
-                <span>Coupon Code</span>
-                <button className="text-purple-600 font-medium hover:underline">
-                  Add
+
+              {/* RIGHT */}
+              <div>
+                <p className="flex items-center gap-2 font-semibold text-gray-700 mb-2">
+                  <span className="text-[#6A3CB1] text-lg">🧱</span> Plan
+                  Features
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-3">
+                  <li>Online Store Builder</li>
+                  <li>Product Management</li>
+                  <li>Integrated Payment Gateway</li>
+                  <li>Order & Shipping Management</li>
+                  <li>Domain & Hosting</li>
+                  <li>Support & Security</li>
+                  <li>Email & Notification System</li>
+                </ul>
+
+                <p className="text-sm text-[#6A3CB1] mt-3 font-semibold">
+                  Add-Ons
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-4">
+                  <li>Customer Management</li>
+                  <li>Store Analytics Dashboard</li>
+                  <li>App & Plugin Integration (Basic Tier)</li>
+                </ul>
+
+                <button className="bg-[#6A3CB1] text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition">
+                  Browse Feature Store
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Terms + Buttons */}
-          <div>
-            <p className="text-xs text-gray-600 mt-6 mb-4 leading-snug">
-              By checking out, you agree with our{" "}
-              <a href="#" className="text-purple-600 hover:underline">
-                Terms of Service
-              </a>{" "}
-              and confirm that you have read our{" "}
-              <a href="#" className="text-purple-600 hover:underline">
-                Privacy Policy
-              </a>
-              . You can cancel recurring payments at any time.
-            </p>
+          {/* RIGHT SIDE */}
+          <div className="flex flex-col gap-6">
+            {/* UPGRADE PLAN */}
+            <div className="rounded-2xl bg-gradient-to-br from-[#9A8CFC] to-[#6A9ECF] p-6 text-white shadow-md">
+              <h3 className="text-lg font-semibold mb-2">Upgrade Your Plan</h3>
+              <p className="text-sm mb-4 opacity-90">
+                Get access to advanced features and increase your usage limits
+                by upgrading to our premium plans.
+              </p>
+              <button className="bg-white text-[#6A3CB1] w-full py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
+                View Upgrade Options
+              </button>
+              <p className="text-xs mt-3 opacity-90">
+                Upgrade today and get 20% off your first 3 months!
+              </p>
+            </div>
 
-            <div className="flex gap-3">
-              <button className="flex-1 py-3 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition">
-                Cancel
-              </button>
-              <button className="flex-1 py-3 rounded-xl font-semibold text-white bg-purple-600 hover:bg-purple-700 transition">
-                Choose Payment Method
-              </button>
+            {/* QUICK ACCESS */}
+            <div className="bg-white rounded-2xl border border-[#c9b8ff] p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-[#6A3CB1] mb-4">
+                Quick Access
+              </h3>
+              <div className="flex flex-col gap-3">
+                <button className="flex justify-between items-center border rounded-lg px-4 py-3 hover:bg-gray-50 transition text-gray-700 font-medium">
+                  Manage Billing <ArrowUpRight className="h-4 w-4" />
+                </button>
+                <button className="flex justify-between items-center border rounded-lg px-4 py-3 hover:bg-gray-50 transition text-gray-700 font-medium">
+                  View Invoices <ArrowUpRight className="h-4 w-4" />
+                </button>
+                <button className="flex justify-between items-center border rounded-lg px-4 py-3 hover:bg-gray-50 transition text-gray-700 font-medium">
+                  Give Feedback <ArrowUpRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

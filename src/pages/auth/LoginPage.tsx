@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     if (loginUser.fulfilled.match(result)) {
       Swal.fire("Success", "Login Successful", "success");
-      navigate("/dashboard");
+      navigate("/Plans");
     } else {
       Swal.fire("Error", result.payload as string, "error");
     }
