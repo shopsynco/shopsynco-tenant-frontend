@@ -1,8 +1,7 @@
 import axios from "axios";
 import { BASE_URL } from "../axios_config";
 
-
-// ✅ Tenant PQRS Endpoints
+// ✅ API Endpoints
 const LOGIN_URL = `${BASE_URL}api/tenants/auth/login/`;
 const REFRESH_URL = `${BASE_URL}api/jwt/refresh/`;
 
@@ -49,7 +48,8 @@ axiosInstance.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+            if (token)
+              originalRequest.headers.Authorization = `Bearer ${token}`;
             return axiosInstance(originalRequest);
           })
           .catch(Promise.reject);
@@ -66,7 +66,15 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = res.data.access;
 
         localStorage.setItem("accessToken", newAccessToken);
-        axiosInstance.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
+        axiosInstance.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${newAccessToken}`;
+        // ✅ Log for debugging
+        console.log(
+          "%c[Auth] Token refreshed successfully!",
+          "color: #22c55e; font-weight: bold;"
+        );
+        console.log("[Auth] New Access Token:", newAccessToken);
         processQueue(null, newAccessToken);
 
         return axiosInstance(originalRequest);

@@ -4,249 +4,183 @@ import { Link } from "react-router-dom";
 
 export default function PaymentPage() {
   const [selectedMethod, setSelectedMethod] = useState<string>("");
-  const [upiID, setUpiID] = useState<string>(""); // UPI ID state
-  const [isUPIModalOpen, setIsUPIModalOpen] = useState(false); // UPI Modal state
-  const [timer, setTimer] = useState(600); // Timer state (10 minutes in seconds)
+  const [upiID, setUpiID] = useState<string>("");
+  const [isUPIModalOpen, setIsUPIModalOpen] = useState(false);
+  const [timer, setTimer] = useState(600);
 
   const handleMethodSelect = (method: string) => {
     setSelectedMethod(selectedMethod === method ? "" : method);
-    if (method === "UPI") {
-      setUpiID(""); // Reset UPI ID if switching methods
-    }
+    if (method === "UPI") setUpiID("");
   };
 
-  // Timer logic for auto-expiration (10 minutes)
   useEffect(() => {
     if (isUPIModalOpen && timer > 0) {
-      const countdown = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
-
+      const countdown = setInterval(() => setTimer((prev) => prev - 1), 1000);
       return () => clearInterval(countdown);
     }
-
-    if (timer === 0) {
-      setIsUPIModalOpen(false); // Close modal after 10 minutes
-    }
+    if (timer === 0) setIsUPIModalOpen(false);
   }, [isUPIModalOpen, timer]);
 
   const handleUPISubmit = () => {
-    if (upiID.trim() === "") {
+    if (upiID.trim() === "" && selectedMethod === "UPI") {
       alert("Please enter a valid UPI ID.");
       return;
     }
-
-    // Trigger the modal after UPI ID is entered and Submit Payment is clicked
     setIsUPIModalOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center px-6 py-10">
+    <div className="min-h-screen bg-white flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10">
       {/* Header */}
-      <div className="w-full max-w-6xl mb-6 flex items-center gap-2 text-gray-500 sticky top-0 bg-white z-20">
+      <div className="w-full max-w-6xl mb-6 flex items-center gap-2 text-gray-500">
         <ChevronLeft className="w-4 h-4" />
-        <span className="text-sm">
-          <Link to="/plan" className="text-black hover:underline">
-            Back to Choose Plan
-          </Link>
-        </span>
+        <Link to="/plan" className="text-sm text-gray-700 hover:underline">
+          Back to Choose Plan
+        </Link>
       </div>
 
-      {/* Content */}
-      <div className="bg-white w-full max-w-6xl rounded-2xl shadow-md grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 p-8 flex-grow">
-        {/* Left Section: Payment Method */}
+      {/* Main Content */}
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10 flex-grow">
+        {/* Left Section */}
         <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
             Choose A Payment Method
           </h2>
 
-          {/* Credit Card */}
-          <div
-            className={`border-2 rounded-xl mb-4 transition-all ${
-              selectedMethod === "Credit Card"
-                ? "border-purple-500 bg-purple-50"
-                : "border-gray-200"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => handleMethodSelect("Credit Card")}
-              className="w-full flex justify-between items-center p-4 text-left"
+          {["Credit Card", "Bank Transfer", "UPI"].map((method) => (
+            <div
+              key={method}
+              className={`border rounded-xl mb-5 transition-all ${
+                selectedMethod === method
+                  ? "border-[#6A3CB1] bg-white shadow-sm"
+                  : "border-gray-200 bg-white"
+              }`}
             >
-              <span className="font-medium text-gray-700">Credit Card</span>
-              <span className="text-gray-400">
-                {selectedMethod === "Credit Card" ? "▲" : "▼"}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleMethodSelect(method)}
+                className="w-full flex justify-between items-center p-5 text-left font-medium text-gray-800"
+              >
+                {method}
+                <span className="text-gray-400">
+                  {selectedMethod === method ? "▲" : "▼"}
+                </span>
+              </button>
 
-            {selectedMethod === "Credit Card" && (
-              <div className="border-t border-gray-200 p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Card Holder Name"
-                    className="input-style"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Card Number"
-                    className="input-style"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Expiry Date (MM/YY)"
-                    className="input-style"
-                  />
-                  <input
-                    type="text"
-                    placeholder="CVV"
-                    className="input-style"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+              {selectedMethod === method && (
+                <div className="border-t border-gray-200 p-5 space-y-4">
+                  {/* Credit Card Form */}
+                  {method === "Credit Card" && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input
+                          placeholder="Card Holder Name"
+                          className="input-style"
+                        />
+                        <input placeholder="Card Number" className="input-style" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input
+                          placeholder="Expiry Date (MM/YY)"
+                          className="input-style"
+                        />
+                        <input placeholder="CVV" className="input-style" />
+                      </div>
+                    </div>
+                  )}
 
-          {/* Bank Transfer */}
-          <div
-            className={`border-2 rounded-xl mb-4 transition-all ${
-              selectedMethod === "Bank Transfer"
-                ? "border-purple-500 bg-purple-50"
-                : "border-gray-200"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => handleMethodSelect("Bank Transfer")}
-              className="w-full flex justify-between items-center p-4 text-left"
-            >
-              <span className="font-medium text-gray-700">Bank Transfer</span>
-              <span className="text-gray-400">
-                {selectedMethod === "Bank Transfer" ? "▲" : "▼"}
-              </span>
-            </button>
+                  {/* Bank Transfer Form */}
+                  {method === "Bank Transfer" && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input
+                          placeholder="Account Holder Name"
+                          className="input-style"
+                        />
+                        <input placeholder="Bank Name" className="input-style" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input
+                          placeholder="Account Number"
+                          className="input-style"
+                        />
+                        <input
+                          placeholder="Re-enter Account Number"
+                          className="input-style"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input placeholder="Branch Name" className="input-style" />
+                        <input placeholder="IFSC Code" className="input-style" />
+                      </div>
+                    </div>
+                  )}
 
-            {selectedMethod === "Bank Transfer" && (
-              <div className="border-t border-gray-200 p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Account Holder Name"
-                    className="input-style"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Bank Name"
-                    className="input-style"
-                  />
+                  {/* UPI Form */}
+                  {method === "UPI" && (
+                    <input
+                      type="text"
+                      placeholder="Enter your UPI ID"
+                      className="input-style w-full"
+                      value={upiID}
+                      onChange={(e) => setUpiID(e.target.value)}
+                    />
+                  )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Account Number"
-                    className="input-style"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Re-enter Account Number"
-                    className="input-style"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Branch Name"
-                    className="input-style"
-                  />
-                  <input
-                    type="text"
-                    placeholder="IFSC Code"
-                    className="input-style"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* UPI */}
-          <div
-            className={`border-2 rounded-xl transition-all ${
-              selectedMethod === "UPI"
-                ? "border-purple-500 bg-purple-50"
-                : "border-gray-200"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => handleMethodSelect("UPI")}
-              className="w-full flex justify-between items-center p-4 text-left"
-            >
-              <span className="font-medium text-gray-700">UPI</span>
-              <span className="text-gray-400">
-                {selectedMethod === "UPI" ? "▲" : "▼"}
-              </span>
-            </button>
-
-            {selectedMethod === "UPI" && (
-              <div className="border-t border-gray-200 p-4">
-                <input
-                  type="text"
-                  placeholder="Enter your UPI ID"
-                  className="input-style w-full"
-                  value={upiID}
-                  onChange={(e) => setUpiID(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          ))}
         </div>
 
-        {/* Right Section: Order Summary */}
-        <div className="border border-gray-200 rounded-2xl p-6 bg-purple-50/50 shadow-xl z-10 sticky bottom-0">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Order Summary
-          </h3>
-          <div className="space-y-2 text-gray-700 text-sm">
-            <div className="flex justify-between">
-              <span>Base Price (monthly)</span>
-              <span>₹1699</span>
+        {/* Right Section (Order Summary) */}
+        <div className="border border-gray-200 rounded-2xl bg-[#F8F5FF] p-6 lg:p-10 h-full flex flex-col justify-between shadow-sm">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Order Summary
+            </h3>
+
+            <div className="space-y-3 text-gray-700 text-sm">
+              <div className="flex justify-between">
+                <span>Base Price (monthly)</span>
+                <span>₹298</span>
+              </div>
+              <div className="flex justify-between">
+                <span>GST 18%</span>
+                <span>₹78</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Credits</span>
+                <span>₹0.00</span>
+              </div>
+
+              <hr className="my-3 border-gray-300" />
+
+              <div className="flex justify-between font-semibold text-gray-900 text-base">
+                <span>Total Payable (yearly)</span>
+                <span>₹4,512</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>GST 18%</span>
-              <span>₹270</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Credits</span>
-              <span>₹0.00</span>
-            </div>
-            <hr className="my-2" />
-            <div className="flex justify-between font-semibold text-gray-900">
-              <span>Total Payable (yearly)</span>
-              <span>₹20,388</span>
-            </div>
+
+            <p className="text-xs text-gray-500 mt-5 leading-relaxed">
+              By checking out, you agree with our{" "}
+              <a href="#" className="underline">
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a href="#" className="underline">
+                Privacy Policy
+              </a>
+              . You can cancel recurring payments at any time.
+            </p>
           </div>
 
-          <p className="text-xs text-gray-500 mt-4">
-            By checking out, you agree with our{" "}
-            <a href="#" className="underline">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="#" className="underline">
-              Privacy Policy
-            </a>
-            .
-          </p>
-
-          <div className="flex justify-between mt-6 gap-3">
-            <button className="flex-1 py-3 rounded-lg border border-gray-300 text-gray-600 font-medium hover:bg-gray-100">
+          <div className="flex justify-between mt-8 gap-3">
+            <button className="flex-1 py-3 rounded-lg border border-gray-300 text-gray-600 font-medium hover:bg-gray-100 transition">
               Cancel
             </button>
             <button
               onClick={handleUPISubmit}
-              className="flex-1 py-3 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700"
+              className="flex-1 py-3 rounded-lg bg-[#6A3CB1] text-white font-semibold hover:bg-[#5b32a2] transition"
             >
               Submit Payment
             </button>
@@ -254,34 +188,47 @@ export default function PaymentPage() {
         </div>
       </div>
 
+      {/* Mobile Sticky Summary */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-inner p-4 lg:hidden">
+        <div className="flex justify-between text-sm mb-2">
+          <span>Subtotal</span>
+          <span>₹298/mo</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>GST 18%</span>
+          <span>₹78</span>
+        </div>
+        <div className="flex justify-between font-semibold text-base mt-2">
+          <span>Total</span>
+          <span>₹4,512/yr</span>
+        </div>
+        <button
+          onClick={handleUPISubmit}
+          className="mt-3 w-full py-3 bg-[#6A3CB1] text-white rounded-lg font-medium hover:bg-[#5b32a2]"
+        >
+          Choose A Payment Method
+        </button>
+      </div>
+
       {/* UPI Modal */}
       {isUPIModalOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
-            <h3 className="text-2xl font-semibold text-purple-600 mb-4">
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+          <div className="bg-white rounded-xl p-6 w-[90%] sm:w-96 shadow-xl">
+            <h3 className="text-lg font-semibold text-[#6A3CB1] mb-3">
               Complete Your Payment
             </h3>
-            <ul className="space-y-2 text-gray-700">
-              <li>
-                Go to UPI ID linked mobile app or Click on the notification from
-                your UPI ID linked mobile app
-              </li>
-              <li>Check pending transactions</li>
-              <li>
-                Complete the payment by selecting the bank and entering UPI PIN
-              </li>
+            <ul className="list-disc list-inside text-gray-700 text-sm space-y-2">
+              <li>Go to your UPI app notification</li>
+              <li>Check pending transaction</li>
+              <li>Complete payment by entering your UPI PIN</li>
             </ul>
-            <p className="text-xs text-gray-500 mt-4">
-              This page will automatically expire in {Math.floor(timer / 60)}:
+            <p className="text-xs text-gray-500 mt-3">
+              This page will expire in {Math.floor(timer / 60)}:
               {timer % 60 < 10 ? `0${timer % 60}` : timer % 60} minutes.
-            </p>
-            <p className="text-xs text-gray-500 mt-4">
-              <strong>Note:</strong> Please do not press back button or close
-              the screen until the payment is complete.
             </p>
             <button
               onClick={() => setIsUPIModalOpen(false)}
-              className="mt-4 w-full py-3 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700"
+              className="mt-4 w-full py-3 rounded-lg bg-[#6A3CB1] text-white font-semibold hover:bg-[#5b32a2]"
             >
               I Completed the Payment
             </button>

@@ -1,17 +1,54 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, LogOut, ArrowUpRight, ArrowLeft, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Name-Logo.png";
+import {
+  fetchSubscriptionHistory,
+  fetchSubscriptionStatus,
+} from "../api/subscription/statusapi";
+import FeatureStorePage from "./subscription/featureModal";
 
 export default function Dashboard() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isFeatureStoreOpen, setIsFeatureStoreOpen] = useState(false);
+
+  const [planData, setPlanData] = useState({
+    user_name: "",
+    plan_name: "",
+    renew_date: "",
+    status: "",
+  });
+  const [historyData, setHistoryData] = useState({
+    last_payment_amount: "",
+    last_payment_date: "",
+    payment_method: "",
+    next_renewal_amount: "",
+    next_renewal_date: "",
+  });
+
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login");
   };
+
+  useEffect(() => {
+    const getPlanStatus = async () => {
+      try {
+        const [status, history] = await Promise.all([
+          fetchSubscriptionStatus(),
+          fetchSubscriptionHistory(),
+        ]);
+        setPlanData(status);
+        setHistoryData(history);
+      } catch (err) {
+        console.error("Failed to load plan or history:", err);
+      }
+    };
+    getPlanStatus();
+  }, []);
 
   const notifications = [
     {
@@ -167,7 +204,7 @@ export default function Dashboard() {
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl font-semibold text-gray-900">
-              Welcome, Manoj!
+              Welcome, {planData.user_name || "Loading..."}
             </h1>
             <p className="text-gray-500">
               Here’s an overview of your account and subscription.
@@ -179,12 +216,16 @@ export default function Dashboard() {
               <Clock size={16} className="text-gray-600" />
               <p className="text-sm text-gray-700">
                 <span className="font-medium text-gray-800">Current Plan:</span>{" "}
-                <span className="text-[#6A3CB1] font-semibold">Starter</span>
+                <span className="text-[#6A3CB1] font-semibold">
+                  {planData.plan_name || "Loading..."}
+                </span>
               </p>
             </div>
             <p className="text-sm text-gray-500">
               Renews yearly on{" "}
-              <span className="text-[#6A3CB1] font-medium">Aug 25</span>
+              <span className="text-[#6A3CB1] font-medium">
+                {planData.renew_date || "—"}
+              </span>
             </p>
           </div>
         </div>
@@ -197,9 +238,11 @@ export default function Dashboard() {
               <h2 className="text-lg font-semibold text-[#6A3CB1]">
                 Account Summary
               </h2>
-              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                Active
-              </span>
+              {planData.status && (
+                <p className="text-xs mt-1 text-green-600 font-medium">
+                  {planData.status}
+                </p>
+              )}
             </div>
 
             {/* DOMAIN */}
@@ -228,8 +271,18 @@ export default function Dashboard() {
                     Summary
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Last payment: ₹1899 on Aug 25, 2025
+                    Last payment: ₹{historyData.last_payment_amount || "—"} on{" "}
+                    {historyData.last_payment_date
+                      ? new Date(
+                          historyData.last_payment_date
+                        ).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "—"}
                   </p>
+
                   <button className="mt-2 text-xs sm:text-sm flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-md text-[#6A3CB1] hover:bg-[#F5F1FF] transition font-medium">
                     Download Invoice
                   </button>
@@ -241,7 +294,7 @@ export default function Dashboard() {
                     Method
                   </p>
                   <p className="text-green-600 font-semibold text-sm mt-1">
-                    VISA **** **** **** 4526
+                    {historyData.payment_method || "—"}
                   </p>
                 </div>
 
@@ -251,7 +304,16 @@ export default function Dashboard() {
                     Renewal
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Next payment: ₹1899 on Aug 25, 2026
+                    Next payment: ₹{historyData.next_renewal_amount || "—"} on{" "}
+                    {historyData.next_renewal_date
+                      ? new Date(
+                          historyData.next_renewal_date
+                        ).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "—"}
                   </p>
                 </div>
               </div>
@@ -281,9 +343,21 @@ export default function Dashboard() {
                   <li>App & Plugin Integration (Basic Tier)</li>
                 </ul>
 
-                <button className="bg-[#6A3CB1] text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition">
-                  Browse Feature Store
-                </button>
+            <button
+  className="bg-[#6A3CB1] text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition"
+  onClick={() => {
+    if (window.innerWidth < 1024) {
+      // 📱 For mobile → navigate as page
+      navigate("/feature-store");
+    } else {
+      // 💻 For laptop → open as modal overlay
+      setIsFeatureStoreOpen(true);
+    }
+  }}
+>
+  Browse Feature Store
+</button>
+
               </div>
             </div>
           </div>
@@ -297,7 +371,10 @@ export default function Dashboard() {
                 Get access to advanced features and increase your usage limits
                 by upgrading to our premium plans.
               </p>
-              <button className="bg-white text-[#6A3CB1] w-full py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
+              <button
+                className="bg-white text-[#6A3CB1] w-full py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+                onClick={() => navigate("/plans")}
+              >
                 View Upgrade Options
               </button>
               <p className="text-xs mt-3 opacity-90">
@@ -325,6 +402,10 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+      {isFeatureStoreOpen && (
+  <FeatureStorePage onClose={() => setIsFeatureStoreOpen(false)} />
+)}
+
     </div>
   );
 }

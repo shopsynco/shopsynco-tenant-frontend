@@ -14,6 +14,7 @@ import PaymentSuccessPage from "../pages/MainPagess/PaymentSuccessfulPage";
 import StoreSetupPage from "../pages/MainPagess/createStore/setupStorePage";
 import StoreSuccessPage from "../pages/MainPagess/createStore/storeSuccess";
 import StoreSetupContactPage from "../pages/MainPagess/createStore/storeLocation&Contact";
+import FeatureStorePage from "../pages/subscription/featureModal";
 
 const AppRoutes = () => {
   return (
@@ -38,6 +39,7 @@ const AppRoutes = () => {
           <Route path="/setup-store" element={<StoreSetupPage />} />
           <Route path="/setup-store-contact" element={<StoreSetupContactPage />} />
           <Route path="/store-success" element={<StoreSuccessPage />} />
+          <Route path="/feature-store" element={<FeatureStorePage />} />
           
         </Route>
       </Routes>
