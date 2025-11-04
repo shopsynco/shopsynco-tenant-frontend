@@ -1,18 +1,43 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  getPaymentMethods,
+  submitPayment,
+  verifyUpi,
+  payWithUpi,
+} from "../../api/payment/paymentapi";
 
 export default function PaymentPage() {
+  const [paymentMethods, setPaymentMethods] = useState<
+    { name: string; code: string }[]
+  >([]);
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [upiID, setUpiID] = useState<string>("");
   const [isUPIModalOpen, setIsUPIModalOpen] = useState(false);
   const [timer, setTimer] = useState(600);
+  const [showCardNumber, setShowCardNumber] = useState(false);
+  const [saveCard, setSaveCard] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const handleMethodSelect = (method: string) => {
-    setSelectedMethod(selectedMethod === method ? "" : method);
-    if (method === "UPI") setUpiID("");
-  };
+  const subscriptionId = "uuid-from-checkout"; // Replace dynamically
 
+  // ✅ Fetch payment methods on load
+  useEffect(() => {
+    const fetchMethods = async () => {
+      try {
+        const res = await getPaymentMethods();
+        setPaymentMethods(res.methods || []);
+        // Auto-select first method
+        if (res.methods?.length > 0) setSelectedMethod(res.methods[0].name);
+      } catch (err) {
+        console.error("Error fetching payment methods:", err);
+      }
+    };
+    fetchMethods();
+  }, []);
+
+  // ✅ Countdown for UPI modal
   useEffect(() => {
     if (isUPIModalOpen && timer > 0) {
       const countdown = setInterval(() => setTimer((prev) => prev - 1), 1000);
@@ -21,115 +46,171 @@ export default function PaymentPage() {
     if (timer === 0) setIsUPIModalOpen(false);
   }, [isUPIModalOpen, timer]);
 
-  const handleUPISubmit = () => {
-    if (upiID.trim() === "" && selectedMethod === "UPI") {
-      alert("Please enter a valid UPI ID.");
-      return;
-    }
-    setIsUPIModalOpen(true);
+  const handleMethodSelect = (method: string) => {
+    setSelectedMethod(selectedMethod === method ? "" : method);
+    if (method.toLowerCase().includes("upi")) setUpiID("");
   };
+
+  // ✅ Handle Payment Submit
+  const handlePaymentSubmit = async () => {
+    try {
+      setLoading(true);
+      const methodCode = paymentMethods.find(
+        (m) => m.name === selectedMethod
+      )?.code;
+
+      if (methodCode === "credit_card" || methodCode === "bank_transfer") {
+        const payload = {
+          subscription_id: subscriptionId,
+          method: methodCode,
+          card_holder: "Manoj Pilla",
+          card_last4: "4564",
+          brand: "VISA",
+          exp_month: 12,
+          exp_year: 2028,
+          cvv_present: true,
+        };
+
+        const res = await submitPayment(payload);
+        console.log("✅ Payment Success:", res);
+        alert("✅ Payment submitted successfully!");
+      }
+
+      if (methodCode === "upi") {
+        if (!upiID) return alert("Please enter UPI ID");
+        const verifyRes = await verifyUpi(upiID);
+        console.log("✅ UPI Verified:", verifyRes);
+        setIsUPIModalOpen(true);
+
+        const payRes = await payWithUpi({
+          subscription_id: subscriptionId,
+          method: "upi",
+          upi_id: upiID,
+        });
+        console.log("✅ UPI Payment Completed:", payRes);
+      }
+    } catch (err) {
+      console.error("❌ Payment Error:", err);
+      alert("Payment failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const InputField = ({
+    label,
+    placeholder,
+    type = "text",
+    ...props
+  }: {
+    label?: string;
+    placeholder?: string;
+    type?: string;
+    [key: string]: any;
+  }) => (
+    <div>
+      {label && (
+        <label className="text-sm text-gray-600 mb-1 block">{label}</label>
+      )}
+      <input
+        type={type}
+        placeholder={placeholder}
+        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1]"
+        {...props}
+      />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10">
       {/* Header */}
       <div className="w-full max-w-6xl mb-6 flex items-center gap-2 text-gray-500">
         <ChevronLeft className="w-4 h-4" />
-        <Link to="/plan" className="text-sm text-gray-700 hover:underline">
+        <Link to="/plans" className="text-sm text-gray-700 hover:underline">
           Back to Choose Plan
         </Link>
       </div>
 
-      {/* Main Content */}
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10 flex-grow">
+      {/* Main */}
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
         {/* Left Section */}
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">
             Choose A Payment Method
           </h2>
 
-          {["Credit Card", "Bank Transfer", "UPI"].map((method) => (
-            <div
-              key={method}
-              className={`border rounded-xl mb-5 transition-all ${
-                selectedMethod === method
-                  ? "border-[#6A3CB1] bg-white shadow-sm"
-                  : "border-gray-200 bg-white"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => handleMethodSelect(method)}
-                className="w-full flex justify-between items-center p-5 text-left font-medium text-gray-800"
+          {paymentMethods.length === 0 ? (
+            <p className="text-gray-500">Loading payment methods...</p>
+          ) : (
+            paymentMethods.map((method) => (
+              <div
+                key={method.code}
+                className={`border rounded-xl mb-5 transition-all ${
+                  selectedMethod === method.name
+                    ? "border-[#6A3CB1] bg-white shadow-sm"
+                    : "border-gray-200 bg-white"
+                }`}
               >
-                {method}
-                <span className="text-gray-400">
-                  {selectedMethod === method ? "▲" : "▼"}
-                </span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleMethodSelect(method.name)}
+                  className="w-full flex justify-between items-center p-5 text-left font-medium text-gray-800"
+                >
+                  {method.name}
+                  <span className="text-gray-400">
+                    {selectedMethod === method.name ? "▲" : "▼"}
+                  </span>
+                </button>
 
-              {selectedMethod === method && (
-                <div className="border-t border-gray-200 p-5 space-y-4">
-                  {/* Credit Card Form */}
-                  {method === "Credit Card" && (
-                    <div className="space-y-3">
+                {/* Credit Card Fields */}
+                {selectedMethod === "Credit Card" &&
+                  method.code === "credit_card" && (
+                    <div className="border-t border-gray-200 p-5 space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input
-                          placeholder="Card Holder Name"
-                          className="input-style"
+                        <InputField
+                          label="Card Holder Name"
+                          placeholder="Manoj Pilla"
                         />
-                        <input placeholder="Card Number" className="input-style" />
+                        <div>
+                          <label className="text-sm text-gray-600 mb-1 block">
+                            Card Number
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showCardNumber ? "text" : "password"}
+                              value="•••• •••• •••• 4564"
+                              readOnly
+                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1]"
+                            />
+                            <Eye
+                              size={18}
+                              className="absolute right-3 top-2.5 text-gray-500 cursor-pointer"
+                              onClick={() => setShowCardNumber(!showCardNumber)}
+                            />
+                          </div>
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input
-                          placeholder="Expiry Date (MM/YY)"
-                          className="input-style"
-                        />
-                        <input placeholder="CVV" className="input-style" />
+                        <InputField label="Expiry Date" type="month" />
+                        <InputField label="CVV" type="password" placeholder="•••" />
                       </div>
                     </div>
                   )}
 
-                  {/* Bank Transfer Form */}
-                  {method === "Bank Transfer" && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input
-                          placeholder="Account Holder Name"
-                          className="input-style"
-                        />
-                        <input placeholder="Bank Name" className="input-style" />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input
-                          placeholder="Account Number"
-                          className="input-style"
-                        />
-                        <input
-                          placeholder="Re-enter Account Number"
-                          className="input-style"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input placeholder="Branch Name" className="input-style" />
-                        <input placeholder="IFSC Code" className="input-style" />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* UPI Form */}
-                  {method === "UPI" && (
-                    <input
-                      type="text"
-                      placeholder="Enter your UPI ID"
-                      className="input-style w-full"
+                {/* UPI Field */}
+                {selectedMethod === "UPI" && method.code === "upi" && (
+                  <div className="border-t border-gray-200 p-5">
+                    <InputField
+                      label="UPI ID"
+                      placeholder="example@okaxis"
                       value={upiID}
-                      onChange={(e) => setUpiID(e.target.value)}
+                      onChange={(e: any) => setUpiID(e.target.value)}
                     />
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Right Section (Order Summary) */}
@@ -138,7 +219,6 @@ export default function PaymentPage() {
             <h3 className="text-xl font-semibold text-gray-900 mb-6">
               Order Summary
             </h3>
-
             <div className="space-y-3 text-gray-700 text-sm">
               <div className="flex justify-between">
                 <span>Base Price (monthly)</span>
@@ -148,30 +228,12 @@ export default function PaymentPage() {
                 <span>GST 18%</span>
                 <span>₹78</span>
               </div>
-              <div className="flex justify-between">
-                <span>Credits</span>
-                <span>₹0.00</span>
-              </div>
-
               <hr className="my-3 border-gray-300" />
-
               <div className="flex justify-between font-semibold text-gray-900 text-base">
                 <span>Total Payable (yearly)</span>
                 <span>₹4,512</span>
               </div>
             </div>
-
-            <p className="text-xs text-gray-500 mt-5 leading-relaxed">
-              By checking out, you agree with our{" "}
-              <a href="#" className="underline">
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a href="#" className="underline">
-                Privacy Policy
-              </a>
-              . You can cancel recurring payments at any time.
-            </p>
           </div>
 
           <div className="flex justify-between mt-8 gap-3">
@@ -179,62 +241,19 @@ export default function PaymentPage() {
               Cancel
             </button>
             <button
-              onClick={handleUPISubmit}
-              className="flex-1 py-3 rounded-lg bg-[#6A3CB1] text-white font-semibold hover:bg-[#5b32a2] transition"
+              onClick={handlePaymentSubmit}
+              disabled={loading}
+              className={`flex-1 py-3 rounded-lg font-semibold text-white ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-[#6A3CB1] hover:bg-[#5b32a2]"
+              } transition`}
             >
-              Submit Payment
+              {loading ? "Processing..." : "Submit Payment"}
             </button>
           </div>
         </div>
       </div>
-
-      {/* Mobile Sticky Summary */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-inner p-4 lg:hidden">
-        <div className="flex justify-between text-sm mb-2">
-          <span>Subtotal</span>
-          <span>₹298/mo</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>GST 18%</span>
-          <span>₹78</span>
-        </div>
-        <div className="flex justify-between font-semibold text-base mt-2">
-          <span>Total</span>
-          <span>₹4,512/yr</span>
-        </div>
-        <button
-          onClick={handleUPISubmit}
-          className="mt-3 w-full py-3 bg-[#6A3CB1] text-white rounded-lg font-medium hover:bg-[#5b32a2]"
-        >
-          Choose A Payment Method
-        </button>
-      </div>
-
-      {/* UPI Modal */}
-      {isUPIModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-          <div className="bg-white rounded-xl p-6 w-[90%] sm:w-96 shadow-xl">
-            <h3 className="text-lg font-semibold text-[#6A3CB1] mb-3">
-              Complete Your Payment
-            </h3>
-            <ul className="list-disc list-inside text-gray-700 text-sm space-y-2">
-              <li>Go to your UPI app notification</li>
-              <li>Check pending transaction</li>
-              <li>Complete payment by entering your UPI PIN</li>
-            </ul>
-            <p className="text-xs text-gray-500 mt-3">
-              This page will expire in {Math.floor(timer / 60)}:
-              {timer % 60 < 10 ? `0${timer % 60}` : timer % 60} minutes.
-            </p>
-            <button
-              onClick={() => setIsUPIModalOpen(false)}
-              className="mt-4 w-full py-3 rounded-lg bg-[#6A3CB1] text-white font-semibold hover:bg-[#5b32a2]"
-            >
-              I Completed the Payment
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -41,3 +41,14 @@ export const upgradeSubscriptionPlan = async (planId: string) => {
     throw error;
   }
 };
+
+export const fetchTenantDashboard = async () => {
+  try {
+    const response = await axiosInstance.get("api/tenant/pqrs_company/dashboard/");
+    
+    return response.data;
+  } catch (error: any) {
+    console.error("Error fetching dashboard:", error);
+    throw error;
+  }
+};

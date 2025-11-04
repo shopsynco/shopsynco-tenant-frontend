@@ -1,5 +1,6 @@
 import axios from "axios";
 import { BASE_URL } from "../../axios_config";
+import axiosInstance from "../../refreshToken/tokenUtils";
 
 // -----------------------------
 // 🔹 Forget Password Code API
@@ -116,4 +117,14 @@ export const discoverTenant = async (domain: string) => {
     domain,
   });
   return response.data;
+};
+
+export const fetchUserProfile = async () => {
+  try {
+    const response = await axiosInstance.get("api/tenants/auth/profile/");
+    return response.data; // expected: { user_name: "...", user_email: "..." }
+  } catch (error: any) {
+    console.error("Error fetching user profile:", error);
+    throw error;
+  }
 };

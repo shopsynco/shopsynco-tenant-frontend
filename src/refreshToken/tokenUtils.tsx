@@ -10,13 +10,34 @@ const axiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// ✅ Attach Access Token on every request
+// ✅ Attach Access Token + Auto Inject Store Slug into URL (with skip list)
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("accessToken");
+    const storeSlug = localStorage.getItem("store_slug");
+
+    // ✅ Add bearer token
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // ✅ Skip slug injection for auth/refresh/discover endpoints
+    const skipSlugInjection =
+      config.url &&
+      (config.url.includes("auth/") ||
+        config.url.includes("jwt/") ||
+        config.url.includes("discover/"));
+
+    // ✅ Inject slug into URL if needed
+    if (!skipSlugInjection && storeSlug && config.url && !config.url.includes(`/api/${storeSlug}/`)) {
+      const normalizedUrl = config.url.replace(/^\/+/, ""); // remove leading slash
+      if (normalizedUrl.startsWith("api/")) {
+        config.url = normalizedUrl.replace("api/", `api/${storeSlug}/`);
+      } else {
+        config.url = `api/${storeSlug}/${normalizedUrl}`;
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -69,14 +90,13 @@ axiosInstance.interceptors.response.use(
         axiosInstance.defaults.headers.common[
           "Authorization"
         ] = `Bearer ${newAccessToken}`;
-        // ✅ Log for debugging
+
         console.log(
           "%c[Auth] Token refreshed successfully!",
           "color: #22c55e; font-weight: bold;"
         );
-        console.log("[Auth] New Access Token:", newAccessToken);
-        processQueue(null, newAccessToken);
 
+        processQueue(null, newAccessToken);
         return axiosInstance(originalRequest);
       } catch (err) {
         processQueue(err, null);

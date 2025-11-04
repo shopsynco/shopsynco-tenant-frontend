@@ -1,24 +1,29 @@
 import { useState, useEffect } from "react";
-import { Bell, LogOut, ArrowUpRight, ArrowLeft, Clock } from "lucide-react";
+import { ArrowUpRight, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/Name-Logo.png";
 import {
   fetchSubscriptionHistory,
   fetchSubscriptionStatus,
+  fetchTenantDashboard,
 } from "../api/subscription/statusapi";
 import FeatureStorePage from "./subscription/featureModal";
+import Header from "../components/dashboardHeader";
+
 
 export default function Dashboard() {
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [isFeatureStoreOpen, setIsFeatureStoreOpen] = useState(false);
 
-  const [planData, setPlanData] = useState({
+  const [userData, setUserData] = useState({
     user_name: "",
+    user_email: "",
+  });
+
+  const [planData, setPlanData] = useState({
     plan_name: "",
     renew_date: "",
     status: "",
   });
+
   const [historyData, setHistoryData] = useState({
     last_payment_amount: "",
     last_payment_date: "",
@@ -27,176 +32,81 @@ export default function Dashboard() {
     next_renewal_date: "",
   });
 
+  const [tenantData, setTenantData] = useState({
+    domain: "",
+    features: [] as string[],
+  });
+
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
-
   useEffect(() => {
-    const getPlanStatus = async () => {
+    const getDashboardData = async () => {
       try {
-        const [status, history] = await Promise.all([
+        // ✅ Fetch all in parallel
+        const [status, history, tenant] = await Promise.all([
           fetchSubscriptionStatus(),
           fetchSubscriptionHistory(),
+          fetchTenantDashboard(),
         ]);
-        setPlanData(status);
-        setHistoryData(history);
+
+        // ✅ Extract + normalize user + plan info
+        const user_name =
+          status?.user_name || localStorage.getItem("user_name") || "";
+        const user_email =
+          status?.user_email || localStorage.getItem("user_email") || "";
+
+        setUserData({ user_name, user_email });
+
+        setPlanData({
+          plan_name: status?.plan_name || tenant?.selected_plan || "",
+          renew_date: status?.renew_date || tenant?.renew_date || "",
+          status: status?.status || tenant?.subscription_status || "",
+        });
+
+        setHistoryData({
+          last_payment_amount:
+            history?.last_payment_amount || tenant?.last_payment_amount || "",
+          last_payment_date:
+            history?.last_payment_date || tenant?.last_payment_date || "",
+          payment_method:
+            history?.payment_method || tenant?.payment_method || "",
+          next_renewal_amount:
+            history?.next_renewal_amount || tenant?.next_renewal_amount || "",
+          next_renewal_date:
+            history?.next_renewal_date || tenant?.next_renewal_date || "",
+        });
+
+        setTenantData({
+          domain: tenant?.domain || "yourcompany.shopsynco.com",
+          features:
+            tenant?.features?.length > 0
+              ? tenant.features
+              : [
+                  "Online Store Builder",
+                  "Product Management",
+                  "Integrated Payment Gateway",
+                  "Order & Shipping Management",
+                  "Domain & Hosting",
+                  "Support & Security",
+                  "Email & Notification System",
+                ],
+        });
+
+        // ✅ Cache user info
+        localStorage.setItem("user_name", user_name);
+        localStorage.setItem("user_email", user_email);
       } catch (err) {
-        console.error("Failed to load plan or history:", err);
+        console.error("Failed to load dashboard data:", err);
       }
     };
-    getPlanStatus();
-  }, []);
 
-  const notifications = [
-    {
-      title: "New Feature Available",
-      text: "Explore Smart Analytics – now in your dashboard.",
-      time: "1 hour ago",
-    },
-    {
-      title: "Payment Method Updated",
-      text: "Your saved payment details were successfully updated.",
-      time: "3 hours ago",
-    },
-  ];
+    getDashboardData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-gray-800 relative">
-      {/* HEADER */}
-      <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <img src={logo} alt="ShopSynco" className="h-8" />
-        </div>
-
-        <div className="flex items-center gap-4 relative">
-          {/* Notifications */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setNotifOpen(!notifOpen);
-                setProfileOpen(false);
-              }}
-              className="p-2 rounded-full hover:bg-gray-100 relative"
-            >
-              <Bell size={20} className="text-gray-600" />
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#6A3CB1] rounded-full"></span>
-            </button>
-
-            {notifOpen && (
-              <div className="hidden lg:block absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden z-50">
-                <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    Notifications
-                  </h3>
-                  <button className="text-xs text-[#6A3CB1] hover:underline font-medium">
-                    Clear All
-                  </button>
-                </div>
-
-                <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
-                  {notifications.map((n, i) => (
-                    <div
-                      key={i}
-                      className="px-4 py-3 hover:bg-gray-50 text-sm text-gray-700"
-                    >
-                      <p className="font-semibold">{n.title}</p>
-                      <p className="text-xs text-gray-500">{n.text}</p>
-                      <p className="text-[11px] text-gray-400 mt-1">{n.time}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Profile Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setProfileOpen(!profileOpen);
-                setNotifOpen(false);
-              }}
-              className="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-100 transition bg-gray-50"
-            >
-              <div className="text-left">
-                <p className="text-sm font-semibold text-gray-800">
-                  Manoj Basker
-                </p>
-                <p className="text-xs text-gray-500">Manoj123@gmail.com</p>
-              </div>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-4 h-4 text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-
-            {profileOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white shadow-md rounded-lg py-2 border border-gray-100 z-50">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
-                >
-                  <LogOut size={16} />
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* MOBILE NOTIFICATION PAGE */}
-      {notifOpen && (
-        <div className="fixed inset-0 bg-white z-50 p-6 overflow-y-auto lg:hidden">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setNotifOpen(false)}
-                className="p-2 rounded-md hover:bg-gray-100"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <h3 className="text-lg font-semibold text-gray-800">
-                Notifications
-              </h3>
-            </div>
-            <button className="text-sm text-[#6A3CB1] hover:underline font-medium">
-              Clear All
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {notifications.map((n, i) => (
-              <div
-                key={i}
-                className="border border-gray-200 rounded-xl p-4 shadow-sm hover:bg-gray-50"
-              >
-                <p className="font-semibold text-gray-800">{n.title}</p>
-                <p className="text-sm text-gray-500 mt-1">{n.text}</p>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-xs text-gray-400">{n.time}</span>
-                  <button className="text-xs text-[#6A3CB1] font-medium hover:underline">
-                    View
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* ✅ Dynamic Header */}
+      <Header />
 
       {/* MAIN DASHBOARD */}
       <main className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-10 flex flex-col gap-8">
@@ -204,7 +114,7 @@ export default function Dashboard() {
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl font-semibold text-gray-900">
-              Welcome, {planData.user_name || "Loading..."}
+              Welcome, {userData.user_name || "Loading..."}
             </h1>
             <p className="text-gray-500">
               Here’s an overview of your account and subscription.
@@ -250,10 +160,12 @@ export default function Dashboard() {
               <div>
                 <p className="font-medium text-gray-700 mb-1">🌐 Your Domain</p>
                 <a
-                  href="#"
+                  href={`https://${tenantData.domain}`}
+                  target="_blank"
+                  rel="noreferrer"
                   className="text-[#6A3CB1] hover:underline text-sm break-all"
                 >
-                  yourcompany.shopsynco.com
+                  {tenantData.domain}
                 </a>
               </div>
               <button className="text-xs bg-white border border-gray-300 rounded-lg px-3 py-1 hover:bg-gray-50 whitespace-nowrap">
@@ -262,7 +174,7 @@ export default function Dashboard() {
             </div>
 
             {/* BILLING + PLAN FEATURES */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10  ">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               {/* LEFT */}
               <div className="space-y-6">
                 <div>
@@ -325,46 +237,29 @@ export default function Dashboard() {
                   Features
                 </p>
                 <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-3">
-                  <li>Online Store Builder</li>
-                  <li>Product Management</li>
-                  <li>Integrated Payment Gateway</li>
-                  <li>Order & Shipping Management</li>
-                  <li>Domain & Hosting</li>
-                  <li>Support & Security</li>
-                  <li>Email & Notification System</li>
+                  {tenantData.features.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
                 </ul>
 
-                <p className="text-sm text-[#6A3CB1] mt-3 font-semibold">
-                  Add-Ons
-                </p>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-4">
-                  <li>Customer Management</li>
-                  <li>Store Analytics Dashboard</li>
-                  <li>App & Plugin Integration (Basic Tier)</li>
-                </ul>
-
-            <button
-  className="bg-[#6A3CB1] text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition"
-  onClick={() => {
-    if (window.innerWidth < 1024) {
-      // 📱 For mobile → navigate as page
-      navigate("/feature-store");
-    } else {
-      // 💻 For laptop → open as modal overlay
-      setIsFeatureStoreOpen(true);
-    }
-  }}
->
-  Browse Feature Store
-</button>
-
+                <button
+                  className="bg-[#6A3CB1] text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition"
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      navigate("/feature-store");
+                    } else {
+                      setIsFeatureStoreOpen(true);
+                    }
+                  }}
+                >
+                  Browse Feature Store
+                </button>
               </div>
             </div>
           </div>
 
           {/* RIGHT SIDE */}
           <div className="flex flex-col gap-6">
-            {/* UPGRADE PLAN */}
             <div className="rounded-2xl bg-gradient-to-br from-[#9A8CFC] to-[#6A9ECF] p-6 text-white shadow-md">
               <h3 className="text-lg font-semibold mb-2">Upgrade Your Plan</h3>
               <p className="text-sm mb-4 opacity-90">
@@ -382,13 +277,15 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {/* QUICK ACCESS */}
             <div className="bg-white rounded-2xl border border-[#c9b8ff] p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-[#6A3CB1] mb-4">
                 Quick Access
               </h3>
               <div className="flex flex-col gap-3">
-                <button className="flex justify-between items-center border rounded-lg px-4 py-3 hover:bg-gray-50 transition text-gray-700 font-medium">
+                <button
+                  className="flex justify-between items-center border rounded-lg px-4 py-3 hover:bg-gray-50 transition text-gray-700 font-medium"
+                  onClick={() => navigate("/manage-billing")}
+                >
                   Manage Billing <ArrowUpRight className="h-4 w-4" />
                 </button>
                 <button className="flex justify-between items-center border rounded-lg px-4 py-3 hover:bg-gray-50 transition text-gray-700 font-medium">
@@ -402,10 +299,10 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
-      {isFeatureStoreOpen && (
-  <FeatureStorePage onClose={() => setIsFeatureStoreOpen(false)} />
-)}
 
+      {isFeatureStoreOpen && (
+        <FeatureStorePage onClose={() => setIsFeatureStoreOpen(false)} />
+      )}
     </div>
   );
 }

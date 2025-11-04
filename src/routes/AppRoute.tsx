@@ -15,6 +15,8 @@ import StoreSetupPage from "../pages/MainPagess/createStore/setupStorePage";
 import StoreSuccessPage from "../pages/MainPagess/createStore/storeSuccess";
 import StoreSetupContactPage from "../pages/MainPagess/createStore/storeLocation&Contact";
 import FeatureStorePage from "../pages/subscription/featureModal";
+import ManageBillingPage from "../pages/subscription/manageBilling";
+import InvoicesPage from "../pages/InvoicesPage";
 
 const AppRoutes = () => {
   return (
@@ -33,13 +35,15 @@ const AppRoutes = () => {
         {/* Protected Routes */}
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/Plans" element={<ChoosePlanPage />} />
+          <Route path="/plans" element={<ChoosePlanPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/setup-store" element={<StoreSetupPage />} />
           <Route path="/setup-store-contact" element={<StoreSetupContactPage />} />
           <Route path="/store-success" element={<StoreSuccessPage />} />
           <Route path="/feature-store" element={<FeatureStorePage />} />
+          <Route path="/manage-billing" element={<ManageBillingPage />} />
+          <Route path="/invoice" element={<InvoicesPage />} />
           
         </Route>
       </Routes>

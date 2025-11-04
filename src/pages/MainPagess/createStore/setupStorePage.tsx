@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import bgImage from "../../../assets/backgroundstore.png";
 import { storeSetup } from "../../../api/mainapi/StoreCreateapi";
 
-
 interface FormData {
   store_name: string;
   product_service: string;
@@ -20,13 +19,9 @@ export default function StoreSetupPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, category: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -36,7 +31,12 @@ export default function StoreSetupPage() {
       const result = await storeSetup(formData);
       console.log("✅ Store created:", result);
 
-      // navigate next if success
+      // If API returns a slug, save it
+      if (result?.slug) {
+        localStorage.setItem("store_slug", result.slug);
+      }
+
+      // navigate next page
       navigate("/setup-store-contact");
     } catch (err) {
       alert("❌ Failed to setup store. Please check inputs or server.");
@@ -78,7 +78,7 @@ export default function StoreSetupPage() {
               </label>
               <input
                 type="text"
-                name="storeName"
+                name="store_name"
                 placeholder="Your Store Home"
                 value={formData.store_name}
                 onChange={handleChange}
@@ -92,17 +92,17 @@ export default function StoreSetupPage() {
                 Category
               </label>
               <select
-                name="category"
+                name="product_service"
                 value={formData.product_service}
-                onChange={handleCategoryChange}
+                onChange={handleChange}
                 className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg"
                 required
               >
                 <option value="">Select Category</option>
-                <option value="electronics">Electronics</option>
-                <option value="fashion">Fashion</option>
-                <option value="beauty">Beauty</option>
-                <option value="home">Home</option>
+                <option value="Retail services">Retail services</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Fashion">Fashion</option>
+                <option value="Home">Home</option>
               </select>
             </div>
           </div>
@@ -111,23 +111,15 @@ export default function StoreSetupPage() {
             <label className="block text-left text-sm font-medium text-gray-700 mb-2">
               Domain
             </label>
-            <div className="flex gap-4 w-full">
-              <input
-                type="text"
-                name="domain"
-                placeholder="Your Domain"
-                value={formData.domain}
-                onChange={handleChange}
-                className="flex-1 rounded-xl px-5 py-4 border border-gray-300 text-black placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg"
-                required
-              />
-              <button
-                type="button"
-                className="rounded-xl bg-[#6A9ECF] hover:bg-[#5c91c4] text-white font-medium transition px-8 py-4 whitespace-nowrap text-lg"
-              >
-                Check Customers
-              </button>
-            </div>
+            <input
+              type="text"
+              name="domain"
+              placeholder="mystore.shopsynco.com"
+              value={formData.domain}
+              onChange={handleChange}
+              className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg"
+              required
+            />
           </div>
 
           <button
@@ -135,7 +127,7 @@ export default function StoreSetupPage() {
             disabled={loading}
             className="w-full bg-[#719CBF] text-white py-4 px-6 rounded-xl text-lg font-semibold hover:bg-[#5c91c4] transition duration-300 mt-6 disabled:opacity-50"
           >
-            {loading ? "Saving..." : "Next"}
+            {loading ? "Saving..." : "Save"}
           </button>
         </form>
       </div>
