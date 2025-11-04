@@ -17,7 +17,6 @@ export default function PaymentPage() {
   const [isUPIModalOpen, setIsUPIModalOpen] = useState(false);
   const [timer, setTimer] = useState(600);
   const [showCardNumber, setShowCardNumber] = useState(false);
-  const [saveCard, setSaveCard] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const subscriptionId = "uuid-from-checkout"; // Replace dynamically
@@ -192,7 +191,11 @@ export default function PaymentPage() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <InputField label="Expiry Date" type="month" />
-                        <InputField label="CVV" type="password" placeholder="•••" />
+                        <InputField
+                          label="CVV"
+                          type="password"
+                          placeholder="•••"
+                        />
                       </div>
                     </div>
                   )}

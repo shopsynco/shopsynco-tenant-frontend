@@ -80,12 +80,41 @@ export default function RegisterPage() {
         confirmPassword: "",
       });
     } catch (error: any) {
-      console.error("Signup error:", error.response?.data || error.message);
-      Swal.fire(
-        "Error",
-        error.response?.data?.message || "Signup failed. Please try again.",
-        "error"
-      );
+  console.error("Signup error:", error.response?.data || error.message);
+
+  let errorMessage = "Signup failed. Please try again.";
+
+  if (error.response) {
+    const data = error.response.data;
+
+    // Case 1: Direct string message (most common)
+    if (typeof data === "string") {
+      errorMessage = data;
+    }
+    // Case 2: { message: "..." }
+    else if (data?.message) {
+      errorMessage = data.message;
+    }
+    // Case 3: Field-specific error (e.g. { email: ["Already registered"] })
+    else if (typeof data === "object") {
+      const firstKey = Object.keys(data)[0];
+      const firstVal = data[firstKey];
+      if (Array.isArray(firstVal)) {
+        errorMessage = firstVal[0];
+      } else if (typeof firstVal === "string") {
+        errorMessage = firstVal;
+      }
+    }
+  }
+
+  Swal.fire({
+    icon: "error",
+    title: "Signup Failed",
+    text: errorMessage,
+    confirmButtonColor: "#6A9ECF",
+  });
+
+
     } finally {
       setLoading(false);
     }
