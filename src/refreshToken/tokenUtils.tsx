@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BASE_URL } from "../axios_config";
+import { BASE_URL } from "../api/axios_config";
 
 // ✅ API Endpoints
 const LOGIN_URL = `${BASE_URL}api/tenants/auth/login/`;
@@ -14,33 +14,94 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("accessToken");
-    const storeSlug = localStorage.getItem("store_slug");
+    // 🏷️ Get store slug from localStorage for multi-tenant routing
+    // const storeSlug = localStorage.getItem("store_slug");
+
+    // 🟦 DEBUG: show request start
+    console.log(
+      "%c[Axios] → Outgoing Request:",
+      "color:#3b82f6;font-weight:bold",
+      config.url
+    );
 
     // ✅ Add bearer token
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log(
+        "%c[Axios] ✓ Token added to headers",
+        "color:#22c55e;font-weight:bold"
+      );
+    } else {
+      console.log(
+        "%c[Axios] ⚠️ No access token found — public request",
+        "color:#eab308;font-weight:bold"
+      );
     }
 
-    // ✅ Skip slug injection for auth/refresh/discover endpoints
-    const skipSlugInjection =
-      config.url &&
-      (config.url.includes("auth/") ||
-        config.url.includes("jwt/") ||
-        config.url.includes("discover/"));
+    // // ==========================================
+    // // 🏷️ STORE SLUG INJECTION LOGIC START
+    // // ==========================================
+    
+    // // ✅ Skip slug injection for specific endpoints
+    // // These endpoints don't need store context (auth, discovery, setup)
+    // const skipSlugInjection =
+    //   config.url &&
+    //   (config.url.includes("auth/") ||           // Authentication endpoints (login, register)
+    //     config.url.includes("jwt/") ||           // JWT token endpoints  
+    //     config.url.includes("discover/") ||      // Store discovery endpoints
+    //     config.url.includes("store/setup/") ||   // Store setup endpoints
+    //     config.url.includes("signup/"));         // User registration endpoints
 
-    // ✅ Inject slug into URL if needed
-    if (!skipSlugInjection && storeSlug && config.url && !config.url.includes(`/api/${storeSlug}/`)) {
-      const normalizedUrl = config.url.replace(/^\/+/, ""); // remove leading slash
-      if (normalizedUrl.startsWith("api/")) {
-        config.url = normalizedUrl.replace("api/", `api/${storeSlug}/`);
-      } else {
-        config.url = `api/${storeSlug}/${normalizedUrl}`;
-      }
-    }
+    // // 🔧 If endpoint is in skip list, don't inject slug
+    // if (skipSlugInjection) {
+    //   console.log(
+    //     "%c[Axios] ⏭️ Skipping store slug injection for:",
+    //     "color:#6b7280;font-weight:bold",
+    //     config.url
+    //   );
+    // }
+
+    // // ✅ Inject slug into URL if all conditions are met:
+    // if (
+    //   !skipSlugInjection &&                    // Only if endpoint is NOT in skip list
+    //   storeSlug &&                             // Only if store slug exists in localStorage
+    //   config.url &&                            // Only if URL is defined
+    //   !config.url.includes(`/api/${storeSlug}/`) // Only if slug not already in URL (avoid duplicates)
+    // ) {
+    //   // 🔧 Normalize URL by removing leading slashes for consistent processing
+    //   const normalizedUrl = config.url.replace(/^\/+/, "");
+      
+    //   // 🎯 Transform the URL based on its current format:
+    //   if (normalizedUrl.startsWith("api/")) {
+    //     // Case 1: URL starts with "api/" → replace "api/" with "api/{slug}/"
+    //     // Example: "api/products/" becomes "api/my-store/products/"
+    //     config.url = normalizedUrl.replace("api/", `api/${storeSlug}/`);
+    //   } else {
+    //     // Case 2: URL doesn't start with "api/" → prepend "api/{slug}/"
+    //     // Example: "products/" becomes "api/my-store/products/"
+    //     config.url = `api/${storeSlug}/${normalizedUrl}`;
+    //   }
+
+    //   // 🟪 Debug log to confirm slug injection
+    //   console.log(
+    //     "%c[Axios] 🏷️ Store slug injected:",
+    //     "color:#a855f7;font-weight:bold",
+    //     storeSlug,
+    //     "→",
+    //     config.url
+    //   );
+    // }
+    
+    // // ==========================================
+    // // 🏷️ STORE SLUG INJECTION LOGIC END
+    // // ==========================================
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error("[Axios] ❌ Request error:", error);
+    return Promise.reject(error);
+  }
 );
 
 // ♻️ Token Refresh Logic
@@ -63,8 +124,10 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // 🔴 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
+        console.log("%c[Auth] 🕐 Token refresh in progress...", "color:#f59e0b");
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -83,6 +146,7 @@ axiosInstance.interceptors.response.use(
         const refreshToken = localStorage.getItem("refreshToken");
         if (!refreshToken) throw new Error("No refresh token found");
 
+        console.log("%c[Auth] 🔄 Refreshing token...", "color:#06b6d4");
         const res = await axios.post(REFRESH_URL, { refresh: refreshToken });
         const newAccessToken = res.data.access;
 
@@ -92,16 +156,20 @@ axiosInstance.interceptors.response.use(
         ] = `Bearer ${newAccessToken}`;
 
         console.log(
-          "%c[Auth] Token refreshed successfully!",
-          "color: #22c55e; font-weight: bold;"
+          "%c[Auth] ✅ Token refreshed successfully!",
+          "color:#22c55e;font-weight:bold"
         );
 
         processQueue(null, newAccessToken);
         return axiosInstance(originalRequest);
       } catch (err) {
+        console.error("%c[Auth] ❌ Token refresh failed", "color:#ef4444");
         processQueue(err, null);
+
+        // 🚪 Force logout
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        console.warn("%c[Auth] 🚪 Logged out due to expired token", "color:#ef4444");
         window.location.href = "/login";
         return Promise.reject(err);
       } finally {
@@ -109,6 +177,8 @@ axiosInstance.interceptors.response.use(
       }
     }
 
+    // Generic error log
+    console.error("[Axios] ❌ Response error:", error.response?.data || error.message);
     return Promise.reject(error);
   }
 );

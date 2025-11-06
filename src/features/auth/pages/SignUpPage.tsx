@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
-import { registerUser } from "../../api/auth/authapi";
+import { registerUser } from "../../../api/auth/authapi";
 import { useNavigate } from "react-router-dom";
-import bgImage from "../../assets/authbackground.png";
+import bgImage from "../../../assets/authbackground.png";
 
 interface RegisterFormData {
   first_name: string;
@@ -32,93 +32,69 @@ export default function RegisterPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  console.log("Signup form submitted");
 
-    // Check if passwords match
-    if (formData.password !== formData.confirmPassword) {
-      Swal.fire("Error", "Passwords do not match!", "error");
-      setLoading(false);
-      return;
-    }
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      // Prepare the payload for registration - use confirm_password instead of confirmPassword
-      const payload = {
-        first_name: formData.first_name,
-        company_name: formData.company_name,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        confirm_password: formData.confirmPassword,
-      };
-
-      console.log("Signup payload:", payload);
-
-      // Register user
-      const signupRes = await registerUser(payload);
-      console.log("Signup response:", signupRes);
-
-      // Show success message
-      Swal.fire(
-        "Success",
-        "Account created successfully! Please check your email to verify your account.",
-        "success"
-      );
-
-      // Redirect to login page directly
-      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
-
-      // Reset form data
-      setFormData({
-        first_name: "",
-        company_name: "",
-        email: "",
-        phone: "",
-        password: "",
-        confirmPassword: "",
-      });
-    } catch (error: any) {
-  console.error("Signup error:", error.response?.data || error.message);
-
-  let errorMessage = "Signup failed. Please try again.";
-
-  if (error.response) {
-    const data = error.response.data;
-
-    // Case 1: Direct string message (most common)
-    if (typeof data === "string") {
-      errorMessage = data;
-    }
-    // Case 2: { message: "..." }
-    else if (data?.message) {
-      errorMessage = data.message;
-    }
-    // Case 3: Field-specific error (e.g. { email: ["Already registered"] })
-    else if (typeof data === "object") {
-      const firstKey = Object.keys(data)[0];
-      const firstVal = data[firstKey];
-      if (Array.isArray(firstVal)) {
-        errorMessage = firstVal[0];
-      } else if (typeof firstVal === "string") {
-        errorMessage = firstVal;
-      }
-    }
+  // Check if passwords match
+  if (formData.password !== formData.confirmPassword) {
+    Swal.fire("Error", "Passwords do not match!", "error");
+    setLoading(false);
+    return;
   }
 
-  Swal.fire({
-    icon: "error",
-    title: "Signup Failed",
-    text: errorMessage,
-    confirmButtonColor: "#6A9ECF",
-  });
+  try {
+    // Prepare the payload for registration
+    const payload = {
+      first_name: formData.first_name,
+      company_name: formData.company_name,
+      email: formData.email.toLowerCase().trim(), // Normalize email
+      phone: formData.phone,
+      password: formData.password,
+      confirm_password: formData.confirmPassword,
+    };
 
+    console.log("Signup payload:", payload);
 
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Register user
+    const signupRes = await registerUser(payload);
+    console.log("Signup response:", signupRes);
+
+    // Show success message
+    Swal.fire(
+      "Success",
+      "Account created successfully! Please check your email to verify your account.",
+      "success"
+    );
+
+    // Redirect to verification page
+    navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+
+    // Reset form data
+    setFormData({
+      first_name: "",
+      company_name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+    });
+  } catch (error: any) {
+    console.error("Signup error:", error);
+    
+    // Use the error message from registerUser function
+    Swal.fire({
+      icon: "error",
+      title: "Signup Failed",
+      text: error.message || "Signup failed. Please try again.",
+      confirmButtonColor: "#6A9ECF",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div

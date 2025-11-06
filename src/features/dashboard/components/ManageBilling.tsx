@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, CreditCard, Clock } from "lucide-react";
-import AddPaymentModal from "./AddPaymentMethodModal";
-import Header from "../../components/dashboardHeader";
+import { AddCardModal } from "./AddPaymentMethodModal";
+import Header from "./dashboardHeader";
 
 export default function ManageBillingPage() {
   const [showAddMethod, setShowAddMethod] = useState(false);
@@ -17,7 +17,9 @@ export default function ManageBillingPage() {
 
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900">Manage Billing</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">
+            Manage Billing
+          </h1>
         </div>
 
         {/* Billing Summary */}
@@ -46,7 +48,9 @@ export default function ManageBillingPage() {
                 <div className="flex items-center gap-3">
                   <CreditCard size={28} className="text-green-600" />
                   <div>
-                    <p className="font-semibold text-gray-800">VISA **** 4564</p>
+                    <p className="font-semibold text-gray-800">
+                      VISA **** 4564
+                    </p>
                     <p className="text-sm text-gray-500">
                       Expires on Sep 20, 2026
                     </p>
@@ -82,7 +86,9 @@ export default function ManageBillingPage() {
           <div className="space-y-6">
             <div className="bg-white rounded-2xl border border-[#E8E4F7] shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-[#6A3CB1]">Billing History</h3>
+                <h3 className="font-semibold text-[#6A3CB1]">
+                  Billing History
+                </h3>
                 <button className="text-sm font-medium text-[#6A3CB1] hover:underline">
                   View All
                 </button>
@@ -122,7 +128,7 @@ export default function ManageBillingPage() {
 
       {/* Add Payment Method Modal */}
       {showAddMethod && (
-        <AddPaymentModal onClose={() => setShowAddMethod(false)} />
+        <AddCardModal onClose={() => setShowAddMethod(false)} />
       )}
     </div>
   );

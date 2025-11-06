@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
-import AuthLayout from "../../layout/AuthLayout";
-import { authApi } from "../../api/auth/authapi";
+import AuthLayout from "../components/AuthLayout";
+import { authApi } from "../../../api/auth/authapi";
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();

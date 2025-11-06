@@ -1,22 +1,22 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./privateRoute";
-import Dashboard from "../pages/Dashboard";
-import LoginPage from "../pages/auth/LoginPage";
-import ForgotPasswordPage from "../pages/auth/ForgotPassword";
-import RegisterPage from "../pages/auth/SignUpPage";
-import LegalPolicies from "../pages/termscondition/PrivacyandPolicies";
-import VerificationPage from "../pages/auth/VerificationPage";
-import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
-import PasswordResetSuccess from "../pages/auth/ForgetPasswordSuccess";
-import ChoosePlanPage from "../pages/MainPagess/ChoosePlanPage";
-import PaymentPage from "../pages/MainPagess/PaymentPage";
-import PaymentSuccessPage from "../pages/MainPagess/PaymentSuccessfulPage";
-import StoreSetupPage from "../pages/MainPagess/createStore/setupStorePage";
-import StoreSuccessPage from "../pages/MainPagess/createStore/storeSuccess";
-import StoreSetupContactPage from "../pages/MainPagess/createStore/storeLocation&Contact";
-import FeatureStorePage from "../pages/subscription/featureModal";
-import ManageBillingPage from "../pages/subscription/manageBilling";
-import InvoicesPage from "../pages/InvoicesPage";
+import Dashboard from "../features/dashboard/pages/Dashboard";
+import ForgotPasswordPage from "../features/auth/pages/ForgotPassword";
+import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
+import PasswordResetSuccess from "../features/auth/pages/ForgetPasswordSuccess";
+import PaymentPage from "../features/dashboard/components/PaymentPage";
+import PaymentSuccessPage from "../features/dashboard/components/PaymentSuccessfulPage";
+import StoreSetupPage from "../features/storeSetup/pages/setupStorePage";
+import StoreSuccessPage from "../features/storeSetup/pages/storeSuccess";
+import StoreSetupContactPage from "../features/storeSetup/pages/storeLocation&Contact";
+import FeatureStorePage from "../features/dashboard/components/FeatureModal";
+import ManageBillingPage from "../features/dashboard/components/ManageBilling";
+import RegisterPage from "../features/auth/pages/SignUpPage";
+import LoginPage from "../features/auth/pages/LoginPage";
+import VerificationPage from "../features/auth/pages/VerificationPage";
+import LegalPolicies from "../features/auth/pages/PrivacyandPolicies";
+import ChoosePlanPage from "../features/dashboard/pages/ChoosePlanPage";
+import InvoicesPage from "../features/dashboard/pages/InvoicesPage";
 
 const AppRoutes = () => {
   return (
@@ -39,12 +39,14 @@ const AppRoutes = () => {
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/setup-store" element={<StoreSetupPage />} />
-          <Route path="/setup-store-contact" element={<StoreSetupContactPage />} />
+          <Route
+            path="/setup-store-contact"
+            element={<StoreSetupContactPage />}
+          />
           <Route path="/store-success" element={<StoreSuccessPage />} />
           <Route path="/feature-store" element={<FeatureStorePage />} />
           <Route path="/manage-billing" element={<ManageBillingPage />} />
           <Route path="/invoice" element={<InvoicesPage />} />
-          
         </Route>
       </Routes>
     </Router>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import bgImage from "../../assets/commonbackground.png";
+import bgImage from "../../../assets/commonbackground.png";
 import {
   verifyResetCode,
   resendVerificationCode,
-} from "../../api/auth/authapi";
+} from "../../../api/auth/authapi";
 
 const VerificationPage: React.FC = () => {
   const [code, setCode] = useState<string[]>(Array(5).fill(""));

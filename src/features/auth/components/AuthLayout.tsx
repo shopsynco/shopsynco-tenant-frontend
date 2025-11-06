@@ -1,4 +1,4 @@
-import bgImage from "../assets/authbackground.png";
+import bgImage from "../../../assets/commonbackground.png";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

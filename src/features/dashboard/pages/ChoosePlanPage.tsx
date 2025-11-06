@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Check } from "lucide-react";
-import { fetchPlans } from "../../api/mainapi/planapi";
+import { fetchPlans } from "../../../api/mainapi/planapi";
 
 interface Plan {
   id: string;

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import bgImage from "../../assets/commonbackground.png";
-import { resetPassword } from "../../api/auth/authapi"; 
+import bgImage from "../../../assets/commonbackground.png";
+import { resetPassword } from "../../../api/auth/authapi"; 
 
 const ResetPasswordPage: React.FC = () => {
   const [password, setPassword] = useState("");

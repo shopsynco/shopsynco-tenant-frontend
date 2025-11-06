@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BASE_URL } from "../../axios_config";
+import { BASE_URL } from "../axios_config";
 import axiosInstance from "../../refreshToken/tokenUtils";
 
 // -----------------------------
@@ -98,20 +98,52 @@ export interface RegisterPayload {
 
 export const registerUser = async (data: RegisterPayload) => {
   try {
-    const response = await axios.post(`${BASE_URL}api/tenants/signup/`, data, {
+    const response = await axios.post(`https://stagingbackend.shopsynco.com/api/tenants/signup/`, data, {
+    // const response = await axios.post(`${BASE_URL}api/tenants/signup/`, data, {
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
     });
+    
     return response.data;
   } catch (error: any) {
-    const message =
-      error.response?.data?.detail ||
-      error.response?.data?.message ||
-      "Registration failed. Please try again.";
-    throw new Error(message);
+    // DEBUG: Log the complete error response
+    console.log("🔍 FULL ERROR RESPONSE:", error.response);
+    console.log("🔍 ERROR DATA:", error.response?.data);
+    
+    if (error.response?.data) {
+      const data = error.response.data;
+      console.log("🔍 ERROR DATA TYPE:", typeof data);
+      console.log("🔍 ERROR DATA KEYS:", Object.keys(data));
+      
+      // Handle different error response formats
+      if (data.email) {
+        const emailError = Array.isArray(data.email) ? data.email[0] : data.email;
+        console.log("🔍 EMAIL ERROR:", emailError);
+        throw new Error(emailError);
+      } else if (data.detail) {
+        throw new Error(data.detail);
+      } else if (data.message) {
+        throw new Error(data.message);
+      } else if (typeof data === 'string') {
+        throw new Error(data);
+      } else if (Array.isArray(data) && data.length > 0) {
+        throw new Error(data[0].message || JSON.stringify(data[0]));
+      }
+      // Handle non-field errors object
+      else if (typeof data === 'object') {
+        const firstErrorKey = Object.keys(data)[0];
+        const firstError = data[firstErrorKey];
+        const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        throw new Error(errorMessage);
+      }
+    }
+    
+    throw new Error(error.message || "Registration failed. Please try again.");
   }
 };
+
 export const discoverTenant = async (domain: string) => {
   const response = await axios.post(`${BASE_URL}api/tenants/discover/`, {
     domain,

@@ -1,12 +1,8 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  getPaymentMethods,
-  submitPayment,
-  verifyUpi,
-  payWithUpi,
-} from "../../api/payment/paymentapi";
+import { getPaymentMethods, payWithUpi, submitPayment, verifyUpi } from "../../../api/payment/paymentapi";
+
 
 export default function PaymentPage() {
   const [paymentMethods, setPaymentMethods] = useState<

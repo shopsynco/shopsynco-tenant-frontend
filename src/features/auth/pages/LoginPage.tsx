@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { loginUser } from "../../slice/authSlice";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
+import { loginUser } from "../../../store/authSlice";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { Eye, EyeOff } from "lucide-react";
-import AuthLayout from "../../layout/AuthLayout";
+import AuthLayout from "../components/AuthLayout";
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();

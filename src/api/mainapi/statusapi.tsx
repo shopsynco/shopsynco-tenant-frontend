@@ -44,7 +44,7 @@ export const upgradeSubscriptionPlan = async (planId: string) => {
 
 export const fetchTenantDashboard = async () => {
   try {
-    const response = await axiosInstance.get("api/tenant/pqrs_company/dashboard/");
+    const response = await axiosInstance.get("api/tenants/pqrs_company/dashboard/");
     
     return response.data;
   } catch (error: any) {

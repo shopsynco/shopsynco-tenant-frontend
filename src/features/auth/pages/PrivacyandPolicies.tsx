@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getLegalPolicies,
   type Policy,
-} from "../../api/termscondition/policiesApi";
-import bgImage from "../../assets/commonbackground.png";
+} from "../../../api/termscondition/policiesApi";
+import bgImage from "../../../assets/commonbackground.png";
 
 export default function LegalPolicies() {
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -44,28 +44,27 @@ export default function LegalPolicies() {
     >
       {/* ✅ Left Sidebar */}
       <div className="w-1/4 border-r border-gray-300 py-16 px-8 relative">
-  {/* Decorative subtle divider */}
-  <div className="absolute top-0 right-0 h-full w-[1px] bg-[#7658A06E]"></div>
+        {/* Decorative subtle divider */}
+        <div className="absolute top-0 right-0 h-full w-[1px] bg-[#7658A06E]"></div>
 
-  <img src="/logo.svg" alt="ShopSynco" className="w-36 mb-12 mx-auto" />
+        <img src="/logo.svg" alt="ShopSynco" className="w-36 mb-12 mx-auto" />
 
-  <nav className="flex flex-col gap-4 text-[#4A5C74] text-sm font-medium">
-    {policies.map((policy) => (
-      <button
-        key={policy.id}
-        onClick={() => setActivePolicy(policy)}
-        className={`text-left transition ${
-          activePolicy?.id === policy.id
-            ? "text-[#6A9ECF] font-semibold"
-            : "hover:text-[#6A9ECF]"
-        }`}
-      >
-        {policy.title}
-      </button>
-    ))}
-  </nav>
-</div>
-
+        <nav className="flex flex-col gap-4 text-[#4A5C74] text-sm font-medium">
+          {policies.map((policy) => (
+            <button
+              key={policy.id}
+              onClick={() => setActivePolicy(policy)}
+              className={`text-left transition ${
+                activePolicy?.id === policy.id
+                  ? "text-[#6A9ECF] font-semibold"
+                  : "hover:text-[#6A9ECF]"
+              }`}
+            >
+              {policy.title}
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {/* ✅ Right Content */}
       <div className="w-3/4 py-16 px-20  flex flex-col justify-between">

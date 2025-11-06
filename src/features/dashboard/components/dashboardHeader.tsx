@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Bell, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/Name-Logo.png";
-import { fetchUserProfile } from "../api/auth/authapi";
+import logo from "../../../assets/Name-Logo.png";
+import { fetchUserProfile } from "../../../api/auth/authapi";
 
 export default function Header() {
   const [notifOpen, setNotifOpen] = useState(false);

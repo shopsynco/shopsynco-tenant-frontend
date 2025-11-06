@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
-import bgImage from '../../assets/commonbackground.png';
+import bgImage from '../../../assets/commonbackground.png';
 
 const PasswordResetSuccess: React.FC = () => {
   const navigate = useNavigate();

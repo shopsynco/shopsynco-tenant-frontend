@@ -5,8 +5,8 @@ import {
   fetchSubscriptionHistory,
   fetchSubscriptionStatus,
   fetchTenantDashboard,
-} from "../api/subscription/statusapi";
-import FeatureStorePage from "./subscription/featureModal";
+} from "../../../api/mainapi/statusapi";
+import FeatureStorePage from "../components/FeatureModal";
 import Header from "../components/dashboardHeader";
 
 
