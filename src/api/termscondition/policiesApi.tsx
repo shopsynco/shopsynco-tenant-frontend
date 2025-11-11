@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BASE_URL } from "../../axios_config";
+import { BASE_URL } from "../axios_config";
 
 export interface Policy {
   id: number;

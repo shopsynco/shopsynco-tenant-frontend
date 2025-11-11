@@ -6,11 +6,12 @@ export const fetchPlans = async () => {
     // Making the GET request using Axios
     const response = await axiosInstance.get("api/platform-admin/plans/available/");
     
-    // Return the plans array from the response
+    console.log(response);
+    
     return response.data.plans; // Assuming the API response has 'plans' field
     
   } catch (error) {
     console.error("Error fetching plans:", error);
-    throw error; // Rethrow error to handle it in the calling component
+    throw error; 
   }
 };
