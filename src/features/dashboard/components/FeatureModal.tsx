@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, X, ShoppingCart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  getFeatureStore,
+  addFeature,
+  removeFeature,
+  getMyFeatures,
+} from "../../../api/mainapi/featureapi";
 
 interface Feature {
   id: string;
@@ -10,46 +16,79 @@ interface Feature {
   tag?: string;
 }
 
-const featuresData: Feature[] = [
-  { id: "1", name: "Customer Loyalty Program", description: "Reward your repeat customers automatically.", price: 199, tag: "Popular" },
-  { id: "2", name: "Discount & Coupon Engine", description: "Create flexible discount rules and coupons.", price: 99, tag: "Popular" },
-  { id: "3", name: "Advanced Analytics", description: "Get deep insights into your customer behavior.", price: 99, tag: "Popular" },
-  { id: "4", name: "WhatsApp Chat Support", description: "Connect with customers directly via WhatsApp.", price: 149 },
-  { id: "5", name: "Email Campaigns", description: "Create and send beautiful email campaigns.", price: 149 },
-  { id: "6", name: "AI Product Descriptions", description: "Generate compelling product descriptions with AI.", price: 299, tag: "New" },
-];
-
-export default function FeatureStorePage({ onClose }: { onClose?: () => void }) {
+export default function FeatureStorePage({
+  onClose,
+}: {
+  onClose?: () => void;
+}) {
+  const [features, setFeatures] = useState<Feature[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [stage, setStage] = useState<"list" | "checkout">("list");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null); // State to handle errors
   const navigate = useNavigate();
 
-  const toggleSelect = (id: string) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  const selectedFeatures = featuresData.filter((f) => selected.includes(f.id));
+  const selectedFeatures = features.filter((f) => selected.includes(f.id));
   const subtotal = selectedFeatures.reduce((sum, f) => sum + f.price, 0);
   const gst = subtotal * 0.18;
   const total = subtotal + gst;
 
-  // ✅ Unified close handler
   const handleClose = () => {
-    if (onClose) onClose(); // for modal (desktop)
-    else navigate(-1); // for page (mobile)
+    if (onClose) onClose();
+    else navigate(-1);
+  };
+
+  // ✅ Fetch features and user's existing selections
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null); // Reset any previous errors
+        const [allFeatures, myFeatures] = await Promise.all([
+          getFeatureStore(),
+          getMyFeatures(),
+        ]);
+        if (allFeatures?.features?.length > 0) {
+          setFeatures(allFeatures?.features || []);
+        } else {
+          setError("No features available at the moment.");
+        }
+        setSelected(myFeatures?.map((f: any) => f.id) || []);
+      } catch (err) {
+        console.error("Error loading feature store:", err);
+        setError("Failed to load feature store data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // ✅ Toggle Add/Remove Feature (API integrated)
+  const toggleSelect = async (id: string) => {
+    try {
+      setLoading(true);
+      if (selected.includes(id)) {
+        await removeFeature(id);
+        setSelected((prev) => prev.filter((x) => x !== id));
+      } else {
+        await addFeature(id);
+        setSelected((prev) => [...prev, id]);
+      }
+    } catch (err) {
+      console.error("Feature update error:", err);
+      alert("Unable to update feature selection. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="lg:fixed lg:inset-0 lg:bg-black/40 lg:flex lg:items-center lg:justify-center p-0 lg:p-4 z-50">
-      {/* Modal (Desktop) / Full page (Mobile) */}
       <div className="bg-white rounded-none lg:rounded-2xl shadow-xl w-full lg:max-w-5xl lg:max-h-[90vh] overflow-hidden flex flex-col h-screen lg:h-auto">
-        
         {/* HEADER */}
         <div className="bg-gradient-to-r from-[#8C7BFF] to-[#6A3CB1] text-white flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
-            {/* Mobile Back */}
             {stage === "checkout" ? (
               <button
                 onClick={() => setStage("list")}
@@ -67,8 +106,6 @@ export default function FeatureStorePage({ onClose }: { onClose?: () => void }) 
             )}
             <h2 className="text-lg font-semibold">Feature Store</h2>
           </div>
-
-          {/* Desktop Close */}
           <button
             onClick={handleClose}
             className="hidden lg:block hover:bg-white/20 rounded-full p-1"
@@ -79,7 +116,13 @@ export default function FeatureStorePage({ onClose }: { onClose?: () => void }) 
 
         {/* BODY */}
         <div className="flex-1 overflow-y-auto px-5 lg:px-6 py-5">
-          {stage === "list" ? (
+          {loading ? (
+            <p className="text-center text-gray-500 mt-10">
+              Loading features...
+            </p>
+          ) : error ? (
+            <p className="text-center text-red-500 mt-10">{error}</p> // Error message
+          ) : stage === "list" ? (
             <>
               {/* Search + Filters */}
               <div className="flex flex-col sm:flex-row gap-3 mb-5">
@@ -100,7 +143,7 @@ export default function FeatureStorePage({ onClose }: { onClose?: () => void }) 
 
               {/* Feature Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {featuresData.map((f) => {
+                {features.map((f) => {
                   const isAdded = selected.includes(f.id);
                   return (
                     <div
@@ -132,6 +175,7 @@ export default function FeatureStorePage({ onClose }: { onClose?: () => void }) 
                         </p>
                         <button
                           onClick={() => toggleSelect(f.id)}
+                          disabled={loading}
                           className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition ${
                             isAdded
                               ? "bg-green-50 text-green-600 border border-green-400"
@@ -196,9 +240,7 @@ export default function FeatureStorePage({ onClose }: { onClose?: () => void }) 
               <p className="text-sm text-gray-700 flex items-center gap-2">
                 <ShoppingCart size={16} className="text-[#6A3CB1]" />
                 {selected.length} Features Selected •{" "}
-                <span className="font-semibold">
-                  Total: ₹{subtotal}/month
-                </span>
+                <span className="font-semibold">Total: ₹{subtotal}/month</span>
               </p>
               <button
                 disabled={selected.length === 0}
@@ -222,8 +264,10 @@ export default function FeatureStorePage({ onClose }: { onClose?: () => void }) 
               >
                 ← Back to Features
               </button>
-              <button className="bg-[#6A3CB1] text-white text-sm px-5 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition"
-              onClick={()=>navigate("/upgrade-payment")}>
+              <button
+                className="bg-[#6A3CB1] text-white text-sm px-5 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition"
+                onClick={() => navigate("/upgrade-payment")}
+              >
                 Pay & Activate
               </button>
             </>
