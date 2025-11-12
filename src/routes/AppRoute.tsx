@@ -4,8 +4,8 @@ import Dashboard from "../features/dashboard/pages/Dashboard";
 import ForgotPasswordPage from "../features/auth/pages/ForgotPassword";
 import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
 import PasswordResetSuccess from "../features/auth/pages/ForgetPasswordSuccess";
-import PaymentPage from "../features/dashboard/components/PaymentPage";
-import PaymentSuccessPage from "../features/dashboard/components/PaymentSuccessfulPage";
+
+import PaymentSuccessPage from "../features/dashboard/components/payment/PaymentSuccessfulPage";
 import StoreSetupPage from "../features/storeSetup/pages/setupStorePage";
 import StoreSuccessPage from "../features/storeSetup/pages/storeSuccess";
 import StoreSetupContactPage from "../features/storeSetup/pages/storeLocation&Contact";
@@ -17,11 +17,15 @@ import VerificationPage from "../features/auth/pages/VerificationPage";
 import LegalPolicies from "../features/auth/pages/PrivacyandPolicies";
 import ChoosePlanPage from "../features/dashboard/pages/ChoosePlanPage";
 import InvoicesPage from "../features/dashboard/pages/InvoicesPage";
+import AllRoutesPage from "../components/helproutes";
+import PaymentPage from "../features/dashboard/components/payment/PaymentPage";
+import UpgradePaymentPage from "../features/dashboard/components/payment/upgradePaymentPage";
 
 const AppRoutes = () => {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<AllRoutesPage />} />
         <Route path="/signup" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forget-password" element={<ForgotPasswordPage />} />
@@ -37,6 +41,7 @@ const AppRoutes = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/plans" element={<ChoosePlanPage />} />
           <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/upgrade-payment" element={<UpgradePaymentPage />} />
           <Route path="/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/setup-store" element={<StoreSetupPage />} />
           <Route

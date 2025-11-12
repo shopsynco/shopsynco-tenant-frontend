@@ -85,7 +85,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() =>
-              navigate(`/forgot-password?email=${encodeURIComponent(email)}`)
+              navigate(`/forget-password?email=${encodeURIComponent(email)}`)
             }
             className="text-[#4A5C74] hover:text-[#6A9ECF] hover:underline text-sm font-medium transition"
           >

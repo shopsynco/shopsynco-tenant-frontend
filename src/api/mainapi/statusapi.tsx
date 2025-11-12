@@ -1,4 +1,4 @@
-import axiosInstance from "../../refreshToken/tokenUtils";
+import axiosInstance from "../../store/refreshToken/tokenUtils";
 
 
 export const fetchSubscriptionStatus = async () => {

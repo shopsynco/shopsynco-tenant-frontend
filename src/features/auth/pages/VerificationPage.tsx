@@ -8,7 +8,7 @@ import {
 } from "../../../api/auth/authapi";
 
 const VerificationPage: React.FC = () => {
-  const [code, setCode] = useState<string[]>(Array(5).fill(""));
+  const [code, setCode] = useState<string[]>(Array(6).fill(""));
   const [timer, setTimer] = useState(60);
   const navigate = useNavigate();
   const location = useLocation();
@@ -16,6 +16,7 @@ const VerificationPage: React.FC = () => {
   const queryParams = new URLSearchParams(location.search);
   const email: string = queryParams.get("email") || "";
 
+  // ✅ Countdown timer
   useEffect(() => {
     if (timer > 0) {
       const countdown = setInterval(() => setTimer((prev) => prev - 1), 1000);
@@ -23,18 +24,21 @@ const VerificationPage: React.FC = () => {
     }
   }, [timer]);
 
+  // ✅ OTP input handler
   const handleChange = (value: string, index: number) => {
     if (/^\d?$/.test(value)) {
       const newCode = [...code];
       newCode[index] = value;
       setCode(newCode);
-      if (value && index < 4) {
+
+      // Auto-focus next input when user types
+      if (value && index < 5) {
         document.getElementById(`otp-${index + 1}`)?.focus();
       }
     }
   };
 
-  // ✅ Resend API handler
+  // ✅ Resend Code
   const handleResend = async () => {
     if (!email) {
       Swal.fire("Error", "Email not found. Please go back.", "error");
@@ -50,7 +54,7 @@ const VerificationPage: React.FC = () => {
         confirmButtonColor: "#6A9ECF",
       });
       setTimer(60);
-      setCode(Array(5).fill(""));
+      setCode(Array(6).fill(""));
     } catch (error: unknown) {
       Swal.fire({
         icon: "error",
@@ -64,28 +68,26 @@ const VerificationPage: React.FC = () => {
     }
   };
 
+  // ✅ Verify Code
   const handleSubmit = async () => {
     const verificationCode = code.join("");
-    if (verificationCode.length < 5) {
-      Swal.fire("Error", "Please enter all 5 digits of your code.", "error");
+
+    if (verificationCode.length < 6) {
+      Swal.fire("Error", "Please enter all 6 digits of your code.", "error");
       return;
     }
 
     if (!email) {
-      Swal.fire(
-        "Error",
-        "Email not found in request. Please go back.",
-        "error"
-      );
+      Swal.fire("Error", "Email not found in request. Please go back.", "error");
       return;
     }
 
     try {
-      await verifyResetCode({ email, code: verificationCode });
+      await verifyResetCode({ email, verification_code: verificationCode });
       await Swal.fire({
         icon: "success",
         title: "Code Verified!",
-        text: "Your verification code is correct. You can now reset your password.",
+        text: "Your verification code is correct. You can now proceed.",
         confirmButtonColor: "#6A9ECF",
       });
       navigate(`/terms&condition`);
@@ -112,7 +114,7 @@ const VerificationPage: React.FC = () => {
           Verification
         </h2>
         <p className="text-sm text-gray-500 mb-6">
-          Enter the 5-digit code sent to <br />
+          Enter the 6-digit code sent to <br />
           <b className="text-[#466b9d]">{email}</b>
         </p>
 

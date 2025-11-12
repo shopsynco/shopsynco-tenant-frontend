@@ -1,6 +1,6 @@
 // src/api/mainapi/StoreCreateapi.ts
 
-import axiosInstance from "../../refreshToken/tokenUtils";
+import axiosInstance from "../../store/refreshToken/tokenUtils";
 
 
 // ======================

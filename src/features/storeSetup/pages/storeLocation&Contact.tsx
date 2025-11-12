@@ -48,11 +48,13 @@ const StoreSetupContactPage: React.FC = () => {
     }
   }, [selectedCountryId]);
 
+  // ✅ Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id.replace("-", "_")]: value }));
   };
 
+  // ✅ Country select
   const handleCountrySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const countryId = Number(e.target.value);
     setSelectedCountryId(countryId);
@@ -60,24 +62,40 @@ const StoreSetupContactPage: React.FC = () => {
     setFormData((prev) => ({ ...prev, country: selectedCountry?.name || "" }));
   };
 
+  // ✅ Submit form
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      // ✅ Optionally get slug by email (if needed)
-      const slugResponse = await getStoreSlug(formData.contact_email);
-      if (slugResponse?.slug) {
-        localStorage.setItem("store_slug", slugResponse.slug);
+    try {
+      const email = formData.contact_email?.trim();
+
+      if (!email) {
+        alert("Please enter a valid contact email.");
+        setLoading(false);
+        return;
       }
 
-      // ✅ Send contact setup request
-      const result = await storeContactSetup(formData);
-      console.log("✅ Store contact setup done:", result);
+      // 🔹 Step 1: Call slug API to generate or get existing slug
+      console.log("📩 Generating slug for email:", email);
+      const slugResponse = await getStoreSlug(email);
 
+      if (slugResponse?.slug) {
+        localStorage.setItem("store_slug", slugResponse.slug);
+        console.log("✅ Slug created and saved:", slugResponse.slug);
+      } else {
+        console.warn("⚠️ Slug not returned from API for email:", email);
+      }
+
+      // 🔹 Step 2: Submit contact info
+      const result = await storeContactSetup(formData);
+      console.log("✅ Store contact setup completed:", result);
+
+      // 🔹 Step 3: Redirect to finish/setup complete page
       navigate("/setup-store-finish");
     } catch (err) {
-      alert("❌ Failed to submit contact details. Check server.");
+      console.error("❌ Failed to submit contact details:", err);
+      alert("Failed to submit contact details. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -92,14 +110,13 @@ const StoreSetupContactPage: React.FC = () => {
         Setup Your Store
       </h2>
 
-      <div
-        className="p-8 bg-white/60 backdrop-blur-md border border-white/30 rounded-2xl shadow-xl w-full max-w-3xl"
-      >
+      <div className="p-8 bg-white/60 backdrop-blur-md border border-white/30 rounded-2xl shadow-xl w-full max-w-3xl">
         <h3 className="text-2xl font-semibold text-[#719CBF] mb-6 text-center">
           Location & Contact
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Address */}
           <div>
             <label htmlFor="business-address" className="block text-lg font-medium text-gray-700">
               Business Address
@@ -114,6 +131,7 @@ const StoreSetupContactPage: React.FC = () => {
             />
           </div>
 
+          {/* Country / State */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label htmlFor="country" className="block text-lg font-medium text-gray-700">
@@ -153,6 +171,7 @@ const StoreSetupContactPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Contact Email */}
           <div>
             <label htmlFor="contact-email" className="block text-lg font-medium text-gray-700">
               Contact Email
@@ -164,9 +183,11 @@ const StoreSetupContactPage: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter your contact email"
               className="w-full p-4 mt-2 text-sm text-gray-700 bg-white/60 border border-gray-300 rounded-lg shadow-md focus:ring-2 focus:ring-[#6A3CB1]"
+              required
             />
           </div>
 
+          {/* Contact Number */}
           <div>
             <label htmlFor="contact-number" className="block text-lg font-medium text-gray-700">
               Contact Number
@@ -181,6 +202,7 @@ const StoreSetupContactPage: React.FC = () => {
             />
           </div>
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}

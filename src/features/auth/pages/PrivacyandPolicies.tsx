@@ -14,10 +14,23 @@ export default function LegalPolicies() {
     const fetchPolicies = async () => {
       try {
         const data = await getLegalPolicies();
-        setPolicies(data);
-        setActivePolicy(data[0]); // Default: first policy
+        console.log("📜 API Response for policies:", data);
+
+        // ✅ Ensure the data is an array before setting
+        if (Array.isArray(data)) {
+          setPolicies(data);
+          setActivePolicy(data[0] || null);
+        } else if (data?.results && Array.isArray(data.results)) {
+          // Some APIs return { results: [...] }
+          setPolicies(data.results);
+          setActivePolicy(data.results[0] || null);
+        } else {
+          console.warn("⚠️ Unexpected API response structure:", data);
+          setPolicies([]);
+        }
       } catch (err) {
-        console.error(err);
+        console.error("❌ Failed to fetch legal policies:", err);
+        setPolicies([]);
       } finally {
         setLoading(false);
       }
@@ -33,6 +46,16 @@ export default function LegalPolicies() {
     );
   }
 
+  if (!policies.length) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <p className="text-gray-500 text-lg">
+          No legal policies found. Please check API response.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex w-full min-h-screen bg-cover bg-center bg-no-repeat"
@@ -44,9 +67,7 @@ export default function LegalPolicies() {
     >
       {/* ✅ Left Sidebar */}
       <div className="w-1/4 border-r border-gray-300 py-16 px-8 relative">
-        {/* Decorative subtle divider */}
         <div className="absolute top-0 right-0 h-full w-[1px] bg-[#7658A06E]"></div>
-
         <img src="/logo.svg" alt="ShopSynco" className="w-36 mb-12 mx-auto" />
 
         <nav className="flex flex-col gap-4 text-[#4A5C74] text-sm font-medium">
@@ -67,15 +88,17 @@ export default function LegalPolicies() {
       </div>
 
       {/* ✅ Right Content */}
-      <div className="w-3/4 py-16 px-20  flex flex-col justify-between">
+      <div className="w-3/4 py-16 px-20 flex flex-col justify-between">
         <div>
           <h2 className="text-2xl font-bold text-[#4A5C74] mb-4">
-            {activePolicy?.title}
+            {activePolicy?.title || "No Title"}
           </h2>
 
           <div
             className="text-gray-700 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: activePolicy?.content || "" }}
+            dangerouslySetInnerHTML={{
+              __html: activePolicy?.content || "<p>No content available.</p>",
+            }}
           />
         </div>
 

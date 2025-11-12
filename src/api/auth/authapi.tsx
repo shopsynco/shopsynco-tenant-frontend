@@ -1,6 +1,6 @@
 import axios from "axios";
 import { BASE_URL } from "../axios_config";
-import axiosInstance from "../../refreshToken/tokenUtils";
+import axiosInstance from "../../store/refreshToken/tokenUtils";
 
 // -----------------------------
 // 🔹 Forget Password Code API
@@ -44,15 +44,15 @@ export const resetPassword = async (
 
 export const verifyResetCode = async ({
   email,
-  code,
+  verification_code,
 }: {
   email: string;
-  code: string;
+  verification_code: string;
 }) => {
   try {
     const response = await axios.post(
       `${BASE_URL}api/user/auth/verify-reset-code/`,
-      { email, code },
+      { email, verification_code },
       { headers: { "Content-Type": "application/json" } }
     );
     return response.data;
@@ -66,11 +66,14 @@ export const verifyResetCode = async ({
 
 export const resendVerificationCode = async ({ email }: { email: string }) => {
   try {
+    console.log("[RESEND] Request payload:", { email });
     const response = await axios.post(
       `${BASE_URL}api/user/auth/resend-verification-code/`,
       { email },
       { headers: { "Content-Type": "application/json" } }
     );
+    
+
     return response.data;
   } catch (error: any) {
     const message =

@@ -223,7 +223,7 @@ export default function FeatureStorePage({ onClose }: { onClose?: () => void }) 
                 ← Back to Features
               </button>
               <button className="bg-[#6A3CB1] text-white text-sm px-5 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition"
-              onClick={()=>navigate("/payment")}>
+              onClick={()=>navigate("/upgrade-payment")}>
                 Pay & Activate
               </button>
             </>
