@@ -1,22 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { verifyEmailCode, resendVerificationCode } from "../../../api/auth/authapi";
 import bgImage from "../../../assets/commonbackground.png";
-import {
-  verifyResetCode,
-  resendVerificationCode,
-} from "../../../api/auth/authapi";
 
 const VerificationPage: React.FC = () => {
-  const [code, setCode] = useState<string[]>(Array(6).fill(""));
-  const [timer, setTimer] = useState(60);
+  const [code, setCode] = useState<string[]>(Array(6).fill("")); // Stores OTP digits
+  const [timer, setTimer] = useState(60); // Timer countdown for resend OTP
   const navigate = useNavigate();
   const location = useLocation();
-
   const queryParams = new URLSearchParams(location.search);
-  const email: string = queryParams.get("email") || "";
+  const email: string = queryParams.get("email") || ""; // Get email from URL
 
-  // ✅ Countdown timer
+  // Countdown timer to disable resend button
   useEffect(() => {
     if (timer > 0) {
       const countdown = setInterval(() => setTimer((prev) => prev - 1), 1000);
@@ -24,7 +20,7 @@ const VerificationPage: React.FC = () => {
     }
   }, [timer]);
 
-  // ✅ OTP input handler
+  // Handle OTP input changes
   const handleChange = (value: string, index: number) => {
     if (/^\d?$/.test(value)) {
       const newCode = [...code];
@@ -38,7 +34,7 @@ const VerificationPage: React.FC = () => {
     }
   };
 
-  // ✅ Resend Code
+  // Resend OTP code
   const handleResend = async () => {
     if (!email) {
       Swal.fire("Error", "Email not found. Please go back.", "error");
@@ -53,24 +49,21 @@ const VerificationPage: React.FC = () => {
         text: `A new code has been sent to ${email}.`,
         confirmButtonColor: "#6A9ECF",
       });
-      setTimer(60);
-      setCode(Array(6).fill(""));
+      setTimer(60); // Reset timer
+      setCode(Array(6).fill("")); // Clear OTP input
     } catch (error: unknown) {
       Swal.fire({
         icon: "error",
         title: "Resend Failed",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Unable to resend code. Try again later.",
+        text: error instanceof Error ? error.message : "Unable to resend code. Try again later.",
         confirmButtonColor: "#6A9ECF",
       });
     }
   };
 
-  // ✅ Verify Code
+  // Submit OTP for verification
   const handleSubmit = async () => {
-    const verificationCode = code.join("");
+    const verificationCode = code.join(""); // Join OTP digits
 
     if (verificationCode.length < 6) {
       Swal.fire("Error", "Please enter all 6 digits of your code.", "error");
@@ -83,36 +76,31 @@ const VerificationPage: React.FC = () => {
     }
 
     try {
-      await verifyResetCode({ email, verification_code: verificationCode });
+      // Verify OTP
+      await verifyEmailCode(email, verificationCode);
       await Swal.fire({
         icon: "success",
         title: "Code Verified!",
         text: "Your verification code is correct. You can now proceed.",
         confirmButtonColor: "#6A9ECF",
       });
+
+      // Redirect to terms page after success
       navigate(`/terms&condition`);
     } catch (error: unknown) {
       Swal.fire({
         icon: "error",
         title: "Invalid Code",
-        text:
-          error instanceof Error
-            ? error.message
-            : "The verification code you entered is invalid or expired.",
+        text: error instanceof Error ? error.message : "The verification code you entered is invalid or expired.",
         confirmButtonColor: "#6A9ECF",
       });
     }
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-cover bg-center"
-      style={{ backgroundImage: `url(${bgImage})` }}
-    >
+    <div className="min-h-screen flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${bgImage})` }}>
       <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl w-[380px] p-8 text-center border border-white/40">
-        <h2 className="text-2xl font-semibold text-[#466b9d] mb-2">
-          Verification
-        </h2>
+        <h2 className="text-2xl font-semibold text-[#466b9d] mb-2">Verification</h2>
         <p className="text-sm text-gray-500 mb-6">
           Enter the 6-digit code sent to <br />
           <b className="text-[#466b9d]">{email}</b>
@@ -141,10 +129,7 @@ const VerificationPage: React.FC = () => {
         </p>
 
         {/* Continue Button */}
-        <button
-          onClick={handleSubmit}
-          className="w-full bg-[#6A9ECF] text-white py-2 rounded-lg hover:bg-[#5c91c4] transition font-semibold shadow-md"
-        >
+        <button onClick={handleSubmit} className="w-full bg-[#6A9ECF] text-white py-2 rounded-lg hover:bg-[#5c91c4] transition font-semibold shadow-md">
           Continue
         </button>
 
@@ -154,11 +139,7 @@ const VerificationPage: React.FC = () => {
           <button
             onClick={handleResend}
             disabled={timer > 0}
-            className={`ml-1 ${
-              timer > 0
-                ? "text-gray-400 cursor-not-allowed"
-                : "text-[#6A9ECF] hover:underline"
-            }`}
+            className={`ml-1 ${timer > 0 ? "text-gray-400 cursor-not-allowed" : "text-[#6A9ECF] hover:underline"}`}
           >
             Resend
           </button>

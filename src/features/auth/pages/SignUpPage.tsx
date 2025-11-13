@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
-import { registerUser } from "../../../api/auth/authapi";
+import { registerUser, sendEmailVerificationCode } from "../../../api/auth/authapi";
 import { useNavigate } from "react-router-dom";
 import bgImage from "../../../assets/authbackground.png";
 
@@ -32,69 +32,57 @@ export default function RegisterPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
- const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  console.log("Signup form submitted");
 
-  e.preventDefault();
-  setLoading(true);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // Check if passwords match
-  if (formData.password !== formData.confirmPassword) {
-    Swal.fire("Error", "Passwords do not match!", "error");
-    setLoading(false);
-    return;
-  }
+    // Check if passwords match
+    if (formData.password !== formData.confirmPassword) {
+      Swal.fire("Error", "Passwords do not match!", "error");
+      setLoading(false);
+      return;
+    }
 
-  try {
-    // Prepare the payload for registration
-    const payload = {
-      first_name: formData.first_name,
-      company_name: formData.company_name,
-      email: formData.email.toLowerCase().trim(), // Normalize email
-      phone: formData.phone,
-      password: formData.password,
-      confirm_password: formData.confirmPassword,
-    };
+    try {
+      // Prepare the payload for registration
+      const payload = {
+        first_name: formData.first_name,
+        company_name: formData.company_name,
+        email: formData.email.toLowerCase().trim(), // Normalize email
+        phone: formData.phone,
+        password: formData.password,
+        confirm_password: formData.confirmPassword,
+      };
 
-    console.log("Signup payload:", payload);
+      console.log("Signup payload:", payload);
 
-    // Register user
-    const signupRes = await registerUser(payload);
-    console.log("Signup response:", signupRes);
+      // 🟣 1. Send email verification OTP without creating the account
+      await sendEmailVerificationCode(payload.email);
+      console.log("Email verification code sent to:", payload.email); // Log successful email sending
 
-    // Show success message
-    Swal.fire(
-      "Success",
-      "Account created successfully! Please check your email to verify your account.",
-      "success"
-    );
+      Swal.fire(
+        "Verification Sent!",
+        "Please check your email for the 6-digit verification code.",
+        "success"
+      );
 
-    // Redirect to verification page
-    navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+      // 🟣 2. Redirect to verify email page
+      navigate(`/verify-email?email=${encodeURIComponent(payload.email)}&data=${encodeURIComponent(JSON.stringify(payload))}`);
 
-    // Reset form data
-    setFormData({
-      first_name: "",
-      company_name: "",
-      email: "",
-      phone: "",
-      password: "",
-      confirmPassword: "",
-    });
-  } catch (error: any) {
-    console.error("Signup error:", error);
-    
-    // Use the error message from registerUser function
-    Swal.fire({
-      icon: "error",
-      title: "Signup Failed",
-      text: error.message || "Signup failed. Please try again.",
-      confirmButtonColor: "#6A9ECF",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (error: any) {
+      console.error("Error:", error); // Log the error
+      Swal.fire({
+        icon: "error",
+        title: "Signup Failed",
+        text: error.message || "Signup failed. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   return (
     <div
