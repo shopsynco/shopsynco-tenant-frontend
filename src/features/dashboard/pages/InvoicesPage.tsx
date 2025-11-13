@@ -1,43 +1,57 @@
+import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import { Eye, Download } from "lucide-react";
 import Header from "../components/dashboardHeader";
 
+import InvoiceDetailModal from "../components/invoiceDetailModal";
+import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
 
 export default function InvoicesPage() {
-  const invoices = [
-    {
-      id: "INV – 003",
-      date: "Aug 25, 2024",
-      description: "Basic Plan Renewal",
-      paymentMethod: "Debit Card",
-      amount: "₹1899",
-    },
-    {
-      id: "INV – 002",
-      date: "Aug 30, 2024",
-      description: "Add-Ons; Customer Management",
-      paymentMethod: "Debit Card",
-      amount: "₹899",
-    },
-    {
-      id: "INV – 001",
-      date: "Aug 25, 2024",
-      description: "Basic Plan Subscription",
-      paymentMethod: "Debit Card",
-      amount: "₹1899",
-    },
-  ];
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null); // Track selected invoice
+  const [isModalOpen, setIsModalOpen] = useState(false); // Track modal visibility
+
+  // Fetch invoices from the API
+  useEffect(() => {
+    const getInvoices = async () => {
+      try {
+        const data = await fetchInvoices(); // Using the imported function to fetch invoices
+        setInvoices(data);
+      } catch (error) {
+        Swal.fire(
+          "Error",
+          "Failed to load invoices. Please try again.",
+          "error"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getInvoices();
+  }, []);
+
+  // Open invoice detail modal
+  const openInvoiceDetail = (invoiceId: string) => {
+    const invoice = invoices.find((inv: any) => inv.id === invoiceId);
+    setSelectedInvoice(invoice);
+    setIsModalOpen(true);
+  };
+
+  // Close modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedInvoice(null);
+  };
 
   return (
     <div className="min-h-screen bg-[#FFFFFF]">
       <Header />
-
       <div className="max-w-6xl mx-auto px-6 py-10">
-        {/* Breadcrumb */}
         <p className="text-sm text-gray-500 mb-2">
           Dashboard <span className="mx-1">›</span> View Invoices
         </p>
-
-        {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-gray-900">Invoices</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -60,35 +74,54 @@ export default function InvoicesPage() {
             </thead>
 
             <tbody>
-              {invoices.map((inv, i) => (
-                <tr
-                  key={i}
-                  className="border-t border-[#E9E4FB] hover:bg-[#FAF8FF] transition"
-                >
-                  <td className="py-4 px-6 font-medium">{inv.id}</td>
-                  <td className="py-4 px-6">{inv.date}</td>
-                  <td className="py-4 px-6 truncate max-w-[180px]">
-                    {inv.description}
-                  </td>
-                  <td className="py-4 px-6">{inv.paymentMethod}</td>
-                  <td className="py-4 px-6 text-right font-semibold text-gray-900">
-                    {inv.amount}
-                  </td>
-                  <td className="py-4 px-6 text-right flex items-center justify-end gap-3">
-                    <button className="text-gray-500 hover:text-[#6A3CB1]">
-                      <Eye size={18} />
-                    </button>
-                    <button className="text-gray-500 hover:text-[#6A3CB1]">
-                      <Download size={18} />
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-4">
+                    Loading invoices...
                   </td>
                 </tr>
-              ))}
+              ) : (
+                invoices.map((inv: any) => (
+                  <tr
+                    key={inv.id}
+                    className="border-t border-[#E9E4FB] hover:bg-[#FAF8FF] transition"
+                  >
+                    <td className="py-4 px-6 font-medium">{inv.id}</td>
+                    <td className="py-4 px-6">{inv.date}</td>
+                    <td className="py-4 px-6 truncate max-w-[180px]">
+                      {inv.description}
+                    </td>
+                    <td className="py-4 px-6">{inv.paymentMethod}</td>
+                    <td className="py-4 px-6 text-right font-semibold text-gray-900">
+                      {inv.amount}
+                    </td>
+                    <td className="py-4 px-6 text-right flex items-center justify-end gap-3">
+                      <button
+                        className="text-gray-500 hover:text-[#6A3CB1]"
+                        onClick={() => openInvoiceDetail(inv.id)}
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button
+                        className="text-gray-500 hover:text-[#6A3CB1]"
+                        // onClick={() =>
+                        //   window.open(
+                        //     `${BASE_URL}/api/tenant/pqrs_company/billing/invoices/${inv.id}/download`,
+                        //     "_blank"
+                        // //   )
+                        // }
+                      >
+                        <Download size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Support Box */}
+        {/* Help Box */}
         <div className="border border-[#D8CFFC] bg-white rounded-2xl p-6 mt-10 shadow-sm">
           <div className="flex items-start gap-3">
             <div className="text-[#6A3CB1] text-xl">😊</div>
@@ -97,8 +130,8 @@ export default function InvoicesPage() {
                 Need help with invoices?
               </h4>
               <p className="text-sm text-gray-500 mb-3 leading-relaxed">
-                Our support team is ready to assist you with any questions
-                about your subscription.
+                Our support team is ready to assist you with any questions about
+                your subscription.
               </p>
               <button className="text-sm font-medium text-[#6A3CB1] hover:underline">
                 Contact Support →
@@ -107,6 +140,11 @@ export default function InvoicesPage() {
           </div>
         </div>
       </div>
+
+      {/* Invoice Detail Modal */}
+      {isModalOpen && selectedInvoice && (
+        <InvoiceDetailModal invoice={selectedInvoice} closeModal={closeModal} />
+      )}
     </div>
   );
 }
