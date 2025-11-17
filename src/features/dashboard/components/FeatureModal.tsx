@@ -39,30 +39,62 @@ export default function FeatureStorePage({
   };
 
   // ✅ Fetch features and user's existing selections
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null); // Reset any previous errors
-        const [allFeatures, myFeatures] = await Promise.all([
-          getFeatureStore(),
-          getMyFeatures(),
-        ]);
-        if (allFeatures?.features?.length > 0) {
-          setFeatures(allFeatures?.features || []);
-        } else {
-          setError("No features available at the moment.");
-        }
-        setSelected(myFeatures?.map((f: any) => f.id) || []);
-      } catch (err) {
-        console.error("Error loading feature store:", err);
-        setError("Failed to load feature store data.");
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null); // Reset any previous errors
+
+      const [allFeatures, myFeaturesResp] = await Promise.all([
+        getFeatureStore(),
+        getMyFeatures(),
+      ]);
+
+      // --- normalize allFeatures into an array ---
+      if (Array.isArray(allFeatures)) {
+        setFeatures(allFeatures);
+      } else if (allFeatures?.features && Array.isArray(allFeatures.features)) {
+        setFeatures(allFeatures.features);
+      } else if (allFeatures?.data && Array.isArray(allFeatures.data)) {
+        setFeatures(allFeatures.data);
+      } else {
+        setFeatures([]);
+        console.warn("Unexpected allFeatures shape:", allFeatures);
       }
-    };
-    fetchData();
-  }, []);
+
+      // --- normalize myFeatures into an array of ids ---
+      let selectedIds: string[] = [];
+
+      if (Array.isArray(myFeaturesResp)) {
+        // direct array of feature objects
+        selectedIds = myFeaturesResp.map((f: any) => String(f.id));
+      } else if (myFeaturesResp?.features && Array.isArray(myFeaturesResp.features)) {
+        selectedIds = myFeaturesResp.features.map((f: any) => String(f.id));
+      } else if (myFeaturesResp?.data && Array.isArray(myFeaturesResp.data)) {
+        selectedIds = myFeaturesResp.data.map((f: any) => String(f.id));
+      } else if (myFeaturesResp?.ids && Array.isArray(myFeaturesResp.ids)) {
+        // sometimes API returns just ids
+        selectedIds = myFeaturesResp.ids.map((id: any) => String(id));
+      } else {
+        // last fallback: if API returned a single object (maybe a feature)
+        if (myFeaturesResp && typeof myFeaturesResp === "object" && myFeaturesResp.id) {
+          selectedIds = [String((myFeaturesResp as any).id)];
+        } else {
+          console.warn("Unexpected myFeatures shape:", myFeaturesResp);
+        }
+      }
+
+      setSelected(selectedIds);
+    } catch (err) {
+      console.error("Error loading feature store:", err);
+      setError("Failed to load feature store data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchData();
+}, []);
+
 
   // ✅ Toggle Add/Remove Feature (API integrated)
   const toggleSelect = async (id: string) => {

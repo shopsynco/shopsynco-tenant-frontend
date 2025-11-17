@@ -20,6 +20,7 @@ import InvoicesPage from "../features/dashboard/pages/InvoicesPage";
 import AllRoutesPage from "../components/helproutes";
 import PaymentPage from "../features/dashboard/components/payment/PaymentPage";
 import UpgradePaymentPage from "../features/dashboard/components/payment/upgradePaymentPage";
+import EnterEmail from "../features/auth/pages/EnterEmail";
 
 const AppRoutes = () => {
   return (
@@ -27,6 +28,7 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/" element={<AllRoutesPage />} />
         <Route path="/signup" element={<RegisterPage />} />
+        <Route path="/email-verify" element={<EnterEmail />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forget-password" element={<ForgotPasswordPage />} />
         <Route path="/verify-email" element={<VerificationPage />} />

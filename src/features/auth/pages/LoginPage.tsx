@@ -110,7 +110,7 @@ export default function LoginPage() {
           <a
             href="#"
             className="text-[#6A9ECF] font-medium hover:underline transition"
-            onClick={() => navigate("/signup")}
+            onClick={() => navigate("/email-verify")}
           >
             Sign Up
           </a>

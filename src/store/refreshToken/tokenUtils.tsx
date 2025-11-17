@@ -38,45 +38,77 @@ axiosInstance.interceptors.request.use(
       );
     }
 
-   // ==========================================
-// 🏷️ STORE SLUG INJECTION LOGIC START
-// ==========================================
-const skipSlugInjection =
-  config.url &&
-  (
-    config.url.includes("auth/") ||
-    config.url.includes("jwt/") ||
-    config.url.includes("discover/") ||
-    config.url.includes("signup/")
-  );
+    // ==========================================
+    // 🏷️ STORE SLUG INJECTION LOGIC START
+    // ==========================================
 
-// Only inject slug for tenant-specific requests
-if (
-  !skipSlugInjection &&
-  storeSlug &&
-  config.url &&
-  !config.url.includes(`/api/${storeSlug}/`)
-) {
-  const normalizedUrl = config.url.replace(/^\/+/, "");
+    const skipSlugInjection =
+      config.url &&
+      (config.url.includes("auth/") ||
+        config.url.includes("jwt/") ||
+        config.url.includes("discover/") ||
+        config.url.includes("signup/"));
 
-  if (normalizedUrl.startsWith("api/")) {
-    config.url = normalizedUrl.replace("api/", `api/${storeSlug}/`);
-  } else {
-    config.url = `api/${storeSlug}/${normalizedUrl}`;
-  }
+    if (!skipSlugInjection && storeSlug && config.url) {
+      let url = config.url.replace(/^\/+/, "");
 
-  console.log(
-    "%c[Axios] 🏷️ Store slug injected:",
-    "color:#a855f7;font-weight:bold",
-    storeSlug,
-    "→",
-    config.url
-  );
-}
-// ==========================================
-// 🏷️ STORE SLUG INJECTION LOGIC END
-// ==========================================
+      // Define prefixes that should NEVER get the slug injected.
+      // Add any other endpoints you want to exempt here.
+      const noSlugPrefixes = [
+        "api/tenants/pricing", // pricing endpoints
+        "api/tenants/payment", // payment endpoints (plural)
+        "api/tenant/payment", // payment endpoints (singular)
+        "api/tenants/payment/", // defensive variants
+        "api/tenant/payment/", // defensive variants
+        "api/tenants/pricing/options", // specific endpoints if needed
+        "api/tenants/pricing/quote", // specific endpoints if needed
+      ];
 
+      // If the URL starts with any of the no-slug prefixes, skip injection.
+      for (const prefix of noSlugPrefixes) {
+        if (
+          url === prefix ||
+          url.startsWith(prefix + "/") ||
+          url.startsWith(prefix + "?")
+        ) {
+          console.log(
+            "%c[Axios] ⛔ Skipping slug injection for:",
+            "color:#f97316;font-weight:bold",
+            url
+          );
+          return config;
+        }
+      }
+
+      // Match: api/tenants/<something...>
+      if (url.startsWith("api/tenants/")) {
+        const parts = url.split("/"); // ["api", "tenants", "..."]
+
+        // Already injected → do nothing
+        if (parts[2] === storeSlug) {
+          return config;
+        }
+
+        // Insert slug after "tenants"
+        parts.splice(2, 0, storeSlug);
+
+        const newUrl = parts.join("/");
+
+        config.url = newUrl;
+
+        console.log(
+          "%c[Axios] 🏷️ Slug injected:",
+          "color:#a855f7;font-weight:bold",
+          storeSlug,
+          "→",
+          config.url
+        );
+      }
+    }
+
+    // ==========================================
+    // 🏷️ STORE SLUG INJECTION LOGIC END
+    // ==========================================
 
     return config;
   },
@@ -109,7 +141,10 @@ axiosInstance.interceptors.response.use(
     // 🔴 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        console.log("%c[Auth] 🕐 Token refresh in progress...", "color:#f59e0b");
+        console.log(
+          "%c[Auth] 🕐 Token refresh in progress...",
+          "color:#f59e0b"
+        );
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -151,7 +186,10 @@ axiosInstance.interceptors.response.use(
         // 🚪 Force logout
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-        console.warn("%c[Auth] 🚪 Logged out due to expired token", "color:#ef4444");
+        console.warn(
+          "%c[Auth] 🚪 Logged out due to expired token",
+          "color:#ef4444"
+        );
         window.location.href = "/login";
         return Promise.reject(err);
       } finally {
@@ -160,7 +198,10 @@ axiosInstance.interceptors.response.use(
     }
 
     // Generic error log
-    console.error("[Axios] ❌ Response error:", error.response?.data || error.message);
+    console.error(
+      "[Axios] ❌ Response error:",
+      error.response?.data || error.message
+    );
     return Promise.reject(error);
   }
 );

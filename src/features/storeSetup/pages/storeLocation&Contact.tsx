@@ -11,7 +11,9 @@ import { useNavigate } from "react-router-dom";
 const StoreSetupContactPage: React.FC = () => {
   const [countries, setCountries] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
-  const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null);
+  const [selectedCountryId, setSelectedCountryId] = useState<number | null>(
+    null
+  );
   const [formData, setFormData] = useState({
     business_address: "",
     country: "",
@@ -49,7 +51,9 @@ const StoreSetupContactPage: React.FC = () => {
   }, [selectedCountryId]);
 
   // ✅ Handle input change
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id.replace("-", "_")]: value }));
   };
@@ -63,43 +67,43 @@ const StoreSetupContactPage: React.FC = () => {
   };
 
   // ✅ Submit form
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const email = formData.contact_email?.trim();
+  try {
+    const email = formData.contact_email?.trim();
 
-      if (!email) {
-        alert("Please enter a valid contact email.");
-        setLoading(false);
-        return;
-      }
-
-      // 🔹 Step 1: Call slug API to generate or get existing slug
-      console.log("📩 Generating slug for email:", email);
-      const slugResponse = await getStoreSlug(email);
-
-      if (slugResponse?.slug) {
-        localStorage.setItem("store_slug", slugResponse.slug);
-        console.log("✅ Slug created and saved:", slugResponse.slug);
-      } else {
-        console.warn("⚠️ Slug not returned from API for email:", email);
-      }
-
-      // 🔹 Step 2: Submit contact info
-      const result = await storeContactSetup(formData);
-      console.log("✅ Store contact setup completed:", result);
-
-      // 🔹 Step 3: Redirect to finish/setup complete page
-      navigate("/setup-store-finish");
-    } catch (err) {
-      console.error("❌ Failed to submit contact details:", err);
-      alert("Failed to submit contact details. Please try again.");
-    } finally {
+    if (!email) {
+      alert("Please enter a valid contact email.");
       setLoading(false);
+      return;
     }
-  };
+
+    // 🔹 Step 1: Submit contact info first
+    const result = await storeContactSetup(formData);
+    console.log("✅ Store contact setup completed:", result);
+
+    // If store contact setup is successful, proceed to get the slug
+    const slugResponse = await getStoreSlug(email);
+
+    if (slugResponse) {
+      console.log("Slug created and saved:", slugResponse.slug);
+    } else {
+      console.warn("Slug not returned from API for email:", email);
+    }
+
+    // 🔹 Step 2: Redirect to finish/setup complete page
+    navigate("/store-success");
+
+  } catch (err) {
+    console.error("❌ Failed to submit contact details:", err);
+    alert("Failed to submit contact details. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div
@@ -118,7 +122,10 @@ const StoreSetupContactPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Address */}
           <div>
-            <label htmlFor="business-address" className="block text-lg font-medium text-gray-700">
+            <label
+              htmlFor="business-address"
+              className="block text-lg font-medium text-gray-700"
+            >
               Business Address
             </label>
             <input
@@ -134,7 +141,10 @@ const StoreSetupContactPage: React.FC = () => {
           {/* Country / State */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label htmlFor="country" className="block text-lg font-medium text-gray-700">
+              <label
+                htmlFor="country"
+                className="block text-lg font-medium text-gray-700"
+              >
                 Country / Region
               </label>
               <select
@@ -152,7 +162,10 @@ const StoreSetupContactPage: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="state" className="block text-lg font-medium text-gray-700">
+              <label
+                htmlFor="state"
+                className="block text-lg font-medium text-gray-700"
+              >
                 State / City
               </label>
               <select
@@ -173,7 +186,10 @@ const StoreSetupContactPage: React.FC = () => {
 
           {/* Contact Email */}
           <div>
-            <label htmlFor="contact-email" className="block text-lg font-medium text-gray-700">
+            <label
+              htmlFor="contact-email"
+              className="block text-lg font-medium text-gray-700"
+            >
               Contact Email
             </label>
             <input
@@ -189,7 +205,10 @@ const StoreSetupContactPage: React.FC = () => {
 
           {/* Contact Number */}
           <div>
-            <label htmlFor="contact-number" className="block text-lg font-medium text-gray-700">
+            <label
+              htmlFor="contact-number"
+              className="block text-lg font-medium text-gray-700"
+            >
               Contact Number
             </label>
             <input
