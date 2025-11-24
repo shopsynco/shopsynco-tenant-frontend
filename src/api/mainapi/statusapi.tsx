@@ -1,4 +1,4 @@
-import axiosInstance from "../../refreshToken/tokenUtils";
+import axiosInstance from "../../store/refreshToken/tokenUtils";
 
 
 export const fetchSubscriptionStatus = async () => {
@@ -44,7 +44,7 @@ export const upgradeSubscriptionPlan = async (planId: string) => {
 
 export const fetchTenantDashboard = async () => {
   try {
-    const response = await axiosInstance.get("api/tenants/pqrs_company/dashboard/");
+    const response = await axiosInstance.get("api/tenants/dashboard/");
     
     return response.data;
   } catch (error: any) {

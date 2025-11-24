@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axiosInstance, { LOGIN_URL, REFRESH_URL } from "../refreshToken/tokenUtils";
+import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils";
 
 interface AuthState {
   accessToken: string | null;

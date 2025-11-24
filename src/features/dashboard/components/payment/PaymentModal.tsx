@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import Swal from "sweetalert2";
-import { submitPayment, verifyUpi, payWithUpi } from "../../../api/payment/paymentapi";
+import { submitPayment, verifyUpi, payWithUpi } from "../../../../api/payment/paymentapi";
 
 interface ModalProps {
   onClose: () => void;

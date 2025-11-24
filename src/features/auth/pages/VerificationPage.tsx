@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { verifyEmailCode, sendEmailVerificationCode } from "../../../api/auth/authapi";
 import bgImage from "../../../assets/commonbackground.png";
-import {
-  verifyResetCode,
-  resendVerificationCode,
-} from "../../../api/auth/authapi";
 
 const VerificationPage: React.FC = () => {
-  const [code, setCode] = useState<string[]>(Array(5).fill(""));
+  const [code, setCode] = useState<string[]>(Array(6).fill(""));
   const [timer, setTimer] = useState(60);
   const navigate = useNavigate();
   const location = useLocation();
@@ -16,6 +13,7 @@ const VerificationPage: React.FC = () => {
   const queryParams = new URLSearchParams(location.search);
   const email: string = queryParams.get("email") || "";
 
+  // ⏱ Countdown timer
   useEffect(() => {
     if (timer > 0) {
       const countdown = setInterval(() => setTimer((prev) => prev - 1), 1000);
@@ -28,13 +26,14 @@ const VerificationPage: React.FC = () => {
       const newCode = [...code];
       newCode[index] = value;
       setCode(newCode);
-      if (value && index < 4) {
+
+      if (value && index < 5) {
         document.getElementById(`otp-${index + 1}`)?.focus();
       }
     }
   };
 
-  // ✅ Resend API handler
+  // 🔁 Resend OTP using same pre-signup send API
   const handleResend = async () => {
     if (!email) {
       Swal.fire("Error", "Email not found. Please go back.", "error");
@@ -42,7 +41,7 @@ const VerificationPage: React.FC = () => {
     }
 
     try {
-      await resendVerificationCode({ email });
+      await sendEmailVerificationCode(email);
       Swal.fire({
         icon: "success",
         title: "Verification Code Resent",
@@ -50,7 +49,7 @@ const VerificationPage: React.FC = () => {
         confirmButtonColor: "#6A9ECF",
       });
       setTimer(60);
-      setCode(Array(5).fill(""));
+      setCode(Array(6).fill(""));
     } catch (error: unknown) {
       Swal.fire({
         icon: "error",
@@ -66,29 +65,30 @@ const VerificationPage: React.FC = () => {
 
   const handleSubmit = async () => {
     const verificationCode = code.join("");
-    if (verificationCode.length < 5) {
-      Swal.fire("Error", "Please enter all 5 digits of your code.", "error");
+
+    if (verificationCode.length < 6) {
+      Swal.fire("Error", "Please enter all 6 digits of your code.", "error");
       return;
     }
 
     if (!email) {
-      Swal.fire(
-        "Error",
-        "Email not found in request. Please go back.",
-        "error"
-      );
+      Swal.fire("Error", "Email not found in request. Please go back.", "error");
       return;
     }
 
     try {
-      await verifyResetCode({ email, code: verificationCode });
+      // ✅ Verify email (pre-signup verify)
+      await verifyEmailCode(email, verificationCode);
+
       await Swal.fire({
         icon: "success",
-        title: "Code Verified!",
-        text: "Your verification code is correct. You can now reset your password.",
+        title: "Email Verified!",
+        text: "Your email has been verified. Now create your account.",
         confirmButtonColor: "#6A9ECF",
       });
-      navigate(`/terms&condition`);
+
+      // 👉 Go to SIGNUP page with email prefilled
+      navigate(`/signup?email=${encodeURIComponent(email)}`);
     } catch (error: unknown) {
       Swal.fire({
         icon: "error",
@@ -112,7 +112,7 @@ const VerificationPage: React.FC = () => {
           Verification
         </h2>
         <p className="text-sm text-gray-500 mb-6">
-          Enter the 5-digit code sent to <br />
+          Enter the 6-digit code sent to <br />
           <b className="text-[#466b9d]">{email}</b>
         </p>
 
@@ -133,12 +133,10 @@ const VerificationPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Timer */}
         <p className="text-sm text-red-400 mb-4">
           00 : {timer.toString().padStart(2, "0")}
         </p>
 
-        {/* Continue Button */}
         <button
           onClick={handleSubmit}
           className="w-full bg-[#6A9ECF] text-white py-2 rounded-lg hover:bg-[#5c91c4] transition font-semibold shadow-md"
@@ -146,7 +144,6 @@ const VerificationPage: React.FC = () => {
           Continue
         </button>
 
-        {/* Resend Link */}
         <p className="text-xs text-gray-500 mt-4">
           Didn’t receive the code?{" "}
           <button
