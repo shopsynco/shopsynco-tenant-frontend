@@ -17,25 +17,31 @@ axiosInstance.interceptors.request.use(
     // 🏷️ Get store slug from localStorage for multi-tenant routing
     const storeSlug = localStorage.getItem("store_slug");
 
-    // 🟦 DEBUG: show request start
-    console.log(
-      "%c[Axios] → Outgoing Request:",
-      "color:#3b82f6;font-weight:bold",
-      config.url
-    );
+    // Log request for debugging (development only)
+    if (import.meta.env.DEV) {
+      console.log(
+        "%c[Axios] → Outgoing Request:",
+        "color:#3b82f6;font-weight:bold",
+        config.url
+      );
+    }
 
     // ✅ Add bearer token
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log(
-        "%c[Axios] ✓ Token added to headers",
-        "color:#22c55e;font-weight:bold"
-      );
+      if (import.meta.env.DEV) {
+        console.log(
+          "%c[Axios] ✓ Token added to headers",
+          "color:#22c55e;font-weight:bold"
+        );
+      }
     } else {
-      console.log(
-        "%c[Axios] ⚠️ No access token found — public request",
-        "color:#eab308;font-weight:bold"
-      );
+      if (import.meta.env.DEV) {
+        console.log(
+          "%c[Axios] ⚠️ No access token found — public request",
+          "color:#eab308;font-weight:bold"
+        );
+      }
     }
 
     // ==========================================
@@ -71,11 +77,13 @@ axiosInstance.interceptors.request.use(
           url.startsWith(prefix + "/") ||
           url.startsWith(prefix + "?")
         ) {
-          console.log(
-            "%c[Axios] ⛔ Skipping slug injection for:",
-            "color:#f97316;font-weight:bold",
-            url
-          );
+          if (import.meta.env.DEV) {
+            console.log(
+              "%c[Axios] ⛔ Skipping slug injection for:",
+              "color:#f97316;font-weight:bold",
+              url
+            );
+          }
           return config;
         }
       }
@@ -96,13 +104,15 @@ axiosInstance.interceptors.request.use(
 
         config.url = newUrl;
 
-        console.log(
-          "%c[Axios] 🏷️ Slug injected:",
-          "color:#a855f7;font-weight:bold",
-          storeSlug,
-          "→",
-          config.url
-        );
+        if (import.meta.env.DEV) {
+          console.log(
+            "%c[Axios] 🏷️ Slug injected:",
+            "color:#a855f7;font-weight:bold",
+            storeSlug,
+            "→",
+            config.url
+          );
+        }
       }
     }
 
@@ -141,10 +151,12 @@ axiosInstance.interceptors.response.use(
     // 🔴 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        console.log(
-          "%c[Auth] 🕐 Token refresh in progress...",
-          "color:#f59e0b"
-        );
+        if (import.meta.env.DEV) {
+          console.log(
+            "%c[Auth] 🕐 Token refresh in progress...",
+            "color:#f59e0b"
+          );
+        }
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -163,7 +175,9 @@ axiosInstance.interceptors.response.use(
         const refreshToken = localStorage.getItem("refreshToken");
         if (!refreshToken) throw new Error("No refresh token found");
 
-        console.log("%c[Auth] 🔄 Refreshing token...", "color:#06b6d4");
+        if (import.meta.env.DEV) {
+          console.log("%c[Auth] 🔄 Refreshing token...", "color:#06b6d4");
+        }
         const res = await axios.post(REFRESH_URL, { refresh: refreshToken });
         const newAccessToken = res.data.access;
 
@@ -172,10 +186,12 @@ axiosInstance.interceptors.response.use(
           "Authorization"
         ] = `Bearer ${newAccessToken}`;
 
-        console.log(
-          "%c[Auth] ✅ Token refreshed successfully!",
-          "color:#22c55e;font-weight:bold"
-        );
+        if (import.meta.env.DEV) {
+          console.log(
+            "%c[Auth] ✅ Token refreshed successfully!",
+            "color:#22c55e;font-weight:bold"
+          );
+        }
 
         processQueue(null, newAccessToken);
         return axiosInstance(originalRequest);

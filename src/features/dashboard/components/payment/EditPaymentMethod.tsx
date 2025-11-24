@@ -1,32 +1,7 @@
-import { X } from "lucide-react";
 import { useState } from "react";
+import Swal from "sweetalert2";
 import { updateCardDetails } from "../../../../api/payment/paymentapi";
-
-/* ------------------------ SHARED WRAPPER ------------------------ */
-export function ModalWrapper({
-  children,
-  onClose,
-  title,
-}: {
-  children: React.ReactNode;
-  onClose: () => void;
-  title: string;
-}) {
-  return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-      <div className="bg-white rounded-xl w-[480px] p-8 relative shadow-xl">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
-        >
-          <X size={20} />
-        </button>
-        <h2 className="text-xl font-semibold mb-4 text-[#4A5C74]">{title}</h2>
-        {children}
-      </div>
-    </div>
-  );
-}
+import { ModalWrapper } from "../../../../components/ui/modalWrapper";
 
 /* -------------------------- CARD MODAL -------------------------- */
 export function EditCardModal({ onClose }: { onClose: () => void }) {
@@ -62,7 +37,7 @@ export function EditCardModal({ onClose }: { onClose: () => void }) {
       !cvv ||
       !card_brand
     ) {
-      alert("Please fill in all fields.");
+      Swal.fire("Validation Error", "Please fill in all fields.", "warning");
       return;
     }
 
@@ -78,10 +53,10 @@ export function EditCardModal({ onClose }: { onClose: () => void }) {
     try {
       setLoading(true);
       await updateCardDetails(payload); // API call
-      alert("Card details updated successfully!");
+      await Swal.fire("Success", "Card details updated successfully!", "success");
       onClose();
     } catch (error) {
-      alert("Failed to update card.");
+      Swal.fire("Error", "Failed to update card.", "error");
     } finally {
       setLoading(false);
     }
@@ -199,67 +174,69 @@ export function ViewCardModal({
   onClose,
   onEditCard,
   onDeleteCard,
+  cardDetails,
 }: {
   onClose: () => void;
   onEditCard: () => void;
   onDeleteCard: () => void;
+  cardDetails?: {
+    card_brand: string;
+    card_last4: string;
+    exp_month: string;
+    exp_year: string;
+    card_holder_name: string;
+  } | null;
 }) {
+  if (!cardDetails) {
+    return (
+      <ModalWrapper title="Card Details" onClose={onClose}>
+        <p className="text-gray-600">No card details available.</p>
+      </ModalWrapper>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-      <div className="bg-white rounded-xl w-[480px] p-8 relative shadow-xl">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
-        >
-          <X size={20} />
-        </button>
-
-        <h2 className="text-xl font-semibold mb-4 text-[#4A5C74]">
-          Card details
-        </h2>
-
-        <div className="flex items-center gap-3 mb-6">
-          {/* Card Logo */}
-          <img
-            src="/path/to/visa-icon.png" // Replace with actual card logo (e.g., VISA, MasterCard)
-            alt="VISA"
-            className="w-10 h-10"
-          />
-          <div>
-            <p className="font-semibold text-gray-800">VISA</p>
-            <p className="text-sm text-gray-500">**** **** **** 4526</p>
-          </div>
+    <ModalWrapper title="Card Details" onClose={onClose}>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+          <span className="text-xs font-semibold text-gray-600">{cardDetails.card_brand}</span>
         </div>
-
-        {/* Expiry Date and Cardholder Name */}
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">Expiry Date: 06/26</p>
-          <p className="text-sm text-gray-600">Cardholder: Manoj Boskar</p>
-        </div>
-
-        {/* Edit and Delete Buttons */}
-        <div className="flex gap-4 justify-between">
-          <button
-            onClick={() => {
-              onEditCard(); // Call the onEditCard function when Edit is clicked
-              onClose(); // Close the modal after the edit action
-            }}
-            className="px-4 py-2 bg-[#6A3CB1] text-white rounded-lg hover:bg-[#5b32a2] transition"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => {
-              onDeleteCard(); // Call the onDeleteCard function when Delete is clicked
-              onClose(); // Close the modal after the delete action
-            }}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition"
-          >
-            Delete
-          </button>
+        <div>
+          <p className="font-semibold text-gray-800">{cardDetails.card_brand}</p>
+          <p className="text-sm text-gray-500">**** **** **** {cardDetails.card_last4}</p>
         </div>
       </div>
-    </div>
+
+      {/* Expiry Date and Cardholder Name */}
+      <div className="mb-4">
+        <p className="text-sm text-gray-600">
+          Expiry Date: {cardDetails.exp_month}/{cardDetails.exp_year.slice(-2)}
+        </p>
+        <p className="text-sm text-gray-600">Cardholder: {cardDetails.card_holder_name || "N/A"}</p>
+      </div>
+
+      {/* Edit and Delete Buttons */}
+      <div className="flex gap-4 justify-between">
+        <button
+          onClick={() => {
+            onEditCard();
+            onClose();
+          }}
+          className="px-4 py-2 bg-[#6A3CB1] text-white rounded-lg hover:bg-[#5b32a2] transition"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => {
+            onDeleteCard();
+            onClose();
+          }}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition"
+        >
+          Delete
+        </button>
+      </div>
+    </ModalWrapper>
   );
 }
 
@@ -280,8 +257,8 @@ export function DeleteModal({
         </button>
         <button
           className="bg-red-600 text-white px-4 py-2 rounded-lg"
-          onClick={() => {
-            alert(`${type} payment method deleted!`);
+          onClick={async () => {
+            await Swal.fire("Deleted!", `${type} payment method deleted!`, "success");
             onClose();
           }}
         >

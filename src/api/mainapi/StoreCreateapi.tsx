@@ -100,9 +100,7 @@ export const getStoreSlug = async (email: string): Promise<DiscoverResponse> => 
     if (res.data?.tenant_slug) {
       // Store the slug in localStorage
       localStorage.setItem("store_slug", res.data.tenant_slug);
-      console.log("Slug created and saved:", res.data.tenant_slug);
-    } else {
-      console.warn("No tenant_slug returned in the response");
+      // Slug saved to localStorage
     }
 
     return res.data; // Return the response data

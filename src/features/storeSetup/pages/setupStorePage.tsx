@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import bgImage from "../../../assets/backgroundstore.png";
 import { storeSetup } from "../../../api/mainapi/StoreCreateapi";
 
@@ -38,7 +39,7 @@ export default function StoreSetupPage() {
       navigate("/setup-store-contact");
     } catch (err) {
       console.error("❌ Failed to setup store:", err);
-      alert("Failed to create store. Please check inputs or server.");
+      Swal.fire("Error", "Failed to create store. Please check inputs or server.", "error");
     } finally {
       setLoading(false);
     }

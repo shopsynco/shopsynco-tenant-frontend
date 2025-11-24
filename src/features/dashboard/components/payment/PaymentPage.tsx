@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, Eye } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import {
   getPaymentMethods,
   submitPayment,
@@ -60,8 +61,8 @@ export default function PaymentPage() {
   const months = params.get("months");
   const country = params.get("country");
 
-  // You'll need to get this from your checkout flow
-  const subscriptionId = "your-subscription-id-here";
+  // Get subscription ID from localStorage or URL params
+  const subscriptionId = params.get("subscription_id") || localStorage.getItem("subscription_id") || "";
 
   // Fetch payment methods on load
   useEffect(() => {
@@ -75,7 +76,7 @@ export default function PaymentPage() {
         }
       } catch (err) {
         console.error("Error fetching payment methods:", err);
-        alert("Failed to load payment methods");
+        Swal.fire("Error", "Failed to load payment methods", "error");
       }
     };
     fetchMethods();
@@ -91,7 +92,7 @@ export default function PaymentPage() {
           setQuoteData(quoteResponse);
         } catch (error) {
           console.error("Error fetching pricing quote:", error);
-          alert("Failed to load pricing information");
+          Swal.fire("Error", "Failed to load pricing information", "error");
         } finally {
           setLoading(false);
         }
@@ -138,19 +139,19 @@ export default function PaymentPage() {
   // Validate forms
   const validateCardForm = (): boolean => {
     if (!cardFormData.cardHolder.trim()) {
-      alert("Please enter card holder name");
+      Swal.fire("Validation Error", "Please enter card holder name", "warning");
       return false;
     }
     if (!cardFormData.cardNumber || cardFormData.cardNumber.replace(/\s/g, '').length < 16) {
-      alert("Please enter valid 16-digit card number");
+      Swal.fire("Validation Error", "Please enter valid 16-digit card number", "warning");
       return false;
     }
     if (!cardFormData.expiryDate) {
-      alert("Please select expiry date");
+      Swal.fire("Validation Error", "Please select expiry date", "warning");
       return false;
     }
     if (!cardFormData.cvv || cardFormData.cvv.length !== 3) {
-      alert("Please enter valid CVV");
+      Swal.fire("Validation Error", "Please enter valid CVV", "warning");
       return false;
     }
     return true;
@@ -158,23 +159,23 @@ export default function PaymentPage() {
 
   const validateBankForm = (): boolean => {
     if (!bankFormData.accountHolder.trim()) {
-      alert("Please enter account holder name");
+      Swal.fire("Validation Error", "Please enter account holder name", "warning");
       return false;
     }
     if (!bankFormData.accountNumber) {
-      alert("Please enter account number");
+      Swal.fire("Validation Error", "Please enter account number", "warning");
       return false;
     }
     if (bankFormData.accountNumber !== bankFormData.confirmAccountNumber) {
-      alert("Account numbers don't match");
+      Swal.fire("Validation Error", "Account numbers don't match", "warning");
       return false;
     }
     if (!bankFormData.bankName) {
-      alert("Please select bank");
+      Swal.fire("Validation Error", "Please select bank", "warning");
       return false;
     }
     if (!bankFormData.ifscCode) {
-      alert("Please enter IFSC code");
+      Swal.fire("Validation Error", "Please enter IFSC code", "warning");
       return false;
     }
     return true;
@@ -182,11 +183,11 @@ export default function PaymentPage() {
 
   const validateUpiForm = (): boolean => {
     if (!upiID.trim()) {
-      alert("Please enter UPI ID");
+      Swal.fire("Validation Error", "Please enter UPI ID", "warning");
       return false;
     }
     if (!upiID.includes('@')) {
-      alert("Please enter valid UPI ID (e.g., example@okaxis)");
+      Swal.fire("Validation Error", "Please enter valid UPI ID (e.g., example@okaxis)", "warning");
       return false;
     }
     return true;
@@ -196,13 +197,18 @@ export default function PaymentPage() {
   const handleUpiSubmit = async () => {
     if (!validateUpiForm()) return;
 
+    if (!subscriptionId) {
+      Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
+      return;
+    }
+
     try {
       setLoading(true);
 
       // Verify UPI ID first
       const verifyResponse = await verifyUpi(upiID);
       if (!verifyResponse.success) {
-        alert("Invalid UPI ID. Please check and try again.");
+        Swal.fire("Validation Error", "Invalid UPI ID. Please check and try again.", "error");
         return;
       }
 
@@ -215,14 +221,14 @@ export default function PaymentPage() {
 
       const paymentResponse = await payWithUpi(upiPayload);
       if (paymentResponse.success) {
-        alert("✅ UPI Payment Successful!");
+        await Swal.fire("Success", "UPI Payment Successful!", "success");
         navigate("/payment-success");
       } else {
         throw new Error("UPI payment failed");
       }
     } catch (err: any) {
       console.error("❌ UPI Payment Error:", err);
-      alert(err.response?.data?.message || "UPI Payment failed. Please try again.");
+      Swal.fire("Error", err.response?.data?.message || "UPI Payment failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -231,6 +237,11 @@ export default function PaymentPage() {
   // Handle card payment
   const handleCardSubmit = async () => {
     if (!validateCardForm()) return;
+
+    if (!subscriptionId) {
+      Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -242,10 +253,8 @@ export default function PaymentPage() {
       const [expYear, expMonth] = cardFormData.expiryDate.split('-');
 
       // Create properly typed payload based on selected method
-      let paymentPayload;
-      
       if (selectedMethod === "credit_card") {
-        paymentPayload = {
+        const paymentPayload = {
           subscription_id: subscriptionId,
           method: "credit_card" as const,
           card_holder: cardFormData.cardHolder,
@@ -255,8 +264,15 @@ export default function PaymentPage() {
           exp_year: parseInt(expYear),
           cvv_present: true,
         };
-      } else {
-        paymentPayload = {
+        const paymentResponse = await submitPayment(paymentPayload);
+        if (paymentResponse.success) {
+          await Swal.fire("Success", "Card Payment Successful!", "success");
+          navigate("/payment-success");
+        } else {
+          throw new Error("Card payment failed");
+        }
+      } else if (selectedMethod === "debit_card") {
+        const paymentPayload = {
           subscription_id: subscriptionId,
           method: "debit_card" as const,
           card_holder: cardFormData.cardHolder,
@@ -266,18 +282,19 @@ export default function PaymentPage() {
           exp_year: parseInt(expYear),
           cvv_present: true,
         };
-      }
-
-      const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success) {
-        alert("✅ Card Payment Successful!");
-        navigate("/payment-success");
+        const paymentResponse = await submitPayment(paymentPayload);
+        if (paymentResponse.success) {
+          await Swal.fire("Success", "Card Payment Successful!", "success");
+          navigate("/payment-success");
+        } else {
+          throw new Error("Card payment failed");
+        }
       } else {
-        throw new Error("Card payment failed");
+        throw new Error("Invalid payment method");
       }
     } catch (err: any) {
       console.error("❌ Card Payment Error:", err);
-      alert(err.response?.data?.message || "Card payment failed. Please try again.");
+      Swal.fire("Error", err.response?.data?.message || "Card payment failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -286,6 +303,11 @@ export default function PaymentPage() {
   // Handle bank transfer
   const handleBankSubmit = async () => {
     if (!validateBankForm()) return;
+
+    if (!subscriptionId) {
+      Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -303,14 +325,14 @@ export default function PaymentPage() {
 
       const paymentResponse = await submitPayment(paymentPayload);
       if (paymentResponse.success) {
-        alert("✅ Bank Transfer Initiated Successfully!");
+        await Swal.fire("Success", "Bank Transfer Initiated Successfully!", "success");
         navigate("/payment-success");
       } else {
         throw new Error("Bank transfer failed");
       }
     } catch (err: any) {
       console.error("❌ Bank Transfer Error:", err);
-      alert(err.response?.data?.message || "Bank transfer failed. Please try again.");
+      Swal.fire("Error", err.response?.data?.message || "Bank transfer failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -319,7 +341,7 @@ export default function PaymentPage() {
   // Main payment handler
   const handlePaymentSubmit = () => {
     if (!selectedMethod) {
-      alert("Please select a payment method");
+      Swal.fire("Validation Error", "Please select a payment method", "warning");
       return;
     }
 
@@ -335,7 +357,7 @@ export default function PaymentPage() {
         handleBankSubmit();
         break;
       default:
-        alert("This payment method is not yet supported");
+        Swal.fire("Error", "This payment method is not yet supported", "error");
     }
   };
 

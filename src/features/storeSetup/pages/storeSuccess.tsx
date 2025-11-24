@@ -1,9 +1,22 @@
-import React from "react";
-import bgImage from "../../../assets/backgroundsuccess.png"; // optional background
-import { CheckCircle } from "lucide-react"; // for green tick icon
+import React, { useEffect, useState } from "react";
+import bgImage from "../../../assets/backgroundsuccess.png";
+import { CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const StoreSuccessPage: React.FC = () => {
-  const dashboardUrl = "https://yourcompany.com";
+  const [dashboardUrl, setDashboardUrl] = useState<string>("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Get store slug from localStorage
+    const storeSlug = localStorage.getItem("store_slug");
+    if (storeSlug) {
+      setDashboardUrl(`https://${storeSlug}.shopsynco.com`);
+    } else {
+      // If no slug, redirect to dashboard
+      setDashboardUrl("/dashboard");
+    }
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(dashboardUrl);
@@ -66,7 +79,13 @@ const StoreSuccessPage: React.FC = () => {
           </div>
 
           <button
-            onClick={() => (window.location.href = dashboardUrl)}
+            onClick={() => {
+              if (dashboardUrl.startsWith("http")) {
+                window.location.href = dashboardUrl;
+              } else {
+                navigate(dashboardUrl);
+              }
+            }}
             className="w-full bg-[#6A3CB1] hover:bg-[#5a2d9d] text-white py-3 rounded-lg font-medium transition"
           >
             Go to Dashboard

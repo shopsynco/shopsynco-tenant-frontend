@@ -6,7 +6,6 @@ export const fetchPlans = async () => {
     // Making the GET request using Axios
     const response = await axiosInstance.get("/api/tenants/pricing/options/");
     
-    console.log(response);
     
     return response.data.plans; // Assuming the API response has 'plans' field
     
@@ -22,7 +21,6 @@ export const getPricingQuote = async (plan_id: string, months: string, country: 
     const response = await axiosInstance.get(
       `/api/tenants/pricing/quote/?plan_id=${plan_id}&months=${months}&country=${country}`
     );
-    console.log("💰 Pricing Quote:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching pricing quote:", error);
