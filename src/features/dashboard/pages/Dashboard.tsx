@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { ArrowUpRight, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
-  fetchSubscriptionHistory,
-  fetchSubscriptionStatus,
+  // fetchSubscriptionHistory,
+  // fetchSubscriptionStatus,
   fetchTenantDashboard,
 } from "../../../api/mainapi/statusapi";
 import FeatureStorePage from "../components/FeatureModal";
@@ -41,64 +41,101 @@ export default function Dashboard() {
 
   useEffect(() => {
     const getDashboardData = async () => {
-      try {
-        // ✅ Fetch all in parallel
-        const [status, history, tenant] = await Promise.all([
-          fetchSubscriptionStatus(),
-          fetchSubscriptionHistory(),
-          fetchTenantDashboard(),
-        ]);
+  try {
+    // Tenant dashboard API
+    const tenant = await fetchTenantDashboard();
 
-        // ✅ Extract + normalize user + plan info
-        const user_name =
-          status?.user_name || localStorage.getItem("user_name") || "";
-        const user_email =
-          status?.user_email || localStorage.getItem("user_email") || "";
+    const data = tenant?.dashboard || {};
 
-        setUserData({ user_name, user_email });
+    // USER DATA
+    const user_name = data?.user_info?.name || "";
+    const user_email = data?.user_info?.email || "";
 
-        setPlanData({
-          plan_name: status?.plan_name || tenant?.selected_plan || "",
-          renew_date: status?.renew_date || tenant?.renew_date || "",
-          status: status?.status || tenant?.subscription_status || "",
-        });
+    setUserData({ user_name, user_email });
 
-        setHistoryData({
-          last_payment_amount:
-            history?.last_payment_amount || tenant?.last_payment_amount || "",
-          last_payment_date:
-            history?.last_payment_date || tenant?.last_payment_date || "",
-          payment_method:
-            history?.payment_method || tenant?.payment_method || "",
-          next_renewal_amount:
-            history?.next_renewal_amount || tenant?.next_renewal_amount || "",
-          next_renewal_date:
-            history?.next_renewal_date || tenant?.next_renewal_date || "",
-        });
+    // PLAN DATA
+    const plan_name = data?.current_plan?.name || "";
+    const renew_date = data?.current_plan?.renewal_date || "";
+    const status = data?.account_summary?.domain?.status || "";
 
-        setTenantData({
-          domain: tenant?.domain || "yourcompany.shopsynco.com",
-          features:
-            tenant?.features?.length > 0
-              ? tenant.features
-              : [
-                  "Online Store Builder",
-                  "Product Management",
-                  "Integrated Payment Gateway",
-                  "Order & Shipping Management",
-                  "Domain & Hosting",
-                  "Support & Security",
-                  "Email & Notification System",
-                ],
-        });
+    setPlanData({ plan_name, renew_date, status });
 
-        // ✅ Cache user info
-        localStorage.setItem("user_name", user_name);
-        localStorage.setItem("user_email", user_email);
-      } catch (err) {
-        console.error("Failed to load dashboard data:", err);
-      }
-    };
+    // HISTORY DATA (placeholder because API not sending history)
+    setHistoryData({
+      last_payment_amount: "—",
+      last_payment_date: "—",
+      payment_method: data?.payment_method || "—",
+      next_renewal_amount: "—",
+      next_renewal_date: renew_date || "—",
+    });
+
+    // TENANT DATA
+    const domain = data?.account_summary?.domain?.name || "";
+    const features = data?.plan_features?.included_features?.map((f: any) => f.name) || [];
+
+    setTenantData({ domain, features });
+
+    // CACHE
+    localStorage.setItem("user_name", user_name);
+    localStorage.setItem("user_email", user_email);
+
+  } catch (err) {
+    console.error("Failed to load dashboard data:", err);
+  }
+};
+
+    //       fetchTenantDashboard(),
+    //     ]);
+
+    //     // ✅ Extract + normalize user + plan info
+    //     const user_name =
+    //       status?.user_name || localStorage.getItem("user_name") || "";
+    //     const user_email =
+    //       status?.user_email || localStorage.getItem("user_email") || "";
+
+    //     setUserData({ user_name, user_email });
+
+    //     setPlanData({
+    //       plan_name: status?.plan_name || tenant?.selected_plan || "",
+    //       renew_date: status?.renew_date || tenant?.renew_date || "",
+    //       status: status?.status || tenant?.subscription_status || "",
+    //     });
+
+    //     setHistoryData({
+    //       last_payment_amount:
+    //         history?.last_payment_amount || tenant?.last_payment_amount || "",
+    //       last_payment_date:
+    //         history?.last_payment_date || tenant?.last_payment_date || "",
+    //       payment_method:
+    //         history?.payment_method || tenant?.payment_method || "",
+    //       next_renewal_amount:
+    //         history?.next_renewal_amount || tenant?.next_renewal_amount || "",
+    //       next_renewal_date:
+    //         history?.next_renewal_date || tenant?.next_renewal_date || "",
+    //     });
+
+    //     setTenantData({
+    //       features:
+    //         tenant?.features?.length > 0
+    //           ? tenant.features
+    //           : [
+    //               "Online Store Builder",
+    //               "Product Management",
+    //               "Integrated Payment Gateway",
+    //               "Order & Shipping Management",
+    //               "Domain & Hosting",
+    //               "Support & Security",
+    //               "Email & Notification System",
+    //             ],
+    //     });
+
+    //     // ✅ Cache user info
+    //     localStorage.setItem("user_name", user_name);
+    //     localStorage.setItem("user_email", user_email);
+    //   } catch (err) {
+    //     console.error("Failed to load dashboard data:", err);
+    //   }
+    // };
 
     getDashboardData();
   }, []);

@@ -41,11 +41,11 @@ const ResetPasswordPage: React.FC = () => {
     }
 
     try {
-      await resetPassword({
-        email: email || "",
+      await resetPassword(
+        email || "",
         password,
-        confirmPassword,
-      });
+        confirmPassword
+      );
 
       await Swal.fire({
         icon: "success",

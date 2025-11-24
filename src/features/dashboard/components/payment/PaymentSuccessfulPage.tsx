@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import bgImage from "../../../assets/backgroundsuccess.png";
+import bgImage from "../../../../assets/backgroundsuccess.png";
 import { CheckCircle } from "lucide-react";
 
 export default function PaymentSuccessPage() {

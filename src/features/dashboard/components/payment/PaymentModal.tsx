@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { X } from "lucide-react";
 import Swal from "sweetalert2";
-import { submitPayment, verifyUpi, payWithUpi } from "../../../api/payment/paymentapi";
+import { submitPayment, verifyUpi, payWithUpi } from "../../../../api/payment/paymentapi";
+import { ModalWrapper } from "../../../../components/ui/modalWrapper";
 
 interface ModalProps {
   onClose: () => void;
@@ -57,7 +57,7 @@ export function AddCardModal({ onClose, onBack }: ModalProps) {
   };
 
   return (
-    <ModalWrapper title="Add your card details" onClose={onClose}>
+    <ModalWrapper title="Add your card details" onClose={onClose} width="w-[90%] sm:w-[600px]">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <input name="card_holder" value={form.card_holder} onChange={handleChange} className={inputClass} placeholder="Card Holder Name" />
         <input name="card_last4" value={form.card_last4} onChange={handleChange} className={inputClass} placeholder="Last 4 digits" />
@@ -116,7 +116,7 @@ export function AddBankModal({ onClose, onBack }: ModalProps) {
   };
 
   return (
-    <ModalWrapper title="Add your bank account" onClose={onClose}>
+    <ModalWrapper title="Add your bank account" onClose={onClose} width="w-[90%] sm:w-[600px]">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <input name="account_holder" value={form.account_holder} onChange={handleChange} className={inputClass} placeholder="Account Holder Name" />
         <input name="bank_name" value={form.bank_name} onChange={handleChange} className={inputClass} placeholder="Bank Name" />
@@ -174,14 +174,14 @@ export function AddUpiModal({ onClose, onBack }: ModalProps) {
   };
 
   return (
-    <ModalWrapper title="Add UPI ID" onClose={onClose}>
+    <ModalWrapper title="Add UPI ID" onClose={onClose} width="w-[90%] sm:w-[600px]">
       <label className="block text-sm text-gray-600 mb-1">Enter UPI ID</label>
       <div className="flex gap-3">
         <input
           type="text"
           value={upiId}
           onChange={(e) => setUpiId(e.target.value)}
-          placeholder="manojpilla@okbiz"
+          placeholder="example@okaxis"
           className={`${inputClass} flex-1`}
         />
         <button
@@ -195,29 +195,6 @@ export function AddUpiModal({ onClose, onBack }: ModalProps) {
 
       <ModalFooter loading={loading} onBack={onBack} onSubmit={handleSubmit} disabled={!verified} />
     </ModalWrapper>
-  );
-}
-
-/* 🔧 Reusable modal wrapper and footer */
-function ModalWrapper({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-[90%] sm:w-[600px] p-6 relative">
-        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
-          <X size={18} />
-        </button>
-        <h3 className="text-lg font-semibold text-gray-800 mb-5">{title}</h3>
-        {children}
-      </div>
-    </div>
   );
 }
 

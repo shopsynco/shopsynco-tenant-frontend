@@ -1,6 +1,6 @@
 import axios from "axios";
 import { BASE_URL } from "../axios_config";
-import axiosInstance from "../../refreshToken/tokenUtils";
+import axiosInstance from "../../store/refreshToken/tokenUtils";
 
 // -----------------------------
 // 🔹 Forget Password Code API
@@ -44,15 +44,15 @@ export const resetPassword = async (
 
 export const verifyResetCode = async ({
   email,
-  code,
+  verification_code,
 }: {
   email: string;
-  code: string;
+  verification_code: string;
 }) => {
   try {
     const response = await axios.post(
       `${BASE_URL}api/user/auth/verify-reset-code/`,
-      { email, code },
+      { email, verification_code },
       { headers: { "Content-Type": "application/json" } }
     );
     return response.data;
@@ -71,6 +71,7 @@ export const resendVerificationCode = async ({ email }: { email: string }) => {
       { email },
       { headers: { "Content-Type": "application/json" } }
     );
+
     return response.data;
   } catch (error: any) {
     const message =
@@ -98,49 +99,88 @@ export interface RegisterPayload {
 
 export const registerUser = async (data: RegisterPayload) => {
   try {
-    const response = await axios.post(`https://stagingbackend.shopsynco.com/api/tenants/signup/`, data, {
-    // const response = await axios.post(`${BASE_URL}api/tenants/signup/`, data, {
+    const response = await axios.post(`${BASE_URL}api/tenants/signup/`, data, {
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        Accept: "application/json",
       },
     });
-    
+
     return response.data;
-  } catch (error: any) {
-    // DEBUG: Log the complete error response
-    console.log("🔍 FULL ERROR RESPONSE:", error.response);
-    console.log("🔍 ERROR DATA:", error.response?.data);
-    
-    if (error.response?.data) {
-      const data = error.response.data;
-      console.log("🔍 ERROR DATA TYPE:", typeof data);
-      console.log("🔍 ERROR DATA KEYS:", Object.keys(data));
-      
+  } catch (error: unknown) {
+    const errorResponse = error as { response?: { data?: unknown } };
+    if (errorResponse?.response?.data) {
+      const data = errorResponse.response.data;
+
       // Handle different error response formats
-      if (data.email) {
-        const emailError = Array.isArray(data.email) ? data.email[0] : data.email;
-        console.log("🔍 EMAIL ERROR:", emailError);
-        throw new Error(emailError);
-      } else if (data.detail) {
-        throw new Error(data.detail);
-      } else if (data.message) {
-        throw new Error(data.message);
-      } else if (typeof data === 'string') {
+      if (typeof data === 'object' && data !== null) {
+        const dataObj = data as Record<string, unknown>;
+        
+        if ('email' in dataObj) {
+          const emailError = Array.isArray(dataObj.email)
+            ? dataObj.email[0]
+            : dataObj.email;
+          throw new Error(String(emailError));
+        } else if ('detail' in dataObj) {
+          throw new Error(String(dataObj.detail));
+        } else if ('message' in dataObj) {
+          throw new Error(String(dataObj.message));
+        } else if (Array.isArray(data) && data.length > 0) {
+          const firstItem = data[0] as { message?: unknown } | unknown;
+          const message = typeof firstItem === 'object' && firstItem !== null && 'message' in firstItem
+            ? firstItem.message
+            : JSON.stringify(firstItem);
+          throw new Error(String(message));
+        } else {
+          // Handle non-field errors object
+          const keys = Object.keys(dataObj);
+          if (keys.length > 0) {
+            const firstErrorKey = keys[0];
+            const firstError = dataObj[firstErrorKey];
+            const errorMessage = Array.isArray(firstError)
+              ? firstError[0]
+              : firstError;
+            throw new Error(String(errorMessage));
+          }
+        }
+      } else if (typeof data === "string") {
         throw new Error(data);
-      } else if (Array.isArray(data) && data.length > 0) {
-        throw new Error(data[0].message || JSON.stringify(data[0]));
-      }
-      // Handle non-field errors object
-      else if (typeof data === 'object') {
-        const firstErrorKey = Object.keys(data)[0];
-        const firstError = data[firstErrorKey];
-        const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
-        throw new Error(errorMessage);
       }
     }
-    
-    throw new Error(error.message || "Registration failed. Please try again.");
+
+    const errorMessage = error instanceof Error ? error.message : "Registration failed. Please try again.";
+    throw new Error(errorMessage);
+  }
+};
+// ------------------------------------------------------
+// ✅ SEND EMAIL VERIFICATION CODE (after signup)
+// ------------------------------------------------------
+export const sendEmailVerificationCode = async (email: string) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}api/user/pre-signup/verify-email/send/`,
+      { email },
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.detail || "Failed to send email verification code.");
+  }
+};
+
+// ------------------------------------------------------
+// ✅ VERIFY OTP CODE
+// ------------------------------------------------------
+export const verifyEmailCode = async (email: string, otp: string) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}api/user/pre-signup/verify-email/verify/`,
+      { email, verification_code: otp },
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.detail || "Invalid or expired verification code.");
   }
 };
 
