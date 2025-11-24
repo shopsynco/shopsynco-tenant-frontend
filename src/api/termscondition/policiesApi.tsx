@@ -4,7 +4,6 @@ import { BASE_URL } from "../axios_config";
 export interface Policy {
   id: number;
   title: string;
-  slug: string;
   content: string;
 }
 

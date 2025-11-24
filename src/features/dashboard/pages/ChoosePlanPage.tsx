@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Check } from "lucide-react";
 import { fetchPlans } from "../../../api/mainapi/planapi";
+import { getPricingQuote } from "../../../api/mainapi/planapi";
+import { useNavigate } from "react-router-dom";
 
 interface Plan {
   id: string;
@@ -14,8 +16,16 @@ interface Plan {
 export default function ChoosePlanPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState("48");
+  const [billingPeriod, setBillingPeriod] = useState("12"); // Default to 12 months
+  const [quoteData, setQuoteData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [couponCode, setCouponCode] = useState<string>(""); // State for coupon code
+  const [isCouponFieldVisible, setIsCouponFieldVisible] = useState<boolean>(); // State for coupon code
+  const [error, setError] = useState<string>("");
 
+  const navigate = useNavigate();
+
+  // Fetch plans on component load
   useEffect(() => {
     const getPlans = async () => {
       try {
@@ -30,6 +40,60 @@ export default function ChoosePlanPage() {
     };
     getPlans();
   }, []);
+                     
+  // Fetch quote data based on selected plan and billing period
+  useEffect(() => {
+    if (selectedPlan && billingPeriod) {
+      const fetchQuote = async () => {
+        setLoading(true);
+        try {
+          const quoteResponse = await getPricingQuote(
+            selectedPlan.id,
+            billingPeriod,
+            "India" // Use the dynamic country if needed
+          );
+          setQuoteData(quoteResponse);
+        } catch (error) {
+          console.error("Error fetching pricing quote:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchQuote();
+    }
+  }, [selectedPlan, billingPeriod]);
+
+  // Handle the application of coupon code
+  const handleApplyCoupon = () => {
+    if (couponCode === "DISCOUNT10") {
+      // Example logic: Apply 10% discount if coupon code is valid
+      setQuoteData((prevData: any) => {
+        if (prevData) {
+          const discount = prevData.total * 0.1;
+          return {
+            ...prevData,
+            total: prevData.total - discount,
+            discount: discount,
+          };
+        }
+        return prevData;
+      });
+      setError(""); // Clear error if coupon is applied correctly
+    } else {
+      setError("Invalid Coupon Code");
+    }
+  };
+
+  // Handle Payment submit and navigate to payment page with query params
+  const handlePaymentSubmit = () => {
+    // Navigate to the payment page with query parameters
+    const planId = selectedPlan?.id || "";
+    const months = billingPeriod;
+    const country = "India";  // This can be dynamic if needed
+    
+    // Navigate to the Payment page with the selected plan details as query params
+    navigate(`/payment?plan_id=${planId}&months=${months}&country=${country}`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center items-start py-8 px-4 md:py-16 md:px-12">
@@ -88,44 +152,35 @@ export default function ChoosePlanPage() {
           </h3>
 
           <div className="space-y-3 md:space-y-4">
-            {[
-              { months: "48", price: 1699, save: "Save Up To 30%" },
-              { months: "24", price: 1799, save: "Save Up To 20%" },
-              { months: "12", price: 1899, save: "" },
-            ].map((option) => (
-              <label
-                key={option.months}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between border rounded-xl px-4 py-3 sm:px-5 sm:py-4 cursor-pointer transition ${
-                  billingPeriod === option.months
-                    ? "border-purple-400 bg-purple-50"
-                    : "border-gray-200 hover:border-purple-300"
-                }`}
-              >
-                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-0">
-                  <input
-                    type="radio"
-                    name="billing"
-                    checked={billingPeriod === option.months}
-                    onChange={() => setBillingPeriod(option.months)}
-                    className="accent-purple-500 w-4 h-4"
-                  />
-                  <span className="font-semibold text-gray-800 text-sm md:text-base">
-                    {option.months} Months
-                  </span>
-                  {option.save && (
-                    <span className="ml-1 text-[10px] sm:text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-                      {option.save}
+            {[{ months: "48", price: 1699 }, { months: "24", price: 1799 }, { months: "12", price: 1899 }].map(
+              (option) => (
+                <label
+                  key={option.months}
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between border rounded-xl px-4 py-3 sm:px-5 sm:py-4 cursor-pointer transition ${
+                    billingPeriod === option.months
+                      ? "border-purple-400 bg-purple-50"
+                      : "border-gray-200 hover:border-purple-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-0">
+                    <input
+                      type="radio"
+                      name="billing"
+                      checked={billingPeriod === option.months}
+                      onChange={() => setBillingPeriod(option.months)}
+                      className="accent-purple-500 w-4 h-4"
+                    />
+                    <span className="font-semibold text-gray-800 text-sm md:text-base">
+                      {option.months} Months
                     </span>
-                  )}
-                </div>
-                <span className="font-semibold text-gray-800 text-sm md:text-base">
-                  ₹{option.price}
-                  <span className="text-xs md:text-sm text-gray-500">
-                    /month
+                  </div>
+                  <span className="font-semibold text-gray-800 text-sm md:text-base">
+                    ₹{option.price}
+                    <span className="text-xs md:text-sm text-gray-500">/month</span>
                   </span>
-                </span>
-              </label>
-            ))}
+                </label>
+              )
+            )}
           </div>
         </div>
 
@@ -138,43 +193,70 @@ export default function ChoosePlanPage() {
             <div className="space-y-3 text-sm text-gray-700">
               <div className="flex justify-between">
                 <span>Base Price</span>
-                <span>₹{1699}</span>
+                <span>₹{quoteData?.base_price || "Loading..."}</span>
               </div>
               <div className="flex justify-between">
                 <span>Taxes & Fees</span>
-                <span>₹270</span>
+                <span>₹{quoteData?.taxes || "Loading..."}</span>
               </div>
-              <div className="flex justify-between items-center border-b border-purple-200 pb-3">
-                <span>Coupon Code</span>
-                <button className="text-purple-600 font-medium hover:underline text-xs sm:text-sm">
-                  Add
-                </button>
+
+              {/* Coupon Code Section */}
+              <div className="flex justify-between items-center mb-3">
+                {!isCouponFieldVisible ? (
+                  <>
+                    <span className="text-gray-700 text-sm">Coupon Code</span>
+                    <button
+                      onClick={() => setIsCouponFieldVisible(true)}
+                      className="text-blue-500 text-sm font-medium hover:text-blue-600"
+                    >
+                      Add
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1">
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Coupon Code
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter Coupon Code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm"
+                      />
+                    </div>
+                    <button
+                      onClick={handleApplyCoupon}
+                      className="ml-3 text-sm text-blue-500 font-medium hover:text-blue-600 focus:outline-none"
+                    >
+                      Apply
+                    </button>
+                  </>
+                )}
+              </div>
+              {error && <p className="text-red-500 text-xs">{error}</p>}
+              <div className="flex justify-between font-semibold text-gray-900 text-base">
+                <span>Total Payable (yearly)</span>
+                <span>₹{quoteData?.total || "Loading..."}</span>
               </div>
             </div>
           </div>
 
-          {/* Terms + Buttons */}
-          <div>
-            <p className="text-[10px] sm:text-xs text-gray-600 mt-6 mb-4 leading-snug">
-              By checking out, you agree with our{" "}
-              <a href="#" className="text-purple-600 hover:underline">
-                Terms of Service
-              </a>{" "}
-              and confirm that you have read our{" "}
-              <a href="#" className="text-purple-600 hover:underline">
-                Privacy Policy
-              </a>
-              . You can cancel recurring payments at any time.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button className="flex-1 py-3 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition text-sm md:text-base">
-                Cancel
-              </button>
-              <button className="flex-1 py-3 rounded-xl font-semibold text-white bg-purple-600 hover:bg-purple-700 transition text-sm md:text-base">
-                Choose Payment Method
-              </button>
-            </div>
+          {/* Payment Button */}
+          <div className="flex justify-between mt-8 gap-3">
+            <button className="flex-1 py-3 rounded-lg font-semibold text-white bg-purple-600 hover:bg-purple-700 transition text-sm md:text-base">
+              Cancel
+            </button>
+            <button
+              onClick={handlePaymentSubmit}
+              disabled={loading}
+              className={`flex-1 py-3 rounded-lg font-semibold text-white ${
+                loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#6A3CB1] hover:bg-[#5b32a2]"
+              } transition`}
+            >
+              {loading ? "Processing..." : "Choose Payment Method"}
+            </button>
           </div>
         </div>
       </div>

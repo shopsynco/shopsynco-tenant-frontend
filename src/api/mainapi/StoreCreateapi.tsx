@@ -1,6 +1,5 @@
-// src/api/mainapi/StoreCreateapi.ts
-
-import axiosInstance from "../../refreshToken/tokenUtils";
+// src/api/mainapi/StoreCreateapi.tsx
+import axiosInstance from "../../store/refreshToken/tokenUtils";
 
 
 // ======================
@@ -87,12 +86,29 @@ export const getStates = async (countryId: number): Promise<State[]> => {
 export const storeContactSetup = async (
   data: ContactFormPayload
 ): Promise<ContactSetupResponse> => {
-  const res = await axiosInstance.post(`api/tenants/store/setup/`, data);
+  const res = await axiosInstance.post(`api/tenants/store/setup/location/`, data);
   return res.data;
 };
 
 // 5️⃣ Discover store slug by email — no slug injection
 export const getStoreSlug = async (email: string): Promise<DiscoverResponse> => {
-  const res = await axiosInstance.post(`api/tenants/discover/`, { email });
-  return res.data;
+  try {
+    // Make the API call to get the slug
+    const res = await axiosInstance.post(`api/tenants/discover/`, { email });
+    
+    // Check if the response contains tenant_slug
+    if (res.data?.tenant_slug) {
+      // Store the slug in localStorage
+      localStorage.setItem("store_slug", res.data.tenant_slug);
+      console.log("Slug created and saved:", res.data.tenant_slug);
+    } else {
+      console.warn("No tenant_slug returned in the response");
+    }
+
+    return res.data; // Return the response data
+  } catch (error) {
+    console.error("Failed to get store slug:", error);
+    throw error; // You can also handle the error here if needed
+  }
 };
+
