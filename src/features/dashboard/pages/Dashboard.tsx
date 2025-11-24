@@ -48,66 +48,42 @@ export default function Dashboard() {
     const data = tenant?.dashboard || {};
 
     // USER DATA
-const user_name = data?.user_info?.name || "";
-const user_email = data?.user_info?.email || "";
+    const user_name = data?.user_info?.name || "";
+    const user_email = data?.user_info?.email || "";
 
-console.log("➡️ USER NAME:", user_name);
-console.log("➡️ USER EMAIL:", user_email);
+    setUserData({ user_name, user_email });
 
-setUserData({ user_name, user_email });
+    // PLAN DATA
+    const plan_name = data?.current_plan?.name || "";
+    const renew_date = data?.current_plan?.renewal_date || "";
+    const status = data?.account_summary?.domain?.status || "";
 
+    setPlanData({ plan_name, renew_date, status });
 
-// PLAN DATA
-const plan_name = data?.current_plan?.name || "";
-const renew_date = data?.current_plan?.renewal_date || "";
-const status = data?.account_summary?.domain?.status || "";
+    // HISTORY DATA (placeholder because API not sending history)
+    setHistoryData({
+      last_payment_amount: "—",
+      last_payment_date: "—",
+      payment_method: data?.payment_method || "—",
+      next_renewal_amount: "—",
+      next_renewal_date: renew_date || "—",
+    });
 
-console.log("📌 PLAN NAME:", plan_name);
-console.log("📌 RENEWAL DATE:", renew_date);
-console.log("📌 PLAN STATUS:", status);
+    // TENANT DATA
+    const domain = data?.account_summary?.domain?.name || "";
+    const features = data?.plan_features?.included_features?.map((f: any) => f.name) || [];
 
-setPlanData({ plan_name, renew_date, status });
+    setTenantData({ domain, features });
 
-
-// HISTORY DATA (placeholder because API not sending history)
-console.log("💳 Payment method:", data?.payment_method);
-
-setHistoryData({
-  last_payment_amount: "—",
-  last_payment_date: "—",
-  payment_method: data?.payment_method || "—",
-  next_renewal_amount: "—",
-  next_renewal_date: renew_date || "—",
-});
-
-
-// TENANT DATA
-const domain = data?.account_summary?.domain?.name || "";
-const features = data?.plan_features?.included_features?.map((f:any) => f.name) || [];
-
-console.log("🌐 DOMAIN:", domain);
-console.log("🧩 FEATURES:", features);
-
-setTenantData({ domain, features });
-
-
-// CACHE
-localStorage.setItem("user_name", user_name);
-localStorage.setItem("user_email", user_email);
-
-console.log("✅ Dashboard state updated.");
+    // CACHE
+    localStorage.setItem("user_name", user_name);
+    localStorage.setItem("user_email", user_email);
 
   } catch (err) {
     console.error("Failed to load dashboard data:", err);
   }
 };
 
-    // const getDashboardData = async () => {
-    //   try {
-    //     // ✅ Fetch all in parallel
-    //     const [status, history, tenant] = await Promise.all([
-    //       fetchSubscriptionStatus(),
-    //       fetchSubscriptionHistory(),
     //       fetchTenantDashboard(),
     //     ]);
 
@@ -139,7 +115,6 @@ console.log("✅ Dashboard state updated.");
     //     });
 
     //     setTenantData({
-    //       domain: tenant?.domain || "yourcompany.shopsynco.com",
     //       features:
     //         tenant?.features?.length > 0
     //           ? tenant.features

@@ -16,12 +16,12 @@ export default function LegalPolicies() {
         const data = await getLegalPolicies();
         console.log("📜 API Response for policies:", data);
 
-        // ✅ Ensure the data is an array before setting
+        // ✅ Handle both array and paginated response formats
         if (Array.isArray(data)) {
           setPolicies(data);
           setActivePolicy(data[0] || null);
-        } else if (data?.results && Array.isArray(data.results)) {
-          // Some APIs return { results: [...] }
+        } else if (data && typeof data === 'object' && 'results' in data && Array.isArray(data.results)) {
+          // Handle paginated response { results: [...] }
           setPolicies(data.results);
           setActivePolicy(data.results[0] || null);
         } else {

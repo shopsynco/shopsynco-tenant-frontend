@@ -62,7 +62,6 @@ export default function RegisterPage() {
         confirm_password: formData.confirmPassword,
       };
 
-      console.log("Final signup payload (after email verification):", payload);
 
       // ✅ Now actually create the account
       await registerUser(payload);

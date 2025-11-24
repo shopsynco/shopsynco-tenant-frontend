@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import bgImage from "../../../assets/backgroundstore.png";
 import {
   getCountries,
@@ -75,7 +76,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     const email = formData.contact_email?.trim();
 
     if (!email) {
-      alert("Please enter a valid contact email.");
+      Swal.fire("Validation Error", "Please enter a valid contact email.", "warning");
       setLoading(false);
       return;
     }
@@ -98,7 +99,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
   } catch (err) {
     console.error("❌ Failed to submit contact details:", err);
-    alert("Failed to submit contact details. Please try again.");
+    Swal.fire("Error", "Failed to submit contact details. Please try again.", "error");
   } finally {
     setLoading(false);
   }
