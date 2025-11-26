@@ -66,7 +66,6 @@ export const verifyResetCode = async ({
 
 export const resendVerificationCode = async ({ email }: { email: string }) => {
   try {
-    console.log("[RESEND] Request payload:", { email });
     const response = await axios.post(
       `${BASE_URL}api/user/auth/resend-verification-code/`,
       { email },
@@ -108,44 +107,49 @@ export const registerUser = async (data: RegisterPayload) => {
     });
 
     return response.data;
-  } catch (error: any) {
-    // DEBUG: Log the complete error response
-    console.log("🔍 FULL ERROR RESPONSE:", error.response);
-    console.log("🔍 ERROR DATA:", error.response?.data);
-
-    if (error.response?.data) {
-      const data = error.response.data;
-      console.log("🔍 ERROR DATA TYPE:", typeof data);
-      console.log("🔍 ERROR DATA KEYS:", Object.keys(data));
+  } catch (error: unknown) {
+    const errorResponse = error as { response?: { data?: unknown } };
+    if (errorResponse?.response?.data) {
+      const data = errorResponse.response.data;
 
       // Handle different error response formats
-      if (data.email) {
-        const emailError = Array.isArray(data.email)
-          ? data.email[0]
-          : data.email;
-        console.log("🔍 EMAIL ERROR:", emailError);
-        throw new Error(emailError);
-      } else if (data.detail) {
-        throw new Error(data.detail);
-      } else if (data.message) {
-        throw new Error(data.message);
+      if (typeof data === 'object' && data !== null) {
+        const dataObj = data as Record<string, unknown>;
+        
+        if ('email' in dataObj) {
+          const emailError = Array.isArray(dataObj.email)
+            ? dataObj.email[0]
+            : dataObj.email;
+          throw new Error(String(emailError));
+        } else if ('detail' in dataObj) {
+          throw new Error(String(dataObj.detail));
+        } else if ('message' in dataObj) {
+          throw new Error(String(dataObj.message));
+        } else if (Array.isArray(data) && data.length > 0) {
+          const firstItem = data[0] as { message?: unknown } | unknown;
+          const message = typeof firstItem === 'object' && firstItem !== null && 'message' in firstItem
+            ? firstItem.message
+            : JSON.stringify(firstItem);
+          throw new Error(String(message));
+        } else {
+          // Handle non-field errors object
+          const keys = Object.keys(dataObj);
+          if (keys.length > 0) {
+            const firstErrorKey = keys[0];
+            const firstError = dataObj[firstErrorKey];
+            const errorMessage = Array.isArray(firstError)
+              ? firstError[0]
+              : firstError;
+            throw new Error(String(errorMessage));
+          }
+        }
       } else if (typeof data === "string") {
         throw new Error(data);
-      } else if (Array.isArray(data) && data.length > 0) {
-        throw new Error(data[0].message || JSON.stringify(data[0]));
-      }
-      // Handle non-field errors object
-      else if (typeof data === "object") {
-        const firstErrorKey = Object.keys(data)[0];
-        const firstError = data[firstErrorKey];
-        const errorMessage = Array.isArray(firstError)
-          ? firstError[0]
-          : firstError;
-        throw new Error(errorMessage);
       }
     }
 
-    throw new Error(error.message || "Registration failed. Please try again.");
+    const errorMessage = error instanceof Error ? error.message : "Registration failed. Please try again.";
+    throw new Error(errorMessage);
   }
 };
 // ------------------------------------------------------

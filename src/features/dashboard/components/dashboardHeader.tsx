@@ -44,18 +44,25 @@ export default function Header() {
     navigate("/login");
   };
 
-  const notifications = [
-    {
-      title: "New Feature Available",
-      text: "Explore Smart Analytics – now in your dashboard.",
-      time: "1 hour ago",
-    },
-    {
-      title: "Payment Method Updated",
-      text: "Your saved payment details were successfully updated.",
-      time: "3 hours ago",
-    },
-  ];
+  // Notifications will be fetched from API in production
+  const [notifications] = useState<Array<{
+    title: string;
+    text: string;
+    time: string;
+  }>>([]);
+
+  // TODO: Fetch notifications from API when endpoint is available
+  // useEffect(() => {
+  //   const fetchNotifications = async () => {
+  //     try {
+  //       const data = await getNotifications();
+  //       setNotifications(data);
+  //     } catch (err) {
+  //       console.error("Failed to fetch notifications:", err);
+  //     }
+  //   };
+  //   fetchNotifications();
+  // }, []);
 
   return (
     <>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, Eye, Plus, CreditCard } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import {
   getPaymentMethods,
   submitPayment,
@@ -33,12 +34,14 @@ interface BankFormData {
 }
 
 interface ExistingCard {
-  id: string;
+  id?: string;
   card_last4: string;
-  brand: string;
+  brand?: string;
+  card_brand?: string;
   exp_month: number;
   exp_year: number;
-  card_holder: string;
+  card_holder?: string;
+  card_holder_name?: string;
   is_default?: boolean;
 }
 
@@ -74,18 +77,27 @@ export default function UpgradePaymentPage() {
   const months = params.get("months");
   const country = params.get("country");
 
-  // You'll need to get this from your checkout flow
-  const subscriptionId = "your-subscription-id-here";
+  // Get subscription ID from localStorage or URL params
+  const subscriptionId = params.get("subscription_id") || localStorage.getItem("subscription_id") || "";
 
   // Fetch existing cards on page load
   useEffect(() => {
     const fetchExistingCards = async () => {
       try {
         const res = await getCardDetails();
-        setExistingCards(res.card_details || []);
+        const cards = (res.card_details || []).map(card => ({
+          id: card.id,
+          card_last4: card.card_last4,
+          brand: card.card_brand,
+          exp_month: card.exp_month,
+          exp_year: card.exp_year,
+          card_holder: card.card_holder_name,
+          is_default: card.is_default,
+        })) as ExistingCard[];
+        setExistingCards(cards);
         // If there are existing cards, select the first one by default
-        if (res.card_details?.length > 0) {
-          setSelectedCardId(res.card_details[0].id);
+        if (cards.length > 0 && cards[0].id) {
+          setSelectedCardId(cards[0].id);
         }
       } catch (err) {
         console.error("Error fetching existing cards:", err);
@@ -100,7 +112,6 @@ export default function UpgradePaymentPage() {
     const fetchMethods = async () => {
       try {
         const res = await getPaymentMethods();
-        console.log("Payment methods:", res.methods);
         setPaymentMethods(res.methods || []);
         if (res.methods?.length > 0) {
           setSelectedMethod(res.methods[0].value);
@@ -210,22 +221,22 @@ export default function UpgradePaymentPage() {
   // Validate forms
   const validateCardForm = (): boolean => {
     if (!cardFormData.cardHolder.trim()) {
-      alert("Please enter card holder name");
+      Swal.fire("Validation Error", "Please enter card holder name", "warning");
       return false;
     }
     if (
       !cardFormData.cardNumber ||
       cardFormData.cardNumber.replace(/\s/g, "").length < 16
     ) {
-      alert("Please enter valid 16-digit card number");
+      Swal.fire("Validation Error", "Please enter valid 16-digit card number", "warning");
       return false;
     }
     if (!cardFormData.expiryDate) {
-      alert("Please select expiry date");
+      Swal.fire("Validation Error", "Please select expiry date", "warning");
       return false;
     }
     if (!cardFormData.cvv || cardFormData.cvv.length !== 3) {
-      alert("Please enter valid CVV");
+      Swal.fire("Validation Error", "Please enter valid CVV", "warning");
       return false;
     }
     return true;
@@ -233,23 +244,23 @@ export default function UpgradePaymentPage() {
 
   const validateBankForm = (): boolean => {
     if (!bankFormData.accountHolder.trim()) {
-      alert("Please enter account holder name");
+      Swal.fire("Validation Error", "Please enter account holder name", "warning");
       return false;
     }
     if (!bankFormData.accountNumber) {
-      alert("Please enter account number");
+      Swal.fire("Validation Error", "Please enter account number", "warning");
       return false;
     }
     if (bankFormData.accountNumber !== bankFormData.confirmAccountNumber) {
-      alert("Account numbers don't match");
+      Swal.fire("Validation Error", "Account numbers don't match", "warning");
       return false;
     }
     if (!bankFormData.bankName) {
-      alert("Please select bank");
+      Swal.fire("Validation Error", "Please select bank", "warning");
       return false;
     }
     if (!bankFormData.ifscCode) {
-      alert("Please enter IFSC code");
+      Swal.fire("Validation Error", "Please enter IFSC code", "warning");
       return false;
     }
     return true;
@@ -257,11 +268,11 @@ export default function UpgradePaymentPage() {
 
   const validateUpiForm = (): boolean => {
     if (!upiID.trim()) {
-      alert("Please enter UPI ID");
+      Swal.fire("Validation Error", "Please enter UPI ID", "warning");
       return false;
     }
     if (!upiID.includes("@")) {
-      alert("Please enter valid UPI ID (e.g., example@okaxis)");
+      Swal.fire("Validation Error", "Please enter valid UPI ID (e.g., example@okaxis)", "warning");
       return false;
     }
     return true;
@@ -271,13 +282,18 @@ export default function UpgradePaymentPage() {
   const handleUpiSubmit = async () => {
     if (!validateUpiForm()) return;
 
+    if (!subscriptionId) {
+      Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
+      return;
+    }
+
     try {
       setLoading(true);
 
       // Verify UPI ID first
       const verifyResponse = await verifyUpi(upiID);
       if (!verifyResponse.success) {
-        alert("Invalid UPI ID. Please check and try again.");
+        Swal.fire("Validation Error", "Invalid UPI ID. Please check and try again.", "error");
         return;
       }
 
@@ -290,16 +306,14 @@ export default function UpgradePaymentPage() {
 
       const paymentResponse = await payWithUpi(upiPayload);
       if (paymentResponse.success) {
-        alert("✅ UPI Payment Successful!");
+        await Swal.fire("Success", "UPI Payment Successful!", "success");
         navigate("/payment-success");
       } else {
         throw new Error("UPI payment failed");
       }
     } catch (err: any) {
       console.error("❌ UPI Payment Error:", err);
-      alert(
-        err.response?.data?.message || "UPI Payment failed. Please try again."
-      );
+      Swal.fire("Error", err.response?.data?.message || "UPI Payment failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -308,6 +322,11 @@ export default function UpgradePaymentPage() {
   // Handle card payment
  const handleCardSubmit = async () => {
     if (!validateCardForm()) return;
+
+    if (!subscriptionId) {
+      Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -347,14 +366,14 @@ export default function UpgradePaymentPage() {
 
       const paymentResponse = await submitPayment(paymentPayload);
       if (paymentResponse.success) {
-        alert("✅ Card Payment Successful!");
+        await Swal.fire("Success", "Card Payment Successful!", "success");
         navigate("/payment-success");
       } else {
         throw new Error("Card payment failed");
       }
     } catch (err: any) {
       console.error("❌ Card Payment Error:", err);
-      alert(err.response?.data?.message || "Card payment failed. Please try again.");
+      Swal.fire("Error", err.response?.data?.message || "Card payment failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -363,6 +382,11 @@ export default function UpgradePaymentPage() {
   // Handle bank transfer
   const handleBankSubmit = async () => {
     if (!validateBankForm()) return;
+
+    if (!subscriptionId) {
+      Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -380,14 +404,14 @@ export default function UpgradePaymentPage() {
 
       const paymentResponse = await submitPayment(paymentPayload);
       if (paymentResponse.success) {
-        alert("✅ Bank Transfer Initiated Successfully!");
+        await Swal.fire("Success", "Bank Transfer Initiated Successfully!", "success");
         navigate("/payment-success");
       } else {
         throw new Error("Bank transfer failed");
       }
     } catch (err: any) {
       console.error("❌ Bank Transfer Error:", err);
-      alert(err.response?.data?.message || "Bank transfer failed. Please try again.");
+      Swal.fire("Error", err.response?.data?.message || "Bank transfer failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -396,7 +420,7 @@ export default function UpgradePaymentPage() {
   // Main payment handler
   const handlePaymentSubmit = () => {
     if (!selectedMethod) {
-      alert("Please select a payment method");
+      Swal.fire("Validation Error", "Please select a payment method", "warning");
       return;
     }
 
@@ -412,7 +436,7 @@ export default function UpgradePaymentPage() {
         handleBankSubmit();
         break;
       default:
-        alert("This payment method is not yet supported");
+        Swal.fire("Error", "This payment method is not yet supported", "error");
     }
   };
 
@@ -522,14 +546,14 @@ export default function UpgradePaymentPage() {
                                   ? "border-[#6A3CB1] bg-purple-50"
                                   : "border-gray-200 hover:border-gray-300"
                               }`}
-                              onClick={() => handleCardSelect(card.id)}
+                              onClick={() => card.id && handleCardSelect(card.id)}
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
                                   <CreditCard className="w-6 h-6 text-gray-500" />
                                   <div>
                                     <div className="font-medium text-gray-900">
-                                      {getCardBrand(card.brand)} ••••{" "}
+                                      {getCardBrand(card.brand || "")} ••••{" "}
                                       {card.card_last4}
                                     </div>
                                     <div className="text-sm text-gray-500">
@@ -545,7 +569,7 @@ export default function UpgradePaymentPage() {
                                       )}
                                     </div>
                                     <div className="text-sm text-gray-400">
-                                      {card.card_holder}
+                                      {card.card_holder || ""}
                                     </div>
                                   </div>
                                 </div>

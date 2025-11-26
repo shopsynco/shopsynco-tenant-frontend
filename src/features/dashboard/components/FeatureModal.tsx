@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, X, ShoppingCart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import {
   getFeatureStore,
   addFeature,
@@ -109,7 +110,7 @@ useEffect(() => {
       }
     } catch (err) {
       console.error("Feature update error:", err);
-      alert("Unable to update feature selection. Please try again.");
+      Swal.fire("Error", "Unable to update feature selection. Please try again.", "error");
     } finally {
       setLoading(false);
     }

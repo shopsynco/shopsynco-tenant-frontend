@@ -1,8 +1,20 @@
-import React from "react";
 import Swal from "sweetalert2";
 import { BASE_URL } from "../../../api/axios_config";
 
-const InvoiceDetailModal = ({ invoice, closeModal }: any) => {
+interface Invoice {
+  id: string | number;
+  date: string;
+  description: string;
+  paymentMethod: string;
+  amount: string | number;
+}
+
+interface InvoiceDetailModalProps {
+  invoice: Invoice;
+  closeModal: () => void;
+}
+
+const InvoiceDetailModal = ({ invoice, closeModal }: InvoiceDetailModalProps) => {
   const downloadInvoice = async () => {
     try {
       window.open(

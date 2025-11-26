@@ -1,7 +1,38 @@
-import Header from "../../components/dashboardHeader";
+import { useState, useEffect } from "react";
+import Header from "../components/dashboardHeader";
 import { AlertTriangle } from "lucide-react";
+import { fetchUserProfile } from "../../../api/auth/authapi";
 
 export default function UnpaidDashboard() {
+  const [domain, setDomain] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    // Get domain from localStorage or API
+    const storeSlug = localStorage.getItem("store_slug");
+    if (storeSlug) {
+      setDomain(`${storeSlug}.shopsynco.com`);
+    } else {
+      setDomain("Loading...");
+    }
+
+    // Fetch user name
+    const fetchUser = async () => {
+      try {
+        const data = await fetchUserProfile();
+        if (data?.user_name) {
+          setUserName(data.user_name);
+        } else {
+          const cachedName = localStorage.getItem("user_name");
+          setUserName(cachedName || "User");
+        }
+      } catch (err) {
+        const cachedName = localStorage.getItem("user_name");
+        setUserName(cachedName || "User");
+      }
+    };
+    fetchUser();
+  }, []);
   return (
     <div className="min-h-screen bg-[#FAF9FF]">
       <Header />
@@ -11,7 +42,7 @@ export default function UnpaidDashboard() {
         <div>
           {/* Greeting */}
           <h1 className="text-3xl font-semibold text-gray-900 mb-3">
-            Welcome, Manoj!
+            Welcome, {userName || "User"}!
           </h1>
 
           {/* Warning Banner */}
@@ -89,7 +120,7 @@ export default function UnpaidDashboard() {
             <div className="flex items-center gap-2 mb-2">
               <input
                 type="text"
-                value="yourcompany.shopsynco.com"
+                value={domain || "Loading..."}
                 readOnly
                 className="flex-1 text-sm border border-[#D8CFFC] rounded-md px-3 py-2 text-gray-700 bg-white focus:outline-none"
               />

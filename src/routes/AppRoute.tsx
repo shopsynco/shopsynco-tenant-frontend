@@ -27,10 +27,11 @@ const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<AllRoutesPage />} />
+        <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<RegisterPage />} />
         <Route path="/email-verify" element={<EnterEmail />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/all-routes" element={<AllRoutesPage />} />
         <Route path="/forget-password" element={<ForgotPasswordPage />} />
         <Route path="/verify-email" element={<VerificationPage />} />
         <Route path="/verify-email-expired" element={<ExpiredVerificationPage />} />

@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Plus, CreditCard, X, Eye, Edit, Trash2 } from "lucide-react";
-import Header from "./dashboardHeader"; // Assuming this is your header component
+import Swal from "sweetalert2";
+import Header from "./dashboardHeader";
+import { getCardDetails } from "../../../api/payment/paymentapi";
 import {
   DeleteModal,
   EditCardModal,
   EditBankModal,
   EditUpiModal,
-  ModalWrapper,
   ViewCardModal,
 } from "./payment/EditPaymentMethod";
 import AddPaymentMethodModal from "./payment/AddPaymentMethodModal";
@@ -15,16 +16,15 @@ import {
   AddCardModal,
   AddUpiModal,
 } from "./payment/PaymentModal";
-import { getCardDetails } from "../../../api/payment/paymentapi"; // Correct API import
 
-// Fake card data (for testing purposes)
-const fakeCardDetails = {
-  card_brand: "VISA",
-  card_last4: "4526",
-  exp_month: "09",
-  exp_year: "2026",
-  card_holder_name: "Manoj Boskar",
-};
+// Card details type definition
+interface CardDetails {
+  card_brand: string;
+  card_last4: string;
+  exp_month: string;
+  exp_year: string;
+  card_holder_name: string;
+}
 
 type PaymentModalType =
   | "add"
@@ -44,26 +44,90 @@ type PaymentModalType =
 
 export default function ManageBillingPage() {
   const [activeModal, setActiveModal] = useState<PaymentModalType>(null);
-  const [cardDetails, setCardDetails] = useState<any | null>(fakeCardDetails); // Set fake card details
-  const [loading, setLoading] = useState<boolean>(false); // Set loading to false for mock data
+  const [cardDetails, setCardDetails] = useState<CardDetails | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Fetch card details on component mount
+  useEffect(() => {
+    const fetchCardDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await getCardDetails();
+        if (response.card_details && response.card_details.length > 0) {
+          const card = response.card_details[0];
+          setCardDetails({
+            card_brand: card.card_brand || "",
+            card_last4: card.card_last4 || "",
+            exp_month: String(card.exp_month || "").padStart(2, "0"),
+            exp_year: String(card.exp_year || ""),
+            card_holder_name: card.card_holder_name || "",
+          });
+        } else {
+          setCardDetails(null);
+        }
+      } catch (err) {
+        console.error("Error fetching card details:", err);
+        setCardDetails(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCardDetails();
+  }, []);
 
   // Handle modal closure
   const closeModal = () => setActiveModal(null);
 
   // Function to handle the delete action
-  const handleDelete = (type: string) => {
-    // Handle the deletion based on the type (card, bank, or UPI)
-    alert(`Delete ${type} payment method`);
-    // Add your delete logic here (e.g., API call)
-    closeModal();
+  const handleDelete = async (type: string) => {
+    const result = await Swal.fire({
+      title: "Delete Payment Method",
+      text: `Are you sure you want to delete this ${type} payment method?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Refresh card details after deletion
+        await Swal.fire("Deleted!", `The ${type} payment method has been deleted.`, "success");
+        
+        // Refresh card details
+        const response = await getCardDetails();
+        if (response.card_details && response.card_details.length > 0) {
+          const card = response.card_details[0];
+          setCardDetails({
+            card_brand: card.card_brand || "VISA",
+            card_last4: card.card_last4 || "",
+            exp_month: String(card.exp_month || "").padStart(2, "0"),
+            exp_year: String(card.exp_year || ""),
+            card_holder_name: card.card_holder_name || "",
+          });
+        } else {
+          setCardDetails(null);
+        }
+        
+        closeModal();
+      } catch (error) {
+        Swal.fire("Error", "Failed to delete payment method. Please try again.", "error");
+      }
+    }
   };
 
   // Function to handle edit actions
   const handleEdit = (type: string) => {
-    // Handle the edit action (edit card, bank or UPI)
-    alert(`Edit ${type} payment method`);
-    // Add your edit logic here (e.g., API call)
-    closeModal();
+    // Open the appropriate edit modal
+    if (type === "card") {
+      setActiveModal("editCard");
+    } else if (type === "bank") {
+      setActiveModal("editBank");
+    } else if (type === "upi") {
+      setActiveModal("editUPI");
+    }
   };
 
   return (
@@ -153,9 +217,9 @@ export default function ManageBillingPage() {
               )}
 
               <div className="pt-2 text-sm text-gray-700 border-t border-gray-200">
-                <p className="font-medium mt-3">Manoj Boskar</p>
+                <p className="font-medium mt-3">{cardDetails?.card_holder_name || "N/A"}</p>
                 <p className="text-xs mt-1 text-gray-500 leading-relaxed">
-                  Gandhi Nagar road, Kadavanthra, Kochi, Kerala 682020
+                  {/* Billing address will be fetched from API */}
                 </p>
                 <button className="text-[#6A3CB1] text-xs font-medium mt-2 hover:underline">
                   Edit Billing Address
@@ -220,7 +284,7 @@ export default function ManageBillingPage() {
       {activeModal === "add" && (
         <AddPaymentMethodModal
           onClose={closeModal}
-          onPaymentMethodSelect={(method) => {
+          onPaymentMethodSelect={(method: PaymentModalType) => {
             setActiveModal(method); // Handle the modal for add/edit
           }}
         />
@@ -236,6 +300,7 @@ export default function ManageBillingPage() {
           onClose={closeModal}
           onEditCard={() => handleEdit("card")}
           onDeleteCard={() => handleDelete("card")}
+          cardDetails={cardDetails}
         />
       )}
       {activeModal === "deleteCard" && (

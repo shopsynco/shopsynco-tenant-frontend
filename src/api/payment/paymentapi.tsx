@@ -68,12 +68,23 @@ interface PaymentResponse {
 // Type for adding a new payment method
 interface AddPaymentMethodPayload {
   method: string;
-  details: any;
+  details: Record<string, unknown>;
+}
+
+// Type for card detail item
+export interface CardDetailItem {
+  id?: string;
+  card_brand: string;
+  card_last4: string;
+  exp_month: number;
+  exp_year: number;
+  card_holder_name: string;
+  is_default?: boolean;
 }
 
 // Type for the response when fetching card details
 interface CardDetailsResponse {
-  card_details: Array<any>;
+  card_details: CardDetailItem[];
 }
 
 // Type for updating card details
@@ -96,8 +107,10 @@ export const getPaymentMethods = async (): Promise<{ methods: PaymentMethod[] }>
   try {
     const res = await axiosInstance.get("/api/tenants/payment/methods/");
     return res.data;
-  } catch (error: any) {
-    console.error("❌ Error fetching payment methods:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Error fetching payment methods:", errorData || errorMessage);
     throw error;
   }
 };
@@ -107,8 +120,10 @@ export const submitPayment = async (payload: SubmitPaymentPayload): Promise<Paym
   try {
     const res = await axiosInstance.post("/api/tenant/payment/submit/", payload);
     return res.data;
-  } catch (error: any) {
-    console.error("❌ Payment submission error:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Payment submission error:", errorData || errorMessage);
     throw error;
   }
 };
@@ -118,8 +133,10 @@ export const verifyUpi = async (upi_id: string): Promise<UpiVerificationResponse
   try {
     const res = await axiosInstance.post("/api/tenant/payment/upi/verify/", { upi_id });
     return res.data;
-  } catch (error: any) {
-    console.error("❌ UPI verification error:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ UPI verification error:", errorData || errorMessage);
     throw error;
   }
 };
@@ -129,19 +146,23 @@ export const payWithUpi = async (payload: UpiPaymentPayload): Promise<PaymentRes
   try {
     const res = await axiosInstance.post("/api/tenant/payment/upi/pay/", payload);
     return res.data;
-  } catch (error: any) {
-    console.error("❌ UPI payment submission error:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ UPI payment submission error:", errorData || errorMessage);
     throw error;
   }
 };
 
 /* ---------------------- 💾 ADD SAVED PAYMENT METHOD ---------------------- */
-export const addPaymentMethod = async (payload: AddPaymentMethodPayload): Promise<any> => {
+export const addPaymentMethod = async (payload: AddPaymentMethodPayload): Promise<{ success: boolean; message?: string }> => {
   try {
     const res = await axiosInstance.post("/api/tenants/payment/methods/", payload);
     return res.data;
-  } catch (error: any) {
-    console.error("❌ Error adding payment method:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Error adding payment method:", errorData || errorMessage);
     throw error;
   }
 };
@@ -153,8 +174,10 @@ export const getPaymentStatus = async (subscriptionId: string): Promise<PaymentS
       params: { subscription_id: subscriptionId },
     });
     return res.data;
-  } catch (error: any) {
-    console.error("❌ Error fetching payment status:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Error fetching payment status:", errorData || errorMessage);
     throw error;
   }
 };
@@ -164,19 +187,23 @@ export const getCardDetails = async (): Promise<CardDetailsResponse> => {
   try {
     const res = await axiosInstance.get("/api/tenants/payment/card/");
     return res.data;
-  } catch (error: any) {
-    console.error("❌ Error fetching card details:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Error fetching card details:", errorData || errorMessage);
     throw error;
   }
 };
 
 /* ---------------------- 💳 UPDATE CARD DETAILS ---------------------- */
-export const updateCardDetails = async (cardData: UpdateCardDetailsPayload): Promise<any> => {
+export const updateCardDetails = async (cardData: UpdateCardDetailsPayload): Promise<{ success: boolean; message?: string }> => {
   try {
     const res = await axiosInstance.post("/api/tenants/payment/card/update/", cardData);
     return res.data;
-  } catch (error: any) {
-    console.error("❌ Error updating card details:", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Error updating card details:", errorData || errorMessage);
     throw error;
   }
 };
