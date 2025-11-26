@@ -21,6 +21,7 @@ import AllRoutesPage from "../components/helproutes";
 import PaymentPage from "../features/dashboard/components/payment/PaymentPage";
 import UpgradePaymentPage from "../features/dashboard/components/payment/upgradePaymentPage";
 import EnterEmail from "../features/auth/pages/EnterEmail";
+import ExpiredVerificationPage from "../features/auth/pages/VerificationExpiredPage";
 
 const AppRoutes = () => {
   return (
@@ -32,6 +33,7 @@ const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forget-password" element={<ForgotPasswordPage />} />
         <Route path="/verify-email" element={<VerificationPage />} />
+        <Route path="/verify-email-expired" element={<ExpiredVerificationPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/Resetpassword-Success"
