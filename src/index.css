@@ -1,16 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&family=Raleway:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-* {
-  font-family: 'Raleway', sans-serif;
+
+/* ===== GLOBAL STYLES ===== */
+@layer base {
+  /* default */
+  body {
+    @apply bg-white;
+    font-family: 'Raleway', sans-serif;
+    color: #3b6f8f;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4 {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #719CBF;
+    line-height: 1.1875; /* approximate 38px for 32px font */
+  }
+
+  /* Input Labels (global) */
+  label {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 24px;
+    color: #719CBF;
+  }
 }
-h1, h2, h3, h4 {
-  font-weight: 600;
-  font-family: 'Raleway', sans-serif;
-}
+
 /* ==== SweetAlert2 card styles (match app design) ==== */
 .swal-popup-wrapper {
-  background: transparent !important; /* keep base transparent */
+  background: transparent !important;
   box-shadow: none !important;
 }
 
