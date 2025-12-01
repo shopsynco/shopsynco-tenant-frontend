@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
-import Swal from "sweetalert2";
-import { registerUser } from "../../../api/auth/authapi";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import bgImage from "../../../assets/authbackground.png";
+import { registerUser } from "../../../api/auth/authapi";
+import { showSuccess, showError } from "../../../components/swalHelper";
 
 interface RegisterFormData {
   first_name: string;
@@ -28,7 +28,6 @@ export default function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Prefill email from verified flow
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const emailParam = params.get("email");
@@ -47,7 +46,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
-      Swal.fire("Error", "Passwords do not match!", "error");
+      showError("Error", "Passwords do not match!");
       setLoading(false);
       return;
     }
@@ -62,24 +61,18 @@ export default function RegisterPage() {
         confirm_password: formData.confirmPassword,
       };
 
-
-      // ✅ Now actually create the account
       await registerUser(payload);
 
-      await Swal.fire(
+      showSuccess(
         "Account Created!",
         "Your account has been created successfully. Please log in to continue.",
-        "success"
+        () => {
+          navigate("/login");
+        }
       );
-
-      navigate("/login");
     } catch (error: any) {
       console.error("Signup error:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Signup Failed",
-        text: error.message || "Signup failed. Please try again.",
-      });
+      showError("Signup Failed", error?.message || "Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -90,31 +83,37 @@ export default function RegisterPage() {
       className="flex items-center justify-center min-h-screen bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
+      {/* Card / Form container
+          - default text color set to #42739A (Raleway) via text-[#42739A]
+          - gradient and rounded 30px via arbitrary values
+      */}
       <div
-        className="w-full max-w-2xl p-12 rounded-3xl shadow-2xl backdrop-blur-sm border border-white/50 flex flex-col gap-6"
+        className="w-full max-w-2xl p-12 shadow-2xl backdrop-blur-sm border border-white/20 flex flex-col gap-6
+                   text-[#42739A] font-raleway"
         style={{
           boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.1)",
+          // gradient exactly as requested: 139.18deg, transparent-> rgba(113,156,191,0.3)
+          // using Tailwind arbitrary background in style to avoid escaping issues in some setups.
+          background:
+            "linear-gradient(139.18deg, rgba(255,255,255,0) 1.22%, rgba(113,156,191,0.3) 98.56%)",
+          borderRadius: "30px",
         }}
       >
+        {/* Heading (condition 2) */}
         <h2
-          className="text-3xl font-bold text-center text-[#719CBF] mb-2"
-          style={{
-            fontFamily: "Raleway, sans-serif",
-            fontWeight: 700,
-            fontSize: "32px",
-            lineHeight: "100%",
-          }}
+          className="mx-auto mb-2 text-center font-raleway font-bold
+                     text-[32px] leading-[38px] tracking-[0.04em] text-[#719CBF]"
         >
           Create Your Account
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Row 1: First Name & Company Name */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* First Name */}
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="first_name"
-                className="text-[#719CBF] font-semibold text-base"
+                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
               >
                 First Name
               </label>
@@ -125,15 +124,21 @@ export default function RegisterPage() {
                 placeholder="Your First Name"
                 value={formData.first_name}
                 onChange={handleChange}
-                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="
+                  w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
+                  border border-[#B7A9CE] rounded-[8px]
+                  focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
+                  transition
+                "
                 required
               />
             </div>
 
+            {/* Company Name */}
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="company_name"
-                className="text-[#719CBF] font-semibold text-base"
+                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
               >
                 Company Name
               </label>
@@ -144,18 +149,23 @@ export default function RegisterPage() {
                 placeholder="Your Company Name"
                 value={formData.company_name}
                 onChange={handleChange}
-                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="
+                  w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
+                  border border-[#B7A9CE] rounded-[8px]
+                  focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
+                  transition
+                "
                 required
               />
             </div>
           </div>
 
-          {/* Row 2: Email & Phone */}
+          {/* Email & Phone */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="email"
-                className="text-[#719CBF] font-semibold text-base"
+                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
               >
                 Email Address
               </label>
@@ -166,17 +176,20 @@ export default function RegisterPage() {
                 placeholder="Your Email Address"
                 value={formData.email}
                 onChange={handleChange}
-                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="
+                  w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
+                  border border-[#B7A9CE] rounded-[8px]
+                  focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
+                  transition
+                "
                 required
-                // optionally lock email:
-                // disabled
               />
             </div>
 
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="phone"
-                className="text-[#719CBF] font-semibold text-base"
+                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
               >
                 Phone Number
               </label>
@@ -187,17 +200,22 @@ export default function RegisterPage() {
                 placeholder="Your Phone Number"
                 value={formData.phone}
                 onChange={handleChange}
-                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="
+                  w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
+                  border border-[#B7A9CE] rounded-[8px]
+                  focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
+                  transition
+                "
                 required
               />
             </div>
           </div>
 
-          {/* Password Fields */}
+          {/* Password */}
           <div className="flex flex-col gap-2">
             <label
               htmlFor="password"
-              className="text-[#719CBF] font-semibold text-base"
+              className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
             >
               Create Password
             </label>
@@ -208,15 +226,21 @@ export default function RegisterPage() {
               placeholder="Create a strong password (min 8 characters)"
               value={formData.password}
               onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="
+                w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
+                border border-[#B7A9CE] rounded-[8px]
+                focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
+                transition
+              "
               required
             />
           </div>
 
+          {/* Confirm Password */}
           <div className="flex flex-col gap-2">
             <label
               htmlFor="confirmPassword"
-              className="text-[#719CBF] font-semibold text-base"
+              className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
             >
               Confirm Password
             </label>
@@ -227,25 +251,33 @@ export default function RegisterPage() {
               placeholder="Confirm your password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="
+                w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
+                border border-[#B7A9CE] rounded-[8px]
+                focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
+                transition
+              "
               required
             />
           </div>
 
+          {/* Submit button */}
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full py-4 rounded-xl font-bold text-white bg-[#6A9ECF] hover:bg-[#5c91c4] shadow-lg border border-white/30 transition"
+            className="
+              mt-2 w-full py-4 rounded-[10px] shadow-lg border border-white/10
+              bg-[#719CBF] hover:bg-[#5f97b6] transition
+              font-poppins font-semibold text-[24px] leading-[36px] text-[#FCFCFC]
+              disabled:opacity-60 disabled:cursor-not-allowed
+            "
           >
             {loading ? "Creating Account..." : "Create Account"}
           </button>
 
-          <p className="text-center text-sm text-[#4A5C74] mt-2">
-            Already have an account?{" "}
-            <a
-              href="/login"
-              className="text-[#6A9ECF] font-medium hover:underline transition"
-            >
+          <p className="text-center text-sm mt-2">
+            <span className="text-[#4A5C74]">Already have an account? </span>
+            <a href="/login" className="text-[#6A9ECF] font-medium hover:underline transition">
               Login
             </a>
           </p>
