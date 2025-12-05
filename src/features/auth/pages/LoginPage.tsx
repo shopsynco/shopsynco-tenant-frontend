@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../components/AuthLayout";
-import shopLogo from "../../../assets/Name-Logo.png";
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
@@ -69,21 +68,23 @@ export default function LoginPage() {
             "linear-gradient(112deg, rgba(255, 255, 255, 0.00) 0%, rgba(113, 156, 191, 0.20) 98.3%)",
         }}
       >
-        {/* Logo */}
+        {/* Logo
         <div className="flex justify-center mb-6">
           <img
             src={shopLogo}
             alt="ShopSynco Logo"
             className="h-16 w-auto object-contain"
           />
-        </div>
+        </div> */}
 
         {/* Title */}
         <h2
           id="login-title"
-          className="text-3xl font-bold text-center mb-4 
-            bg-gradient-to-r from-[#7658A0] to-[#4A3B5E]
-            bg-clip-text text-transparent font-poppins"
+          className="mx-auto w-[106px] h-[47px]
+             flex items-center justify-center
+             text-[40px] leading-[40px] font-semibold
+             text-[ #719CBF] font-raleway mb-10"
+          style={{ letterSpacing: "0" }}
         >
           Login
         </h2>
@@ -102,7 +103,7 @@ export default function LoginPage() {
             placeholder="Email"
             autoComplete="email"
             className="rounded-xl px-5 py-4 w-full bg-[#124B7A24]
-              text-black placeholder:text-gray-600
+              text-black placeholder:text-gray-[#C8D1DB]
               focus:outline-none focus:ring-2 focus:ring-[#719CBF]
               border border-gray-300 transition-all font-raleway"
             value={email}
@@ -118,7 +119,7 @@ export default function LoginPage() {
               placeholder="Password"
               autoComplete="current-password"
               className="rounded-xl px-5 py-4 w-full bg-[#124B7A24]
-                text-black placeholder:text-gray-600
+                text-black placeholder:text-gray-[#C8D1DB]
                 focus:outline-none focus:ring-2 focus:ring-[#719CBF]
                 border border-gray-300 transition-all font-raleway"
               value={password}
@@ -130,9 +131,17 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-4 text-[#42739A] hover:text-[#6A9ECF] p-1"
               aria-label={showPassword ? "Hide password" : "Show password"}
+              className="
+      absolute right-4 top-1/2 -translate-y-1/2
+      text-[#9ea5ad]                 /* match placeholder color exactly */
+      hover:text-[#6A9ECF]          /* hover color */
+      p-1 transition-colors duration-200
+      flex items-center justify-center
+    "
             >
+              {/* Most icon libraries (react-feather, lucide, etc.) inherit currentColor.
+        If your icon doesn't, pass color prop: <Eye color='#C8D1DB' /> */}
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
@@ -169,7 +178,8 @@ export default function LoginPage() {
               role="link"
               tabIndex={0}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") navigate("/email-verify");
+                if (e.key === "Enter" || e.key === " ")
+                  navigate("/email-verify");
               }}
             >
               Sign Up
