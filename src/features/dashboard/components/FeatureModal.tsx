@@ -137,7 +137,7 @@ useEffect(() => {
                 <ArrowLeft size={22} />
               </button>
             )}
-            <h2 className="text-lg font-semibold">Feature Store</h2>
+            <h2 className="text-lg font-semibold text-white">Feature Store</h2>
           </div>
           <button
             onClick={handleClose}
