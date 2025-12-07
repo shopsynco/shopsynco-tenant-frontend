@@ -46,6 +46,13 @@ export const fetchTenantDashboard = async () => {
   try {
     const response = await axiosInstance.get("api/tenants/dashboard/");
     
+    if (import.meta.env.DEV) {
+      console.log(
+        "%c[DashboardAPI] final URL:",
+        "color:#10b981;font-weight:bold",
+        response.config?.url
+      );
+    }
     return response.data;
   } catch (error: any) {
     console.error("Error fetching dashboard:", error);

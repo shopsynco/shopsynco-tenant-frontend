@@ -5,7 +5,7 @@ export const fetchPlans = async () => {
   try {
     // Making the GET request using Axios
     const response = await axiosInstance.get("/api/tenants/pricing/options/");
-    
+    console.log("Fetched plans:", response.data);
     
     return response.data.plans; // Assuming the API response has 'plans' field
     

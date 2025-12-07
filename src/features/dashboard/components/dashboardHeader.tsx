@@ -10,8 +10,8 @@ export default function Header() {
 
   // ✅ Load cached user info first for instant UI
   const [userData, setUserData] = useState({
-    user_name: localStorage.getItem("user_name") || "User",
-    user_email: localStorage.getItem("user_email") || "user@email.com",
+    full_name: localStorage.getItem("full_name")?.trim() || "User",
+    email: localStorage.getItem("email") || "user@email.com",
   });
 
   const navigate = useNavigate();
@@ -21,15 +21,12 @@ export default function Header() {
     const getProfile = async () => {
       try {
         const data = await fetchUserProfile();
-        if (data?.user_name && data?.user_email) {
-          setUserData({
-            user_name: data.user_name,
-            user_email: data.user_email,
-          });
+        if (data?.user?.full_name && data?.user?.email) {
+          const cleanName = data.user.full_name.trim(); // ← remove trailing space
+          setUserData({ full_name: cleanName, email: data.user.email });
 
-          // ✅ Cache for future loads
-          localStorage.setItem("user_name", data.user_name);
-          localStorage.setItem("user_email", data.user_email);
+          localStorage.setItem("full_name", cleanName);
+          localStorage.setItem("email", data.user.email);
         }
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
@@ -45,11 +42,13 @@ export default function Header() {
   };
 
   // Notifications will be fetched from API in production
-  const [notifications] = useState<Array<{
-    title: string;
-    text: string;
-    time: string;
-  }>>([]);
+  const [notifications] = useState<
+    Array<{
+      title: string;
+      text: string;
+      time: string;
+    }>
+  >([]);
 
   // TODO: Fetch notifications from API when endpoint is available
   // useEffect(() => {
@@ -127,9 +126,9 @@ export default function Header() {
             >
               <div className="text-left">
                 <p className="text-sm font-semibold text-gray-800">
-                  {userData.user_name}
+                  {userData.full_name}
                 </p>
-                <p className="text-xs text-gray-500">{userData.user_email}</p>
+                <p className="text-xs text-gray-500">{userData.email}</p>
               </div>
               <svg
                 xmlns="http://www.w3.org/2000/svg"

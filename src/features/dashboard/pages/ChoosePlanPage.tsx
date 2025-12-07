@@ -6,22 +6,147 @@ import { useNavigate } from "react-router-dom";
 interface Plan {
   id: string;
   name: string;
-  price: number;
+  base_monthly: number;
   billing_cycle: string;
   is_active: boolean;
   date_added: string;
-  variant?: "purple" | "green" | "blue";
+  variant?: "green" | "blue" | "yellow";
 }
 
+/* ----------  tiny card component – keeps useState inside  ---------- */
+const PlanCard = ({
+  plan,
+  isSelected,
+  onSelect,
+}: {
+  plan: Plan;
+  isSelected: boolean;
+  onSelect: () => void;
+}) => {
+  const [showMore, setShowMore] = useState(false);
+  const v = plan.variant ?? "yellow";
+  const colors = {
+    green: {
+      accent: "#75AB66",
+      shadow: "#75AB6682",
+      text: "#75AB66",
+      border: "#75AB66",
+    },
+    blue: {
+      accent: "#5882A4",
+      shadow: "#5882A482",
+      text: "#5882A4",
+      border: "#5882A4",
+    },
+    yellow: {
+      accent: "#D19026",
+      shadow: "#D1902682",
+      text: "#D19026",
+      border: "#D19026",
+    },
+  }[v];
+
+  return (
+    <div
+      role="button"
+      onClick={onSelect}
+      className={`cursor-pointer p-5 sm:p-6 rounded-[10px] flex flex-col justify-between transition-all duration-200 ${
+        isSelected ? "border-2" : "border"
+      } bg-white`}
+      style={{
+        width: 255,
+        height: 276,
+        borderWidth: isSelected ? 4 : 3,
+        borderColor: isSelected ? colors.border : colors.border, // ← same as card
+        boxShadow: `2px 2px 25px 0px ${colors.shadow}`,
+        transform: isSelected ? "scale(1.03)" : "scale(1)",
+        transition: "transform .2s ease, border-width .2s ease",
+        zIndex: isSelected ? 10 : 1,
+      }}
+    >
+      {/* price */}
+      <div className="flex items-baseline shrink-0">
+        <div className="text-[32px] leading-[50px] font-poppins font-semibold text-[#1E1E1E]">
+          ₹{plan.base_monthly}
+        </div>
+        <span className="ml-2 text-[16px] leading-[50px] font-poppins text-[#6E6E6E]">
+          /{plan.billing_cycle}
+        </span>
+      </div>
+
+      {/* name */}
+      <div className="mt-2 px-4 py-1 shrink-0">
+        <div
+          className="font-poppins font-semibold text-xl truncate"
+          style={{ color: colors.text }}
+        >
+          {plan.name}
+        </div>
+      </div>
+
+      {/* features – expands/collapses */}
+      <div className="mt-3 border-t border-gray-100 flex-1 min-h-0">
+        <ul className="space-y-2 pt-3">
+          {["Active Plan", "Standard support"].map((f) => (
+            <li key={f} className="flex items-center gap-3">
+              <Check size={12} style={{ color: colors.accent }} />
+              <span className="font-poppins text-sm text-[#4B4B4B] truncate">
+                {f}
+              </span>
+            </li>
+          ))}
+          {showMore &&
+            [
+              "All core features",
+              "Free onboarding",
+              "24×7 priority help-desk",
+            ].map((f) => (
+              <li key={f} className="flex items-center gap-3">
+                <Check size={12} style={{ color: colors.accent }} />
+                <span className="font-poppins text-sm text-[#4B4B4B] truncate">
+                  {f}
+                </span>
+              </li>
+            ))}
+        </ul>
+      </div>
+
+      {/* more/less toggle */}
+      <div className="mt-auto pt-3 border-t border-gray-100 shrink-0">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMore((s) => !s);
+          }}
+          className="text-xs font-poppins hover:underline flex items-center justify-end gap-1 w-full"
+          style={{ color: colors.accent }}
+        >
+          {showMore ? "Less info" : "More info"}
+          <svg width="12" height="12" fill="none">
+            <path
+              d="M4.5 9L7.5 6L4.5 3"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
 export default function ChoosePlanPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState("48"); // default 48 to show save ribbon
+  const [billingPeriod, setBillingPeriod] = useState("48");
   const [quoteData, setQuoteData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [couponCode, setCouponCode] = useState<string>("");
-  const [isCouponFieldVisible, setIsCouponFieldVisible] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
+  const [couponCode, setCouponCode] = useState("");
+  const [isCouponFieldVisible, setIsCouponFieldVisible] = useState(false);
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
@@ -29,20 +154,16 @@ export default function ChoosePlanPage() {
     const getPlans = async () => {
       try {
         const fetched = await fetchPlans();
-        // Guarantee at least 3 variants for visuals (if API returns <3, create placeholders)
-        const base = fetched && fetched.length ? fetched : [
-          { id: "starter", name: "Starter", price: 1899, billing_cycle: "month", is_active: true, date_added: "", variant: "green" },
-          { id: "pro", name: "Professional", price: 4000, billing_cycle: "month", is_active: true, date_added: "", variant: "blue" },
-          { id: "enterprise", name: "Enterprise", price: 9999, billing_cycle: "month", is_active: true, date_added: "", variant: "purple" },
-        ];
-        const withVariants = base.map((p: Plan, idx: number) => ({
+        const withVariants = (fetched || []).map((p: Plan, i: number) => ({
           ...p,
-          variant: p.variant || (idx % 3 === 0 ? "purple" : idx % 3 === 1 ? "green" : "blue"),
+          variant:
+            p.variant ??
+            (i % 3 === 0 ? "green" : i % 3 === 1 ? "blue" : "yellow"),
         }));
         setPlans(withVariants);
-        if (withVariants.length > 0) setSelectedPlan(withVariants[0]);
-      } catch (err) {
-        console.error("Error fetching plans:", err);
+        if (withVariants.length) setSelectedPlan(withVariants[0]);
+      } catch {
+        setPlans([]);
       }
     };
     getPlans();
@@ -50,284 +171,276 @@ export default function ChoosePlanPage() {
 
   useEffect(() => {
     if (!selectedPlan || !billingPeriod) return;
-    const fetchQuote = async () => {
-      setLoading(true);
-      try {
-        const q = await getPricingQuote(selectedPlan.id, billingPeriod, "India");
-        setQuoteData(q);
-      } catch (err) {
-        console.error("Error fetching pricing quote:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchQuote();
+    setLoading(true);
+    getPricingQuote(selectedPlan.id, billingPeriod, "India")
+      .then(setQuoteData)
+      .finally(() => setLoading(false));
   }, [selectedPlan, billingPeriod]);
 
-  const handleApplyCoupon = () => {
+  const applyCoupon = () => {
     if (!quoteData) return;
     if (couponCode.trim().toUpperCase() === "DISCOUNT10") {
       const discount = quoteData.total * 0.1;
-      setQuoteData({ ...quoteData, total: +(quoteData.total - discount).toFixed(2), discount });
+      setQuoteData({
+        ...quoteData,
+        total: +(quoteData.total - discount).toFixed(2),
+        discount,
+      });
       setError("");
-    } else {
-      setError("Invalid Coupon Code");
-    }
+    } else setError("Invalid Coupon Code");
   };
 
-  const handlePaymentSubmit = () => {
-    const planId = selectedPlan?.id || "";
-    const months = billingPeriod;
-    const country = "India";
-    navigate(`/payment?plan_id=${planId}&months=${months}&country=${country}`);
-  };
+  const goPayment = () =>
+    navigate(
+      `/payment?plan_id=${selectedPlan?.id}&months=${billingPeriod}&country=India`
+    );
 
-  // utility: accent color per variant
-  const accentFor = (v?: Plan["variant"]) =>
-    v === "purple" ? "#7658A0" : v === "green" ? "#1F9B46" : "#2B7BE3";
+  const sorted = [...plans].sort((a, b) => {
+    const o = { green: 0, blue: 1, yellow: 2 };
+    return (o[a.variant ?? "green"] || 0) - (o[b.variant ?? "green"] || 0);
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center items-start py-8 px-4 md:py-16 md:px-12">
-      <div className="w-full max-w-6xl bg-white rounded-[20px] shadow-lg p-6 md:p-10 flex flex-col lg:flex-row gap-8 md:gap-10">
-        {/* LEFT */}
-        <div className="flex-1">
-          {/* Header: Raleway 600 40/80 */}
-          <h1
-            className="font-raleway font-semibold text-[40px] leading-[80px] text-[#1E1E1E] mb-0"
-            aria-label="Choose your plan"
-          >
-            Choose Your Plan
-          </h1>
+    <div className="w-screen h-screen bg-white flex justify-center items-start overflow-auto">
+      {/* no padding here – content touches edges */}
+      <div className="w-full max-w-7xl h-full flex flex-col lg:flex-row gap-0">
+        {/* white panel now carries the padding */}
+        <div className="flex-1 flex flex-col p-6 md:p-10">
+          {/* LEFT - nudged left on large screens */}
+          <div className="flex-1 flex flex-col pl-0">
+            <h1 className="font-raleway font-semibold text-[40px] leading-[80px] text-[#1E1E1E]">
+              Choose Your Plan
+            </h1>
+            <p className="font-poppins text-[20px] leading-[30px] text-[#6E6E6E] mb-6">
+              Pick the plan and billing period that fit your business best.
+            </p>
 
-          {/* Subtext: Poppins 400 20/30 */}
-          <p className="font-poppins font-normal text-[20px] leading-[30px] text-[#6E6E6E] mb-6 md:mb-8">
-            Pick the plan and billing period that fit your business best.
-          </p>
-
-          {/* Top small preview cards - three visually distinct cards */}
-          <div className="flex gap-4 mb-6">
-            {/* map first three plans to small previews */}
-            {plans.slice(0, 3).map((p) => {
-              const accent = accentFor(p.variant);
-              return (
-                <div
-                  key={`preview-${p.id}`}
-                  className="flex-1 border rounded-[10px] p-4 bg-white shadow-sm"
-                  style={{ borderColor: p.variant === "purple" ? "#F0E9F8" : p.variant === "green" ? "#E9F8F0" : "#E9F2FF" }}
-                >
-                  <div className={`text-[16px] font-poppins font-semibold`} style={{ color: accent }}>
-                    ₹{p.price}
-                    <span className="text-xs font-poppins font-normal text-[#6E6E6E] ml-2">/month</span>
-                  </div>
-                  <div className="text-sm font-poppins font-medium text-[#1E1E1E] mt-2">{p.name}</div>
-                  <ul className="mt-3 space-y-1 text-xs text-[#6E6E6E]">
-                    <li className="flex items-center gap-2">
-                      <Check size={12} style={{ color: accent }} /> Up to 10 shops
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check size={12} style={{ color: accent }} /> Basic reports
-                    </li>
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Plans grid - selectable */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
-            {plans.map((plan) => {
-              const isSelected = selectedPlan?.id === plan.id;
-              const accent = accentFor(plan.variant);
-
-              return (
-                <div
+            {/* Cards – parent stays hook-safe */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start auto-rows-min">
+              {sorted.map((plan) => (
+                <PlanCard
                   key={plan.id}
-                  onClick={() => setSelectedPlan(plan)}
-                  role="button"
-                  className={`cursor-pointer p-5 sm:p-6 rounded-[10px] relative transition-shadow
-                    ${isSelected ? "shadow-xl" : "shadow-sm"}
-                    ${isSelected ? "border-[2px] border-[#7658A0]" : "border border-gray-200"}
-                    bg-white`}
-                >
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <div className="text-[24px] font-poppins font-semibold text-[#1E1E1E]">
-                        ₹{plan.price}
-                        <span className="text-[14px] font-poppins font-normal text-[#6E6E6E] ml-2">/{plan.billing_cycle}</span>
-                      </div>
-                      <div className="text-[18px] font-poppins font-medium text-[#1E1E1E] mt-2">
-                        {plan.name}
-                      </div>
-                    </div>
+                  plan={plan}
+                  isSelected={selectedPlan?.id === plan.id}
+                  onSelect={() => setSelectedPlan(plan)}
+                />
+              ))}
+            </div>
 
-                    <div className="flex flex-col items-end">
-                      {isSelected && (
-                        <span
-                          className="text-[12px] font-poppins font-semibold px-3 py-1 rounded-full"
-                          style={{ color: "#FFFFFF", backgroundColor: "#7658A0" }}
+            {/* Billing period */}
+            <div className="mt-auto pt-8">
+              <h3 className="font-poppins font-medium text-[25px] leading-[30px] text-[#1E1E1E] mb-3">
+                Select billing period
+              </h3>
+              <div className="space-y-3 md:space-y-4">
+                {[
+                  { m: "48", p: 1699, s: 30 },
+                  { m: "24", p: 1799, s: 20 },
+                  { m: "12", p: 1899, s: 0 },
+                ].map((o) => {
+                  const a = billingPeriod === o.m;
+                  return (
+                    <label
+                      key={o.m}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 sm:px-5 sm:py-4 cursor-pointer rounded-[10px] border transition-all ${
+                        a
+                          ? "border-2 border-[#7658A0]"
+                          : "border border-[#D1D1D1]"
+                      } hover:border-[#7658A0] hover:border-opacity-50`}
+                    >
+                      <div className="flex items-center gap-3 mb-1 sm:mb-0">
+                        <label className="relative flex items-center justify-center w-5 h-5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="billing"
+                            checked={a}
+                            onChange={() => setBillingPeriod(o.m)}
+                            className="opacity-0 w-0 h-0"
+                          />
+                          <span
+                            className={`absolute inset-0 rounded-full border-2 transition ${
+                              a ? "border-[#7658A0]" : "border-[#D1D1D1]"
+                            }`}
+                          />
+                          {a && (
+                            <span className="absolute w-2.5 h-2.5 rounded-full bg-[#7658A0]" />
+                          )}
+                        </label>
+                        <div
+                          className={`font-poppins font-medium text-[24px] leading-[50px] ${
+                            a ? "text-[#7658A0]" : "text-black"
+                          }`}
                         >
-                          Selected
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <ul className="mt-4 space-y-2 text-sm text-[#4B4B4B]">
-                    <li className="flex items-center gap-2">
-                      <Check size={14} style={{ color: accent }} />
-                      <span className="font-poppins text-[14px]">Active Plan</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check size={14} style={{ color: accent }} />
-                      <span className="font-poppins text-[14px]">Standard support</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check size={14} style={{ color: accent }} />
-                      <span className="font-poppins text-[14px]">All core features</span>
-                    </li>
-                  </ul>
-
-                  <a href="#" className="absolute bottom-3 right-4 text-xs font-poppins text-[#6E6E6E] hover:text-[#333]">
-                    More info
-                  </a>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Billing period - styled boxes */}
-          <h3 className="font-poppins font-medium text-[20px] leading-[30px] text-[#1E1E1E] mb-3">Select billing period</h3>
-
-          <div className="space-y-3 md:space-y-4">
-            {[
-              { months: "48", price: 1699 },
-              { months: "24", price: 1799 },
-              { months: "12", price: 1899 },
-            ].map((option) => {
-              const active = billingPeriod === option.months;
-              return (
-                <label
-                  key={option.months}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 sm:px-5 sm:py-4 cursor-pointer transition
-                    ${active ? "border-[2px] border-[#7658A0] bg-white" : "border border-[#6E6E6E] bg-white"}
-                    rounded-[10px]`}
-                >
-                  <div className="flex items-center gap-3 mb-1 sm:mb-0">
-                    <input
-                      type="radio"
-                      name="billing"
-                      checked={active}
-                      onChange={() => setBillingPeriod(option.months)}
-                      className="w-5 h-5 accent-[#7658A0]"
-                    />
-                    <div>
-                      {/* 48 Months label: Poppins 500 24/50, color #7658A0 */}
-                      <div
-                        className="font-poppins"
-                        style={{ fontWeight: 500, fontSize: "24px", lineHeight: "50px", color: "#7658A0" }}
-                      >
-                        {option.months} Months
-                      </div>
-
-                      {/* Save up to 30% for 48 */}
-                      {option.months === "48" && (
-                        <div className="inline-block text-xs font-poppins text-[#7658A0] bg-[#FFF7F0] px-2 py-1 rounded-full mt-1">
-                          Save up to 30%
+                          {o.m} Months
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="font-poppins font-semibold text-[24px] leading-[30px] text-[#1E1E1E]">
-                    ₹{option.price}
-                    <span className="text-xs text-[#6E6E6E] ml-2">/month</span>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* RIGHT - ORDER SUMMARY */}
-        <div className="w-full lg:w-80 p-5 sm:p-6 flex flex-col justify-between">
-          {/* summary card (bg rgba(174,132,235,0.05), rounded 20) */}
-          <div className="rounded-[20px] p-4" style={{ background: "rgba(174,132,235,0.05)" }}>
-            <h3 className="font-poppins font-semibold text-[32px] leading-[30px] text-[#000000] mb-3">
-              Order Summary
-            </h3>
-
-            <div className="space-y-3 text-sm text-[#4B4B4B]">
-              <div className="flex justify-between">
-                <span className="font-poppins text-[20px] leading-[30px] text-[#000000]">Base Price</span>
-                <span className="font-poppins text-[20px] leading-[30px] text-[#000000]">₹{quoteData?.base_price ?? "—"}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="font-poppins text-[20px] leading-[30px] text-[#000000]">Taxes & Fees</span>
-                <span className="font-poppins text-[20px] leading-[30px] text-[#000000]">₹{quoteData?.taxes ?? "—"}</span>
-              </div>
-
-              {/* coupon */}
-              <div className="mt-3">
-                {!isCouponFieldVisible ? (
-                  <div className="flex items-center justify-between">
-                    <span className="font-poppins text-[20px] leading-[30px] text-[#6E6E6E]">Coupon Code</span>
-                    <button onClick={() => setIsCouponFieldVisible(true)} className="text-[#7658A0] font-poppins font-medium">
-                      Add
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      placeholder="Enter Coupon Code"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-[#6E6E6E] rounded-[10px] placeholder-[#6E6E6E] text-[#1E1E1E] font-poppins"
-                    />
-                    <button onClick={handleApplyCoupon} className="px-3 py-2 rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold">
-                      Apply
-                    </button>
-                  </div>
-                )}
-                {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
-              </div>
-
-              <div className="flex justify-between font-poppins font-medium text-[24px] leading-[30px] text-[#1E1E1E] mt-4">
-                <span>Total Payable (yearly)</span>
-                <span>₹{quoteData?.total ?? "—"}</span>
+                        {o.s > 0 && (
+                          <div
+                            className="ml-2 inline-block text-xs font-poppins px-2 py-1 rounded-lg"
+                            style={{
+                              backgroundColor: "#7CB2E540",
+                              color: "#5882A4",
+                            }}
+                          >
+                            Save up to {o.s}%
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className={`font-poppins font-semibold text-[24px] leading-[30px] ${
+                          a ? "text-[#1E1E1E]" : "text-black"
+                        }`}
+                      >
+                        ₹{o.p}
+                        <span className="text-xs text-[#6E6E6E] ml-2">
+                          /month
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* terms box (bg rgba(174,132,235,0.05) rounded 20) */}
-          <div className="mt-4 rounded-[20px] p-3" style={{ background: "rgba(174,132,235,0.05)" }}>
-            <label className="flex items-start gap-3">
-              <input type="checkbox" className="w-4 h-4 accent-[#7658A0] mt-1" />
-              <div className="text-sm font-poppins text-[#4B4B4B]">
-                By checking out, you agree with our <a href="#" className="text-[#7658A0] font-semibold">Terms & Conditions</a> and Privacy Policy.
+        <div className="w-96 flex flex-col p-6 md:p-10 ">
+          {/* RIGHT - wider order summary */}
+          <div
+            className="w-full lg:w-96 flex flex-col h-full rounded-[20px]"
+            style={{ background: "#AE84EB0D" }} /* 5 % opacity */
+          >
+            {/* scrollable summary */}
+            <div className="flex-1 flex flex-col gap-4">
+              <div className="rounded-[20px] p-4  flex-1 overflow-y-auto">
+                <h3 className="font-poppins font-semibold text-[32px] leading-[30px] text-black my-6 mx-6">
+                  Order Summary
+                </h3>
+                <div className="space-y-3 text-sm text-[#4B4B4B]">
+                  <div className="flex justify-between">
+                    <span className="font-poppins text-[20px] leading-[30px] text-black">
+                      Base Price
+                    </span>
+                    <span className="font-poppins text-[20px] leading-[30px] text-black">
+                      ₹{quoteData?.base_price ?? "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-poppins text-[20px] leading-[30px] text-black">
+                      Taxes & Fees
+                    </span>
+                    <span className="font-poppins text-[20px] leading-[30px] text-black">
+                      ₹{quoteData?.taxes ?? "—"}
+                    </span>
+                  </div>
+
+                  {/* coupon */}
+                  <div className="mt-3">
+                    {!isCouponFieldVisible ? (
+                      <div className="flex justify-between items-center">
+                        <span className="font-poppins text-[20px] leading-[30px] text-black">
+                          Coupon Code
+                        </span>
+                        <button
+                          onClick={() => setIsCouponFieldVisible(true)}
+                          className="text-[#7658A0] font-poppins font-medium hover:text-[#5f3a86]"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          placeholder="Enter Coupon Code"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                          className="w-full px-3 py-2 border border-[#6E6E6E] rounded-[10px] placeholder-[#6E6E6E] text-[#1E1E1E] font-poppins"
+                        />
+                        <button
+                          onClick={applyCoupon}
+                          className="px-3 py-2 rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold hover:bg-[#5f3a86]"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    )}
+                    {error && (
+                      <p className="text-red-500 text-xs mt-2">{error}</p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </label>
-          </div>
+            </div>
 
-          {/* action buttons */}
-          <div className="flex justify-between mt-6 gap-3">
-            <button className="flex-1 py-3 rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold text-[16px] leading-[20px]">
-              Cancel
-            </button>
+            {/* fixed footer – no inner white gaps, exact Figma sizes */}
+            <div className="mt-8 space-y-4 shrink-0 px-6 pb-6">
+              <div className="rounded-[20px] p-3 bg-transparent text-center">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <div className="text-sm font-poppins text-[#4B4B4B]">
+                    By checking out, you agree with our
+                    <br />
+                    <a
+                      href="#"
+                      className="text-[#7658A0] font-semibold underline"
+                    >
+                      Terms of Service
+                    </a>{" "}
+                    and confirm that you have read our&nbsp;
+                    <a
+                      href="#"
+                      className="text-[#7658A0] font-semibold underline"
+                    >
+                      Privacy Policy
+                    </a>
+                    .<br />
+                    You can cancel recurring payments at any time.
+                  </div>
+                </label>
+              </div>
 
-            <button
-              onClick={handlePaymentSubmit}
-              disabled={loading}
-              className={`flex-1 py-3 rounded-[10px] font-poppins font-semibold text-[16px] leading-[20px] text-white transition ${
-                loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#7658A0] hover:bg-[#5f3a86]"
-              }`}
-            >
-              {loading ? "Processing..." : "Choose Payment Method"}
-            </button>
+              {/* buttons – transparent, parent tint continues underneath */}
+              <div
+                className="w-full max-w-[408px] lg:w-96 flex flex-col h-full rounded-[20px]"
+                style={{ background: "#AE84EB0D" }}
+              >
+                <div className="flex justify-center">
+                  <div className="flex gap-3">
+                    {/* Cancel – 162 px (smaller) */}
+                    <button
+                      className="flex items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold"
+                      style={{
+                        width: 162,
+                        height: 56,
+                        padding: "18px 52px",
+                        gap: 10,
+                      }}
+                    >
+                      Cancel
+                    </button>
+
+                    {/* Choose Payment – 246 px (wider) */}
+                    <button
+                      onClick={goPayment}
+                      disabled={loading}
+                      className="flex items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold"
+                      style={{
+                        width: 162,
+                        height: 56,
+                        padding: "18px 52px",
+                        gap: 10,
+                      }}
+                    >
+                      {loading ? "Processing..." : "Next"}
+                      {/* {loading ? "Processing..." : "Choose Payment Method"} */}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    // </div>
   );
 }

@@ -2,10 +2,19 @@ import React, { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import { loginUser } from "../../../store/authSlice";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
 import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../components/AuthLayout";
-import shopLogo from "../../../assets/Name-Logo.png";
+import { showSuccess } from "../../../components/swalHelper";
+import { discoverTenantSlug } from "../../../api/auth/slugapi";
+
+type TenantSlugResponse = {
+  slug?: string;
+  tenant_slug?: string;
+  data?: {
+    slug?: string;
+    tenant_slug?: string;
+  };
+};
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
@@ -15,29 +24,61 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage("");
 
     if (!email.trim() || !password) {
-      Swal.fire("Error", "Please enter both email and password.", "error");
+      setErrorMessage("Please enter both email and password.");
       return;
     }
 
     try {
+      const trimmedEmail = email.trim();
+
       const result = await dispatch(
-        // cast to any if your thunk types are not set up
-        loginUser({ email: email.trim(), password } as any)
+        loginUser({ email: trimmedEmail, password } as any)
       );
 
-      // success path
       if (loginUser.fulfilled.match(result)) {
-        Swal.fire("Success", "Login Successful", "success");
-        navigate("/Plans");
-      } else {
-        // failure: ensure error message is a string
-        let errMsg = "Login failed";
+        // 1️⃣ Login success – discover & store tenant slug
+        try {
+          const slugResponse = (await discoverTenantSlug(
+            trimmedEmail
+          )) as TenantSlugResponse;
 
+          console.log("discoverTenantSlug response:", slugResponse);
+
+          const slug =
+            slugResponse?.slug ??
+            slugResponse?.tenant_slug ??
+            slugResponse?.data?.slug ??
+            slugResponse?.data?.tenant_slug;
+
+          if (slug) {
+            localStorage.setItem("store_slug", slug);
+            console.log("Slug created and saved:", slug);
+          } else {
+            console.warn(
+              "Slug not returned from API for email:",
+              trimmedEmail
+            );
+          }
+        } catch (slugErr) {
+          console.error("Failed to discover tenant slug:", slugErr);
+          // Do not block login if slug fails
+        }
+
+        // 2️⃣ Show success modal + go to Plans when user clicks button
+        showSuccess("Success", "Login Successful", () => {
+          setErrorMessage("");
+          navigate("/Plans");
+        });
+      } else {
+        // build readable error message
+        let errMsg = "Login failed";
         if (result && (result as any).payload) {
           const payload = (result as any).payload;
           if (typeof payload === "string") {
@@ -50,12 +91,21 @@ export default function LoginPage() {
               "Login failed";
           }
         }
-
-        Swal.fire("Error", errMsg, "error");
+        setErrorMessage(errMsg);
       }
     } catch (err: any) {
-      Swal.fire("Error", err?.message || "Something went wrong", "error");
+      setErrorMessage(err?.message || "Something went wrong");
     }
+  };
+
+  // Clear server error when user types
+  const onEmailChange = (v: string) => {
+    setEmail(v);
+    if (errorMessage) setErrorMessage("");
+  };
+  const onPasswordChange = (v: string) => {
+    setPassword(v);
+    if (errorMessage) setErrorMessage("");
   };
 
   return (
@@ -69,21 +119,14 @@ export default function LoginPage() {
             "linear-gradient(112deg, rgba(255, 255, 255, 0.00) 0%, rgba(113, 156, 191, 0.20) 98.3%)",
         }}
       >
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <img
-            src={shopLogo}
-            alt="ShopSynco Logo"
-            className="h-16 w-auto object-contain"
-          />
-        </div>
-
         {/* Title */}
         <h2
           id="login-title"
-          className="text-3xl font-bold text-center mb-4 
-            bg-gradient-to-r from-[#7658A0] to-[#4A3B5E]
-            bg-clip-text text-transparent font-poppins"
+          className="mx-auto w-[106px] h-[47px]
+             flex items-center justify-center
+             text-[40px] leading-[40px] font-semibold
+             text-[#719CBF] font-raleway mb-10"
+          style={{ letterSpacing: "0" }}
         >
           Login
         </h2>
@@ -101,14 +144,15 @@ export default function LoginPage() {
             type="email"
             placeholder="Email"
             autoComplete="email"
-            className="rounded-xl px-5 py-4 w-full bg-[#124B7A24]
-              text-black placeholder:text-gray-600
+            className="rounded-xl px-5 py-4 w-full
+              bg-[rgba(18,75,122,0.14)]
+              text-black placeholder:text-[#9ea5ad]
               focus:outline-none focus:ring-2 focus:ring-[#719CBF]
               border border-gray-300 transition-all font-raleway"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => onEmailChange(e.target.value)}
             required
-            aria-required
+            aria-required={true}
           />
 
           <div className="relative">
@@ -117,25 +161,39 @@ export default function LoginPage() {
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               autoComplete="current-password"
-              className="rounded-xl px-5 py-4 w-full bg-[#124B7A24]
-                text-black placeholder:text-gray-600
+              className="rounded-xl px-5 py-4 w-full
+                bg-[rgba(18,75,122,0.14)]
+                text-black placeholder:text-[#9ea5ad]
                 focus:outline-none focus:ring-2 focus:ring-[#719CBF]
                 border border-gray-300 transition-all font-raleway"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => onPasswordChange(e.target.value)}
               required
-              aria-required
+              aria-required={true}
             />
 
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-4 text-[#42739A] hover:text-[#6A9ECF] p-1"
               aria-label={showPassword ? "Hide password" : "Show password"}
+              className="
+                absolute right-4 top-1/2 -translate-y-1/2
+                text-[#9ea5ad]
+                hover:text-[#6A9ECF]
+                p-1 transition-colors duration-200
+                flex items-center justify-center
+              "
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
+
+          {/* ERROR MESSAGE (shows under inputs) */}
+          {errorMessage && (
+            <p role="alert" className="text-red-500 text-sm font-raleway -mt-2">
+              {errorMessage}
+            </p>
+          )}
 
           <div className="text-right">
             <button
