@@ -5,7 +5,16 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../components/AuthLayout";
 import { showSuccess } from "../../../components/swalHelper";
+import { discoverTenantSlug } from "../../../api/auth/slugapi";
 
+type TenantSlugResponse = {
+  slug?: string;
+  tenant_slug?: string;
+  data?: {
+    slug?: string;
+    tenant_slug?: string;
+  };
+};
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
@@ -27,12 +36,42 @@ export default function LoginPage() {
     }
 
     try {
+      const trimmedEmail = email.trim();
+
       const result = await dispatch(
-        loginUser({ email: email.trim(), password } as any)
+        loginUser({ email: trimmedEmail, password } as any)
       );
 
       if (loginUser.fulfilled.match(result)) {
-        // Use your swal helper. onClose will run when user clicks OK.
+        // 1️⃣ Login success – discover & store tenant slug
+        try {
+          const slugResponse = (await discoverTenantSlug(
+            trimmedEmail
+          )) as TenantSlugResponse;
+
+          console.log("discoverTenantSlug response:", slugResponse);
+
+          const slug =
+            slugResponse?.slug ??
+            slugResponse?.tenant_slug ??
+            slugResponse?.data?.slug ??
+            slugResponse?.data?.tenant_slug;
+
+          if (slug) {
+            localStorage.setItem("store_slug", slug);
+            console.log("Slug created and saved:", slug);
+          } else {
+            console.warn(
+              "Slug not returned from API for email:",
+              trimmedEmail
+            );
+          }
+        } catch (slugErr) {
+          console.error("Failed to discover tenant slug:", slugErr);
+          // Do not block login if slug fails
+        }
+
+        // 2️⃣ Show success modal + go to Plans when user clicks button
         showSuccess("Success", "Login Successful", () => {
           setErrorMessage("");
           navigate("/Plans");

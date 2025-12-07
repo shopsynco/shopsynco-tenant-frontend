@@ -5,9 +5,9 @@ import {
   getCountries,
   getStates,
   storeContactSetup,
-  getStoreSlug,
 } from "../../../api/mainapi/StoreCreateapi";
 import { useNavigate } from "react-router-dom";
+import { discoverTenantSlug } from "../../../api/auth/slugapi";
 
 const StoreSetupContactPage: React.FC = () => {
   const [countries, setCountries] = useState<any[]>([]);
@@ -86,7 +86,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     console.log("✅ Store contact setup completed:", result);
 
     // If store contact setup is successful, proceed to get the slug
-    const slugResponse = await getStoreSlug(email);
+    const slugResponse = await discoverTenantSlug(email);
 
     if (slugResponse) {
       console.log("Slug created and saved:", slugResponse.slug);
