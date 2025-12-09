@@ -72,16 +72,21 @@ interface AddPaymentMethodPayload {
 }
 
 // Type for card detail item
-export interface CardDetailItem {
-  id?: string;
+interface CardDetailItem {
   card_brand: string;
   card_last4: string;
   exp_month: number;
   exp_year: number;
   card_holder_name: string;
-  is_default?: boolean;
+  billing_address?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  };
 }
-
 // Type for the response when fetching card details
 interface CardDetailsResponse {
   card_details: CardDetailItem[];
