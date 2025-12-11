@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import Swal from "sweetalert2";
 import { Eye, Download, ArrowRight, HelpCircle } from "lucide-react";
 import Header from "../components/dashboardHeader";
 
 import InvoiceDetailModal from "../components/invoiceDetailModal";
 import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
 import { useNavigate } from "react-router-dom";
+import { showError } from "../../../components/swalHelper";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -24,11 +24,8 @@ export default function InvoicesPage() {
           : data.results || data.invoices || [];
         setInvoices(list);
       } catch (error) {
-        Swal.fire(
-          "Error",
-          "Failed to load invoices. Please try again.",
-          "error"
-        );
+        console.error(error);
+        showError("Load Failed", "Failed to load invoices. Please try again.");
       } finally {
         setLoading(false);
       }

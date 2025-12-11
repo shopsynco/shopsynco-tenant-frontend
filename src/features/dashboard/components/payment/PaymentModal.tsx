@@ -1,7 +1,11 @@
 import { useState } from "react";
-import Swal from "sweetalert2";
-import { submitPayment, verifyUpi, payWithUpi } from "../../../../api/payment/paymentapi";
+import {
+  submitPayment,
+  verifyUpi,
+  payWithUpi,
+} from "../../../../api/payment/paymentapi";
 import { ModalWrapper } from "../../../../components/ui/modalWrapper";
+import { showError, showSuccess } from "../../../../components/swalHelper";
 
 interface ModalProps {
   onClose: () => void;
@@ -30,7 +34,10 @@ export function AddCardModal({ onClose, onBack }: ModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!subscriptionId) return Swal.fire("Error", "Missing subscription ID", "error");
+    if (!subscriptionId) {
+      showError("Missing subscription ID", "Please try again.");
+      return;
+    }
 
     const payload = {
       subscription_id: subscriptionId,
@@ -45,25 +52,60 @@ export function AddCardModal({ onClose, onBack }: ModalProps) {
 
     try {
       setLoading(true);
-      const res = await submitPayment(payload);
-      console.log("✅ Payment submitted:", res);
-      Swal.fire("Success", "Card payment saved successfully!", "success");
-      onClose();
+      await submitPayment(payload);
+      showSuccess("Card Added", "Card payment saved successfully.", onClose);
     } catch (error: any) {
-      Swal.fire("Error", error.response?.data?.message || "Failed to submit payment", "error");
+      showError(
+        "Save Failed",
+        error.response?.data?.message || "Failed to submit payment."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ModalWrapper title="Add your card details" onClose={onClose} width="w-[90%] sm:w-[600px]">
+    <ModalWrapper
+      title="Add your card details"
+      onClose={onClose}
+      width="w-[90%] sm:w-[600px]"
+    >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input name="card_holder" value={form.card_holder} onChange={handleChange} className={inputClass} placeholder="Card Holder Name" />
-        <input name="card_last4" value={form.card_last4} onChange={handleChange} className={inputClass} placeholder="Last 4 digits" />
-        <input name="brand" value={form.brand} onChange={handleChange} className={inputClass} placeholder="Brand (e.g. VISA)" />
-        <input name="exp_month" value={form.exp_month} onChange={handleChange} className={inputClass} placeholder="Expiry Month (MM)" />
-        <input name="exp_year" value={form.exp_year} onChange={handleChange} className={inputClass} placeholder="Expiry Year (YYYY)" />
+        <input
+          name="card_holder"
+          value={form.card_holder}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Card Holder Name"
+        />
+        <input
+          name="card_last4"
+          value={form.card_last4}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Last 4 digits"
+        />
+        <input
+          name="brand"
+          value={form.brand}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Brand (e.g. VISA)"
+        />
+        <input
+          name="exp_month"
+          value={form.exp_month}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Expiry Month (MM)"
+        />
+        <input
+          name="exp_year"
+          value={form.exp_year}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Expiry Year (YYYY)"
+        />
       </div>
 
       <ModalFooter loading={loading} onBack={onBack} onSubmit={handleSubmit} />
@@ -90,7 +132,10 @@ export function AddBankModal({ onClose, onBack }: ModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!subscriptionId) return Swal.fire("Error", "Missing subscription ID", "error");
+    if (!subscriptionId) {
+      showError("Missing subscription ID", "Please try again.");
+      return;
+    }
 
     const payload = {
       subscription_id: subscriptionId,
@@ -104,25 +149,60 @@ export function AddBankModal({ onClose, onBack }: ModalProps) {
 
     try {
       setLoading(true);
-      const res = await submitPayment(payload);
-      console.log("✅ Bank payment submitted:", res);
-      Swal.fire("Success", "Bank details saved successfully!", "success");
-      onClose();
+      await submitPayment(payload);
+      showSuccess("Bank Added", "Bank details saved successfully.", onClose);
     } catch (error: any) {
-      Swal.fire("Error", error.response?.data?.message || "Bank payment submission failed", "error");
+      showError(
+        "Save Failed",
+        error.response?.data?.message || "Bank payment submission failed."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ModalWrapper title="Add your bank account" onClose={onClose} width="w-[90%] sm:w-[600px]">
+    <ModalWrapper
+      title="Add your bank account"
+      onClose={onClose}
+      width="w-[90%] sm:w-[600px]"
+    >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input name="account_holder" value={form.account_holder} onChange={handleChange} className={inputClass} placeholder="Account Holder Name" />
-        <input name="bank_name" value={form.bank_name} onChange={handleChange} className={inputClass} placeholder="Bank Name" />
-        <input name="account_number" value={form.account_number} onChange={handleChange} className={inputClass} placeholder="Account Number" />
-        <input name="branch_name" value={form.branch_name} onChange={handleChange} className={inputClass} placeholder="Branch Name" />
-        <input name="ifsc" value={form.ifsc} onChange={handleChange} className={inputClass} placeholder="IFSC Code" />
+        <input
+          name="account_holder"
+          value={form.account_holder}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Account Holder Name"
+        />
+        <input
+          name="bank_name"
+          value={form.bank_name}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Bank Name"
+        />
+        <input
+          name="account_number"
+          value={form.account_number}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Account Number"
+        />
+        <input
+          name="branch_name"
+          value={form.branch_name}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="Branch Name"
+        />
+        <input
+          name="ifsc"
+          value={form.ifsc}
+          onChange={handleChange}
+          className={inputClass}
+          placeholder="IFSC Code"
+        />
       </div>
 
       <ModalFooter loading={loading} onBack={onBack} onSubmit={handleSubmit} />
@@ -140,19 +220,24 @@ export function AddUpiModal({ onClose, onBack }: ModalProps) {
   const handleVerify = async () => {
     try {
       setLoading(true);
-      const res = await verifyUpi(upiId);
-      console.log("✅ UPI verified:", res);
-      Swal.fire("Success", "UPI verified successfully!", "success");
+      await verifyUpi(upiId);
+      showSuccess("Verified", "UPI verified successfully.");
       setVerified(true);
     } catch (error: any) {
-      Swal.fire("Error", error.response?.data?.message || "UPI verification failed", "error");
+      showError(
+        "Verification Failed",
+        error.response?.data?.message || "UPI verification failed."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!subscriptionId) return Swal.fire("Error", "Missing subscription ID", "error");
+    if (!subscriptionId) {
+      showError("Missing subscription ID", "Please try again.");
+      return;
+    }
 
     const payload = {
       subscription_id: subscriptionId,
@@ -162,19 +247,24 @@ export function AddUpiModal({ onClose, onBack }: ModalProps) {
 
     try {
       setLoading(true);
-      const res = await payWithUpi(payload);
-      console.log("✅ UPI payment submitted:", res);
-      Swal.fire("Success", "UPI payment saved successfully!", "success");
-      onClose();
+      await payWithUpi(payload);
+      showSuccess("UPI Added", "UPI payment saved successfully.", onClose);
     } catch (error: any) {
-      Swal.fire("Error", error.response?.data?.message || "UPI payment failed", "error");
+      showError(
+        "Save Failed",
+        error.response?.data?.message || "UPI payment failed."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ModalWrapper title="Add UPI ID" onClose={onClose} width="w-[90%] sm:w-[600px]">
+    <ModalWrapper
+      title="Add UPI ID"
+      onClose={onClose}
+      width="w-[90%] sm:w-[600px]"
+    >
       <label className="block text-sm text-gray-600 mb-1">Enter UPI ID</label>
       <div className="flex gap-3">
         <input
@@ -193,7 +283,12 @@ export function AddUpiModal({ onClose, onBack }: ModalProps) {
         </button>
       </div>
 
-      <ModalFooter loading={loading} onBack={onBack} onSubmit={handleSubmit} disabled={!verified} />
+      <ModalFooter
+        loading={loading}
+        onBack={onBack}
+        onSubmit={handleSubmit}
+        disabled={!verified}
+      />
     </ModalWrapper>
   );
 }
@@ -212,7 +307,10 @@ function ModalFooter({
   return (
     <div className="flex justify-end mt-6 gap-3">
       {onBack && (
-        <button onClick={onBack} className="px-5 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100">
+        <button
+          onClick={onBack}
+          className="px-5 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100"
+        >
           Back
         </button>
       )}

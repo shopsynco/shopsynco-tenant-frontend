@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
 import bgImage from "../../../assets/backgroundstore.png";
 import { storeSetup } from "../../../api/mainapi/StoreCreateapi";
+import shopLogo from "../../../assets/Name-Logo.png";
+import { showError } from "../../../components/swalHelper";
 
 interface FormData {
   store_name: string;
@@ -21,7 +22,9 @@ export default function StoreSetupPage() {
   const navigate = useNavigate();
 
   // ✅ Handle input change
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -39,7 +42,10 @@ export default function StoreSetupPage() {
       navigate("/setup-store-contact");
     } catch (err) {
       console.error("❌ Failed to setup store:", err);
-      Swal.fire("Error", "Failed to create store. Please check inputs or server.", "error");
+      showError(
+        "Store Creation Failed",
+        "Failed to create store. Please check inputs or server."
+      );
     } finally {
       setLoading(false);
     }
@@ -52,7 +58,11 @@ export default function StoreSetupPage() {
     >
       {/* Logo */}
       <div className="absolute top-6 left-6">
-        <img src="/logo.svg" alt="ShopSynco" className="w-36" />
+        <img
+          src={shopLogo}
+          alt="ShopSynco Logo"
+          className="w-36 h-auto object-contain"
+        />
       </div>
 
       {/* Title */}
@@ -64,7 +74,11 @@ export default function StoreSetupPage() {
       <div
         className="p-12 rounded-2xl bg-transparent backdrop-blur-sm border border-white/50 
         shadow-[0_8px_32px_0_rgba(31,38,135,0.1)] flex flex-col items-center text-center gap-8 z-10"
-        style={{ width: "750px" }}
+        style={{
+          width: "750px",
+          background:
+            "linear-gradient(112deg, rgba(255, 255, 255, 0.00) 0%, rgba(113, 156, 191, 0.20) 98.3%)",
+        }}
       >
         <h3 className="text-2xl font-semibold text-[#719CBF]">
           Basic Store Details
@@ -77,7 +91,7 @@ export default function StoreSetupPage() {
           <div className="flex flex-col md:flex-row gap-6 w-full mb-2">
             {/* Store Name */}
             <div className="flex-1">
-              <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-left text-sm font-medium text-[#719CBF] mb-2">
                 Company / Store Name
               </label>
               <input
@@ -87,15 +101,15 @@ export default function StoreSetupPage() {
                 value={formData.store_name}
                 onChange={handleChange}
                 className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black placeholder:text-gray-500 
-                focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg"
+                focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg bg-transparent"
                 required
               />
             </div>
 
             {/* Category (changed to input field) */}
             <div className="flex-1">
-              <label className="block text-left text-sm font-medium text-gray-700 mb-2">
-                Category / Service Type
+              <label className="block text-left text-sm font-medium text-[#719CBF] mb-2">
+                Category
               </label>
               <input
                 type="text"
@@ -103,28 +117,60 @@ export default function StoreSetupPage() {
                 placeholder="e.g., Fashion, Cleaning, Retail..."
                 value={formData.product_service}
                 onChange={handleChange}
-                className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black placeholder:text-gray-500 
-                focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg"
+                className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black
+             placeholder:text-gray-500 bg-transparent
+             focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg
+             resize-none"
                 required
               />
             </div>
           </div>
 
           {/* Domain */}
+
           <div className="w-full">
-            <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-left text-sm font-medium text-[#719CBF] mb-2">
               Domain
             </label>
-            <input
-              type="text"
-              name="domain"
-              placeholder="mystore.shopsynco.com"
-              value={formData.domain}
-              onChange={handleChange}
-              className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black placeholder:text-gray-500 
-              focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg"
-              required
-            />
+
+            {/* flex container → input + suffix + button */}
+            <div className="flex items-center gap-2">
+              {/* editable prefix */}
+              <input
+                type="text"
+                name="domain"
+                placeholder="my-store"
+                value={formData.domain}
+                onChange={handleChange}
+                className="flex-1 rounded-l-xl px-5 py-4 border border-gray-300 border-r-0
+           text-black placeholder:text-gray-500
+           focus:outline-none focus:ring-2 focus:ring-purple-400
+           text-lg bg-transparent"
+                required
+              />
+
+              {/* locked suffix */}
+              <span
+                className="px-4 py-4 border-y border-r border-gray-300 rounded-r-xl
+                     bg-white/10 text-black select-none"
+              >
+                .shopsynco.com
+              </span>
+
+              {/* Check button */}
+              <button
+                type="button"
+                onClick={() => {
+                  /* call your availability API here */
+                  alert(`Checking "${formData.domain}.shopsynco.com"`);
+                }}
+                className="whitespace-nowrap bg-[#719CBF] text-white px-4 py-3
+                 rounded-xl text-sm font-semibold hover:bg-[#5c91c4]
+                 transition"
+              >
+                Check Availability
+              </button>
+            </div>
           </div>
 
           {/* Submit */}

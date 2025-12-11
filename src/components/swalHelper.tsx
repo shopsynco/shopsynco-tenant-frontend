@@ -130,3 +130,46 @@ export function showError(title: string, message: string, onClose?: Callback) {
     },
   });
 }
+
+export function showWarning(title: string, message: string, onClose?: Callback) {
+  ensureGlobalStyles();
+
+  Swal.fire({
+    html: `
+      <div class="swal-card" role="dialog" aria-labelledby="swal-title" aria-describedby="swal-sub">
+        <div style="width:84px;height:84px;margin:8px auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,193,7,0.15)">
+          <div style="font-size:36px;color:#ffa000">⚠</div>
+        </div>
+        <h2 id="swal-title" style="margin:6px 0 4px;font-size:20px;font-weight:600;color:#27445a">${title}</h2>
+        <p id="swal-sub" style="margin:0 0 8px;font-size:14px;color:#5f7385">${message}</p>
+        <button id="swal-ok-btn" style="display:inline-block;margin-top:14px;width:85%;padding:12px;border-radius:12px;background:#ffa000;color:#fff;font-weight:600;border:none;cursor:pointer;box-shadow:0 6px 14px rgba(255,160,0,0.18)">OK</button>
+      </div>
+    `,
+    showConfirmButton: false,
+    allowOutsideClick: false,
+    padding: 0,
+    background: "transparent",
+    customClass: { popup: "swal2-custom-popup" },
+    didOpen: () => {
+      const container = document.querySelector(".swal2-container") as HTMLElement | null;
+      if (container) {
+        container.classList.add("custom-swal-backdrop");
+        container.style.background = PAGE_GRADIENT;
+        container.style.setProperty("backdrop-filter", "blur(14px)");
+        container.style.setProperty("-webkit-backdrop-filter", "blur(14px)");
+      }
+
+      const btn = document.getElementById("swal-ok-btn");
+      btn?.addEventListener("click", () => {
+        if (container) {
+          container.classList.remove("custom-swal-backdrop");
+          container.style.background = "";
+          container.style.removeProperty("backdrop-filter");
+          container.style.removeProperty("-webkit-backdrop-filter");
+        }
+        Swal.close();
+        if (onClose) onClose();
+      });
+    },
+  });
+}

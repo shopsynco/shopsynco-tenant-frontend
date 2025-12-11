@@ -9,6 +9,7 @@ import {
   payWithUpi,
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
+import { showError } from "../../../../components/swalHelper";
 
 // Define types
 interface PaymentMethod {
@@ -78,9 +79,9 @@ export default function PaymentPage() {
           setSelectedMethod(res.methods[0].value);
         }
       } catch (err) {
-        console.error("Error fetching payment methods:", err);
-        Swal.fire("Error", "Failed to load payment methods", "error");
-      }
+  console.error("Error fetching payment methods:", err);
+  showError("Load Failed", "Failed to load payment methods.");
+}
     };
     fetchMethods();
   }, []);
@@ -93,10 +94,10 @@ export default function PaymentPage() {
         try {
           const quoteResponse = await getPricingQuote(planId, months, country);
           setQuoteData(quoteResponse);
-        } catch (error) {
-          console.error("Error fetching pricing quote:", error);
-          Swal.fire("Error", "Failed to load pricing information", "error");
-        } finally {
+       } catch (error) {
+  console.error("Error fetching pricing quote:", error);
+  showError("Load Failed", "Failed to load pricing information.");
+} finally {
           setLoading(false);
         }
       };
@@ -216,11 +217,7 @@ export default function PaymentPage() {
     if (!validateUpiForm()) return;
 
     if (!subscriptionId) {
-      Swal.fire(
-        "Error",
-        "Subscription ID is required. Please try again.",
-        "error"
-      );
+     showError("Missing subscription ID", "Please try again.");
       return;
     }
 

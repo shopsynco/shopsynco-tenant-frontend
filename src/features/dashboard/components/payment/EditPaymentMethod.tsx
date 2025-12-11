@@ -1,7 +1,7 @@
 import { useState } from "react";
-import Swal from "sweetalert2";
 import { updateCardDetails } from "../../../../api/payment/paymentapi";
 import { ModalWrapper } from "../../../../components/ui/modalWrapper";
+import { showError, showSuccess } from "../../../../components/swalHelper";
 
 /* -------------------------- CARD MODAL -------------------------- */
 export function EditCardModal({ onClose }: { onClose: () => void }) {
@@ -37,7 +37,7 @@ export function EditCardModal({ onClose }: { onClose: () => void }) {
       !cvv ||
       !card_brand
     ) {
-      Swal.fire("Validation Error", "Please fill in all fields.", "warning");
+      showError("Validation Error", "Please fill in all fields.");
       return;
     }
 
@@ -52,11 +52,10 @@ export function EditCardModal({ onClose }: { onClose: () => void }) {
 
     try {
       setLoading(true);
-      await updateCardDetails(payload); // API call
-      await Swal.fire("Success", "Card details updated successfully!", "success");
-      onClose();
-    } catch (error) {
-      Swal.fire("Error", "Failed to update card.", "error");
+      await updateCardDetails(payload);
+      showSuccess("Updated", "Card details updated successfully.", onClose);
+    } catch {
+      showError("Update Failed", "Failed to update card.");
     } finally {
       setLoading(false);
     }
@@ -199,11 +198,17 @@ export function ViewCardModal({
     <ModalWrapper title="Card Details" onClose={onClose}>
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
-          <span className="text-xs font-semibold text-gray-600">{cardDetails.card_brand}</span>
+          <span className="text-xs font-semibold text-gray-600">
+            {cardDetails.card_brand}
+          </span>
         </div>
         <div>
-          <p className="font-semibold text-gray-800">{cardDetails.card_brand}</p>
-          <p className="text-sm text-gray-500">**** **** **** {cardDetails.card_last4}</p>
+          <p className="font-semibold text-gray-800">
+            {cardDetails.card_brand}
+          </p>
+          <p className="text-sm text-gray-500">
+            **** **** **** {cardDetails.card_last4}
+          </p>
         </div>
       </div>
 
@@ -212,7 +217,9 @@ export function ViewCardModal({
         <p className="text-sm text-gray-600">
           Expiry Date: {cardDetails.exp_month}/{cardDetails.exp_year.slice(-2)}
         </p>
-        <p className="text-sm text-gray-600">Cardholder: {cardDetails.card_holder_name || "N/A"}</p>
+        <p className="text-sm text-gray-600">
+          Cardholder: {cardDetails.card_holder_name || "N/A"}
+        </p>
       </div>
 
       {/* Edit and Delete Buttons */}
@@ -258,8 +265,7 @@ export function DeleteModal({
         <button
           className="bg-red-600 text-white px-4 py-2 rounded-lg"
           onClick={async () => {
-            await Swal.fire("Deleted!", `${type} payment method deleted!`, "success");
-            onClose();
+            showSuccess("Deleted", `${type} payment method deleted.`, onClose);
           }}
         >
           Delete
