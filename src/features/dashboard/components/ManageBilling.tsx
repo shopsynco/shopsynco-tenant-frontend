@@ -25,6 +25,8 @@ import {
   AddCardModal,
   AddUpiModal,
 } from "./payment/PaymentModal";
+import { useNavigate } from "react-router-dom";
+import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -81,7 +83,26 @@ export default function ManageBillingPage() {
   const [activeModal, setActiveModal] = useState<PaymentModalType>(null);
   const [cardDetails, setCardDetails] = useState<CardDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const navigate = useNavigate();
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 
+  const formatAmount = (n: number) => "₹" + n.toLocaleString("en-IN");
+  useEffect(() => {
+    fetchInvoices()
+      .then((data) => {
+        const list = Array.isArray(data)
+          ? data
+          : data.results || data.invoices || [];
+        setInvoices(list);
+      })
+      .catch(() => setInvoices([]));
+  }, []);
   /* ----------  fetch card details  ---------- */
   useEffect(() => {
     const fetchCardDetails = async () => {
@@ -157,9 +178,15 @@ export default function ManageBillingPage() {
       <Header />
       <div className="max-w-6xl mx-auto px-6 py-10">
         <p className="text-sm text-gray-500 mb-2">
-          Dashboard <span className="mx-1">›</span> Manage Billing
+          <span
+            className="cursor-pointer hover:underline"
+            onClick={() => navigate("/dashboard")}
+          >
+            Dashboard
+          </span>
+          <span className="mx-1">›</span>
+          <span className="text-gray-700 font-medium">Manage Billing</span>
         </p>
-
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-semibold text-gray-900">
             Manage Billing
@@ -275,7 +302,10 @@ export default function ManageBillingPage() {
                 <h3 className="font-semibold text-[#6A3CB1]">
                   Billing History
                 </h3>
-                <button className="bg-[#7658A0] text-sm font-medium text-white rounded-lg px-3 py-1.5 hover:opacity-90 transition">
+                <button
+                  onClick={() => navigate("/invoice")}
+                  className="bg-[#7658A0] text-sm font-medium text-white rounded-lg px-3 py-1.5 hover:opacity-90 transition"
+                >
                   View All
                 </button>
               </div>
@@ -283,14 +313,38 @@ export default function ManageBillingPage() {
                 Recent invoices and payments
               </p>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between text-[#565756]">
-                  <span className="font-medium">Aug 25, 2025</span>
-                  <span className="font-medium">₹1899</span>
-                </div>
-                <div className="flex justify-between text-[#565756]">
-                  <span className="font-medium">Aug 25, 2024</span>
-                  <span className="font-medium">₹1899</span>
-                </div>
+                {invoices.length === 0 ? (
+                  <>
+                    <div className="flex justify-between text-[#565756]">
+                      <span className="font-medium">Aug 25, 2025</span>
+                      <span className="font-medium">₹1,899</span>
+                    </div>
+                    <div className="flex justify-between text-[#565756]">
+                      <span className="font-medium">Aug 25, 2024</span>
+                      <span className="font-medium">₹1,899</span>
+                    </div>
+                  </>
+                ) : (
+                  invoices
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime()
+                    )
+                    .slice(0, 2)
+                    .map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="flex justify-between text-[#565756]"
+                      >
+                        <span className="font-medium">
+                          {formatDate(inv.date)}
+                        </span>
+                        <span className="font-medium">
+                          {formatAmount(inv.amount)}
+                        </span>
+                      </div>
+                    ))
+                )}
               </div>
             </div>
 
@@ -302,8 +356,8 @@ export default function ManageBillingPage() {
                 </h4>
               </div>
               <p className="text-sm text-gray-500 mb-3 leading-relaxed">
-                Our support team is ready to assist you with any questions
-                about your subscription.
+                Our support team is ready to assist you with any questions about
+                your subscription.
               </p>
               <div className="flex justify-end">
                 <button className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1">
@@ -316,12 +370,14 @@ export default function ManageBillingPage() {
       </div>
 
       {/* =====================  MODALS  ===================== */}
-     {activeModal === "add" && (
-  <AddPaymentMethodModal
-    onClose={closeModal}
-    onPaymentMethodSelect={(method: PaymentModalType) => setActiveModal(method)}
-  />
-)}
+      {activeModal === "add" && (
+        <AddPaymentMethodModal
+          onClose={closeModal}
+          onPaymentMethodSelect={(method: PaymentModalType) =>
+            setActiveModal(method)
+          }
+        />
+      )}
       {activeModal === "addCard" && <AddCardModal onClose={closeModal} />}
       {activeModal === "addBank" && <AddBankModal onClose={closeModal} />}
       {activeModal === "addUpi" && <AddUpiModal onClose={closeModal} />}

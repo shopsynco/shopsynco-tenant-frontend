@@ -419,6 +419,7 @@ export default function Dashboard() {
                 </button>
 
                 <button
+                onClick={() => navigate("/invoice")}
                   className="flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50 transition font-medium text-black"
                   style={{ borderColor: "#8B6BB6" }}
                 >
