@@ -4,7 +4,7 @@ import axiosInstance from "../../store/refreshToken/tokenUtils";
 export const fetchInvoices = async () => {
   try {
     const response = await axiosInstance.get(`api/tenants/billing/invoices/`);
-    return response.data;  // Returning the data so that the component can use it
+    return response.data; // Returning the data so that the component can use it
   } catch (error) {
     throw new Error("Failed to load invoices. Please try again.");
   }
@@ -18,5 +18,22 @@ export const fetchInvoicedetail = async (transaction_id: string) => {
     return response.data;
   } catch (error) {
     throw new Error("Failed to load invoice detail. Please try again.");
+  }
+};
+
+export const downloadInvoiceFile = async (invoiceId: string | number) => {
+  try {
+    const response = await axiosInstance.get(
+      `api/tenant/pqrs_company/billing/invoices/${invoiceId}/download`,
+      { responseType: "blob" }
+    );
+
+    const blob = new Blob([response.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+
+    window.open(url, "_blank");
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    throw new Error("Failed to download invoice. Please try again.");
   }
 };

@@ -86,13 +86,13 @@ export default function UpgradePaymentPage() {
       try {
         const res = await getCardDetails();
         const cards = (res.card_details || []).map(card => ({
-          id: card.id,
+          // id: card.id,
           card_last4: card.card_last4,
           brand: card.card_brand,
           exp_month: card.exp_month,
           exp_year: card.exp_year,
           card_holder: card.card_holder_name,
-          is_default: card.is_default,
+          // is_default: card.is_default,
         })) as ExistingCard[];
         setExistingCards(cards);
         // If there are existing cards, select the first one by default
