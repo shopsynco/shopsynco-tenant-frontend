@@ -72,7 +72,10 @@ export default function RegisterPage() {
       );
     } catch (error: any) {
       console.error("Signup error:", error);
-      showError("Signup Failed", error?.message || "Signup failed. Please try again.");
+      showError(
+        "Signup Failed",
+        error?.message || "Signup failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -83,23 +86,16 @@ export default function RegisterPage() {
       className="flex items-center justify-center min-h-screen bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      {/* Card / Form container
-          - default text color set to #42739A (Raleway) via text-[#42739A]
-          - gradient and rounded 30px via arbitrary values
-      */}
       <div
         className="w-full max-w-2xl p-12 shadow-2xl backdrop-blur-sm border border-white/20 flex flex-col gap-6
                    text-[#42739A] font-raleway"
         style={{
           boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.1)",
-          // gradient exactly as requested: 139.18deg, transparent-> rgba(113,156,191,0.3)
-          // using Tailwind arbitrary background in style to avoid escaping issues in some setups.
           background:
             "linear-gradient(139.18deg, rgba(255,255,255,0) 1.22%, rgba(113,156,191,0.3) 98.56%)",
           borderRadius: "30px",
         }}
       >
-        {/* Heading (condition 2) */}
         <h2
           className="mx-auto mb-2 text-center font-raleway font-bold
                      text-[32px] leading-[38px] tracking-[0.04em] text-[#719CBF]"
@@ -124,12 +120,7 @@ export default function RegisterPage() {
                 placeholder="Your First Name"
                 value={formData.first_name}
                 onChange={handleChange}
-                className="
-                  w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
-                  border border-[#B7A9CE] rounded-[8px]
-                  focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
-                  transition
-                "
+                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
                 required
               />
             </div>
@@ -149,12 +140,7 @@ export default function RegisterPage() {
                 placeholder="Your Company Name"
                 value={formData.company_name}
                 onChange={handleChange}
-                className="
-                  w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
-                  border border-[#B7A9CE] rounded-[8px]
-                  focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
-                  transition
-                "
+                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
                 required
               />
             </div>
@@ -176,12 +162,7 @@ export default function RegisterPage() {
                 placeholder="Your Email Address"
                 value={formData.email}
                 onChange={handleChange}
-                className="
-                  w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
-                  border border-[#B7A9CE] rounded-[8px]
-                  focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
-                  transition
-                "
+                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
                 required
               />
             </div>
@@ -200,12 +181,7 @@ export default function RegisterPage() {
                 placeholder="Your Phone Number"
                 value={formData.phone}
                 onChange={handleChange}
-                className="
-                  w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
-                  border border-[#B7A9CE] rounded-[8px]
-                  focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
-                  transition
-                "
+                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
                 required
               />
             </div>
@@ -226,12 +202,7 @@ export default function RegisterPage() {
               placeholder="Create a strong password (min 8 characters)"
               value={formData.password}
               onChange={handleChange}
-              className="
-                w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
-                border border-[#B7A9CE] rounded-[8px]
-                focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
-                transition
-              "
+              className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
               required
             />
           </div>
@@ -251,12 +222,7 @@ export default function RegisterPage() {
               placeholder="Confirm your password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="
-                w-full px-5 py-3 bg-white text-[#000000] placeholder-[#B7A9CE]
-                border border-[#B7A9CE] rounded-[8px]
-                focus:outline-none focus:ring-0 focus:border-2 focus:border-[#719CBF]
-                transition
-              "
+              className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
               required
             />
           </div>
@@ -265,19 +231,20 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="
-              mt-2 w-full py-4 rounded-[10px] shadow-lg border border-white/10
+            className="mt-2 w-full py-4 rounded-[10px] shadow-lg border border-white/10
               bg-[#719CBF] hover:bg-[#5f97b6] transition
-              font-poppins font-semibold text-[24px] leading-[36px] text-[#FCFCFC]
-              disabled:opacity-60 disabled:cursor-not-allowed
-            "
+              font-poppins font-semibold text-[24px] leading-[33px] text-[#FCFCFC]
+              disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? "Creating Account..." : "Create Account"}
           </button>
 
           <p className="text-center text-sm mt-2">
             <span className="text-[#4A5C74]">Already have an account? </span>
-            <a href="/login" className="text-[#6A9ECF] font-medium hover:underline transition">
+            <a
+              href="/login"
+              className="text-[#6A9ECF] font-medium hover:underline transition"
+            >
               Login
             </a>
           </p>

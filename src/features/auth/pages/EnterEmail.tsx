@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import Swal from "sweetalert2";
 import AuthLayout from "../components/AuthLayout";
 import { sendEmailVerificationCode } from "../../../api/auth/authapi";
+import { showError, showSuccess } from "../../../components/swalHelper";
 
 export default function EnterEmail() {
   const navigate = useNavigate();
@@ -21,33 +21,26 @@ export default function EnterEmail() {
     e.preventDefault();
 
     if (!email) {
-      Swal.fire("Error", "Please enter your email", "error");
-      return;
-    }
+  showError("Validation Error", "Please enter your email.");
+  return;
+}
 
-    try {
-      setLoading(true);
-
-      // 🔹 Call pre-signup send API
-      await sendEmailVerificationCode(email.toLowerCase().trim());
-
-      Swal.fire(
-        "Verification Sent",
-        "We’ve sent a 6-digit verification code to your email.",
-        "success"
-      );
-
-      // 🔹 Go to verification page with email
-      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
-    } catch (err: any) {
-      Swal.fire(
-        "Error",
-        err.message || "Failed to send verification email. Please try again.",
-        "error"
-      );
-    } finally {
-      setLoading(false);
-    }
+try {
+  setLoading(true);
+  await sendEmailVerificationCode(email.toLowerCase().trim());
+  showSuccess(
+    "Verification Sent",
+    "We’ve sent a 6-digit verification code to your email.",
+    () => navigate(`/verify-email?email=${encodeURIComponent(email)}`)
+  );
+} catch (err: any) {
+  showError(
+    "Send Failed",
+    err.message || "Failed to send verification email. Please try again."
+  );
+} finally {
+  setLoading(false);
+}
   };
 
   return (

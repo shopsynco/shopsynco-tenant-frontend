@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { Plus, CreditCard, X, Eye, Edit, Trash2 } from "lucide-react";
+import {
+  Plus,
+  CreditCard,
+  Eye,
+  Edit,
+  Trash2,
+  Clock,
+  HelpCircle,
+  ArrowRight,
+} from "lucide-react";
 import Swal from "sweetalert2";
 import Header from "./dashboardHeader";
 import { getCardDetails } from "../../../api/payment/paymentapi";
@@ -16,14 +25,38 @@ import {
   AddCardModal,
   AddUpiModal,
 } from "./payment/PaymentModal";
+import { useNavigate } from "react-router-dom";
+import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
 
-// Card details type definition
+/* ------------------------------------------------------------------ */
+/*  Types                                                             */
+/* ------------------------------------------------------------------ */
+
+/* Shape that comes from the API */
 interface CardDetails {
+  card_brand: string;
+  card_last4: string;
+  exp_month: number;
+  exp_year: number;
+  card_holder_name: string;
+  billing_address?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  };
+}
+
+/* Props expected by the ViewCardModal (strings only) */
+interface ViewCardModalProps {
   card_brand: string;
   card_last4: string;
   exp_month: string;
   exp_year: string;
   card_holder_name: string;
+  billing_address?: CardDetails["billing_address"];
 }
 
 type PaymentModalType =
@@ -42,26 +75,42 @@ type PaymentModalType =
   | "deleteUpi"
   | null;
 
+/* ------------------------------------------------------------------ */
+/*  Component                                                         */
+/* ------------------------------------------------------------------ */
+
 export default function ManageBillingPage() {
   const [activeModal, setActiveModal] = useState<PaymentModalType>(null);
   const [cardDetails, setCardDetails] = useState<CardDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const navigate = useNavigate();
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 
-  // Fetch card details on component mount
+  const formatAmount = (n: number) => "₹" + n.toLocaleString("en-IN");
+  useEffect(() => {
+    fetchInvoices()
+      .then((data) => {
+        const list = Array.isArray(data)
+          ? data
+          : data.results || data.invoices || [];
+        setInvoices(list);
+      })
+      .catch(() => setInvoices([]));
+  }, []);
+  /* ----------  fetch card details  ---------- */
   useEffect(() => {
     const fetchCardDetails = async () => {
       try {
         setLoading(true);
         const response = await getCardDetails();
-        if (response.card_details && response.card_details.length > 0) {
-          const card = response.card_details[0];
-          setCardDetails({
-            card_brand: card.card_brand || "",
-            card_last4: card.card_last4 || "",
-            exp_month: String(card.exp_month || "").padStart(2, "0"),
-            exp_year: String(card.exp_year || ""),
-            card_holder_name: card.card_holder_name || "",
-          });
+        if (response.card_details?.length) {
+          setCardDetails(response.card_details[0]);
         } else {
           setCardDetails(null);
         }
@@ -72,14 +121,12 @@ export default function ManageBillingPage() {
         setLoading(false);
       }
     };
-
     fetchCardDetails();
   }, []);
 
-  // Handle modal closure
   const closeModal = () => setActiveModal(null);
 
-  // Function to handle the delete action
+  /* ----------  delete handler  ---------- */
   const handleDelete = async (type: string) => {
     const result = await Swal.fire({
       title: "Delete Payment Method",
@@ -91,54 +138,55 @@ export default function ManageBillingPage() {
       confirmButtonText: "Yes, delete it",
     });
 
-    if (result.isConfirmed) {
-      try {
-        // Refresh card details after deletion
-        await Swal.fire("Deleted!", `The ${type} payment method has been deleted.`, "success");
-        
-        // Refresh card details
-        const response = await getCardDetails();
-        if (response.card_details && response.card_details.length > 0) {
-          const card = response.card_details[0];
-          setCardDetails({
-            card_brand: card.card_brand || "VISA",
-            card_last4: card.card_last4 || "",
-            exp_month: String(card.exp_month || "").padStart(2, "0"),
-            exp_year: String(card.exp_year || ""),
-            card_holder_name: card.card_holder_name || "",
-          });
-        } else {
-          setCardDetails(null);
-        }
-        
-        closeModal();
-      } catch (error) {
-        Swal.fire("Error", "Failed to delete payment method. Please try again.", "error");
-      }
+    if (!result.isConfirmed) return;
+
+    try {
+      await Swal.fire("Deleted!", `${type} removed.`, "success");
+      const response = await getCardDetails();
+      setCardDetails(response.card_details?.[0] ?? null);
+      closeModal();
+    } catch {
+      Swal.fire("Error", "Failed to delete payment method.", "error");
     }
   };
 
-  // Function to handle edit actions
+  /* ----------  edit handler  ---------- */
   const handleEdit = (type: string) => {
-    // Open the appropriate edit modal
-    if (type === "card") {
-      setActiveModal("editCard");
-    } else if (type === "bank") {
-      setActiveModal("editBank");
-    } else if (type === "upi") {
-      setActiveModal("editUPI");
-    }
+    if (type === "card") setActiveModal("editCard");
+    else if (type === "bank") setActiveModal("editBank");
+    else if (type === "upi") setActiveModal("editUPI");
   };
+
+  /* ----------  helpers  ---------- */
+  const toViewModalShape = (
+    src: CardDetails | null
+  ): ViewCardModalProps | null => {
+    if (!src) return null;
+    return {
+      ...src,
+      exp_month: String(src.exp_month).padStart(2, "0"),
+      exp_year: String(src.exp_year),
+    };
+  };
+
+  /* ------------------------------------------------------------------ */
+  /*  Render                                                            */
+  /* ------------------------------------------------------------------ */
 
   return (
     <div className="min-h-screen bg-[#FFFFFF]">
       <Header />
       <div className="max-w-6xl mx-auto px-6 py-10">
-        {/* Breadcrumb */}
         <p className="text-sm text-gray-500 mb-2">
-          Dashboard <span className="mx-1">›</span> Manage Billing
+          <span
+            className="cursor-pointer hover:underline"
+            onClick={() => navigate("/dashboard")}
+          >
+            Dashboard
+          </span>
+          <span className="mx-1">›</span>
+          <span className="text-gray-700 font-medium">Manage Billing</span>
         </p>
-
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-semibold text-gray-900">
             Manage Billing
@@ -146,22 +194,22 @@ export default function ManageBillingPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-          {/* Left section */}
+          {/* ------------  Left  ------------ */}
           <div className="space-y-8">
             {/* Billing period */}
-            <div className="rounded-2xl border border-[#E5E0FA] bg-[#F6F3FF] p-6">
-              <p className="text-base font-semibold text-[#6A3CB1]">
+            <div className="rounded-2xl bg-[#AE84EB26] p-6">
+              <p className="text-base font-semibold text-black">
                 Billing Period:{" "}
-                <span className="font-medium text-[#6A3CB1]">Yearly</span>
+                <span className="font-semibold text-[#6A3CB1]">Yearly</span>
               </p>
-              <div className="flex items-center gap-2 mt-2 text-gray-600 text-sm">
-                <X size={15} className="text-[#6A3CB1]" />
+              <div className="flex items-center gap-2 mt-2 text-black text-sm">
+                <Clock size={15} />
                 <span>Next Renewal: Aug 25, 2026</span>
               </div>
             </div>
 
             {/* Payment method */}
-            <div className="bg-white rounded-2xl border border-[#E8E4F7] shadow-sm p-6 space-y-5">
+            <div className="bg-white rounded-2xl border border-[#8B6BB6] shadow-sm p-6 space-y-5">
               <h3 className="text-base font-semibold text-[#6A3CB1]">
                 Payment Method
               </h3>
@@ -169,66 +217,76 @@ export default function ManageBillingPage() {
               {loading ? (
                 <div>Loading card details...</div>
               ) : cardDetails ? (
-                <div className="flex items-center justify-between bg-[#F9F8FF] border border-[#E9E4FB] rounded-xl p-4">
-                  <div className="flex items-center gap-3">
-                    {/* Card Type and Last 4 Digits */}
-                    <div className="flex gap-2 items-center">
+                <>
+                  <div className="flex items-center justify-between bg-[#F9F8FF] border border-[#8B6BB6] rounded-xl p-4">
+                    <div className="flex items-center gap-3">
                       <CreditCard size={28} className="text-green-600" />
                       <p className="font-semibold text-gray-800">
                         {cardDetails.card_brand} **** {cardDetails.card_last4}
                       </p>
                     </div>
+                    <div className="text-gray-800 font-semibold">
+                      {cardDetails.card_holder_name}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={() => setActiveModal("viewCard")}
+                      >
+                        <Eye size={20} />
+                      </button>
+                      <button
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={() => setActiveModal("editCard")}
+                      >
+                        <Edit size={20} />
+                      </button>
+                      <button
+                        className="text-gray-500 hover:text-gray-700"
+                        onClick={() => setActiveModal("deleteCard")}
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Cardholder's Name */}
-                  <div className="text-gray-800 font-semibold">
-                    {cardDetails.card_holder_name}
+                  {/* -------- billing address -------- */}
+                  <div className="pt-2 text-sm text-gray-700 border-t border-gray-200">
+                    <p className="font-medium mt-3">
+                      {cardDetails.card_holder_name}
+                    </p>
+                    {cardDetails.billing_address ? (
+                      <div className="text-xs mt-1 text-gray-500 leading-relaxed">
+                        <p>{cardDetails.billing_address.line1}</p>
+                        {cardDetails.billing_address.line2 && (
+                          <p>{cardDetails.billing_address.line2}</p>
+                        )}
+                        <p>
+                          {cardDetails.billing_address.city},{" "}
+                          {cardDetails.billing_address.state}{" "}
+                          {cardDetails.billing_address.postal_code}
+                        </p>
+                        <p>{cardDetails.billing_address.country}</p>
+                      </div>
+                    ) : (
+                      <button className="text-[#6A3CB1] text-xs font-medium mt-2 hover:underline">
+                        + Add Billing Address
+                      </button>
+                    )}
+                    {cardDetails.billing_address && (
+                      <button className="text-[#6A3CB1] text-xs font-medium mt-2 hover:underline">
+                        Edit Billing Address
+                      </button>
+                    )}
                   </div>
-
-                  {/* Action Icons */}
-                  <div className="flex items-center gap-3">
-                    {/* View Card Button */}
-                    <button
-                      className="text-gray-500 hover:text-gray-700"
-                      onClick={() => setActiveModal("viewCard")}
-                    >
-                      <Eye size={20} />
-                    </button>
-
-                    {/* Edit Card Button */}
-                    <button
-                      className="text-gray-500 hover:text-gray-700"
-                      onClick={() => setActiveModal("editCard")}
-                    >
-                      <Edit size={20} />
-                    </button>
-
-                    {/* Delete Card Button */}
-                    <button
-                      className="text-gray-500 hover:text-gray-700"
-                      onClick={() => setActiveModal("deleteCard")}
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
-                </div>
+                </>
               ) : (
                 <div>No card details available</div>
               )}
 
-              <div className="pt-2 text-sm text-gray-700 border-t border-gray-200">
-                <p className="font-medium mt-3">{cardDetails?.card_holder_name || "N/A"}</p>
-                <p className="text-xs mt-1 text-gray-500 leading-relaxed">
-                  {/* Billing address will be fetched from API */}
-                </p>
-                <button className="text-[#6A3CB1] text-xs font-medium mt-2 hover:underline">
-                  Edit Billing Address
-                </button>
-              </div>
-
               <div className="pt-4 flex justify-end">
                 <button
-                  onClick={() => setActiveModal("add")} // Open "Add Payment Method" modal
+                  onClick={() => setActiveModal("add")}
                   className="flex items-center gap-2 bg-[#6A3CB1] text-white text-sm px-5 py-2.5 rounded-lg hover:bg-[#5b32a2] transition"
                 >
                   <Plus size={16} /> Add Payment Method
@@ -237,33 +295,62 @@ export default function ManageBillingPage() {
             </div>
           </div>
 
-          {/* Right section - billing history */}
+          {/* ------------  Right  ------------ */}
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-[#E8E4F7] shadow-sm p-6">
+            <div className="bg-[#AE84EB1A] rounded-2xl shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-[#6A3CB1]">
                   Billing History
                 </h3>
-                <button className="text-sm font-medium text-[#6A3CB1] hover:underline">
+                <button
+                  onClick={() => navigate("/invoice")}
+                  className="bg-[#7658A0] text-sm font-medium text-white rounded-lg px-3 py-1.5 hover:opacity-90 transition"
+                >
                   View All
                 </button>
               </div>
-
+              <p className="text-sm text-[#565756] mb-4">
+                Recent invoices and payments
+              </p>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between text-gray-700">
-                  <span>Aug 25, 2025</span>
-                  <span>₹1899</span>
-                </div>
-                <div className="flex justify-between text-gray-700">
-                  <span>Aug 25, 2024</span>
-                  <span>₹1899</span>
-                </div>
+                {invoices.length === 0 ? (
+                  <>
+                    <div className="flex justify-between text-[#565756]">
+                      <span className="font-medium">Aug 25, 2025</span>
+                      <span className="font-medium">₹1,899</span>
+                    </div>
+                    <div className="flex justify-between text-[#565756]">
+                      <span className="font-medium">Aug 25, 2024</span>
+                      <span className="font-medium">₹1,899</span>
+                    </div>
+                  </>
+                ) : (
+                  invoices
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime()
+                    )
+                    .slice(0, 2)
+                    .map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="flex justify-between text-[#565756]"
+                      >
+                        <span className="font-medium">
+                          {formatDate(inv.date)}
+                        </span>
+                        <span className="font-medium">
+                          {formatAmount(inv.amount)}
+                        </span>
+                      </div>
+                    ))
+                )}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#E8E4F7] bg-white p-6 text-gray-700">
+            <div className="rounded-2xl border border-[#8B6BB6] bg-white p-6 text-gray-700">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[#6A3CB1] text-lg">❓</span>
+                <HelpCircle size={24} className="text-[#6A3CB1]" />
                 <h4 className="font-semibold text-gray-800">
                   Need help with billing?
                 </h4>
@@ -272,21 +359,23 @@ export default function ManageBillingPage() {
                 Our support team is ready to assist you with any questions about
                 your subscription.
               </p>
-              <button className="text-sm font-medium text-[#6A3CB1] hover:underline">
-                Contact Support →
-              </button>
+              <div className="flex justify-end">
+                <button className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1">
+                  Contact Support <ArrowRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 🧩 Modal Renderer */}
+      {/* =====================  MODALS  ===================== */}
       {activeModal === "add" && (
         <AddPaymentMethodModal
           onClose={closeModal}
-          onPaymentMethodSelect={(method: PaymentModalType) => {
-            setActiveModal(method); // Handle the modal for add/edit
-          }}
+          onPaymentMethodSelect={(method: PaymentModalType) =>
+            setActiveModal(method)
+          }
         />
       )}
       {activeModal === "addCard" && <AddCardModal onClose={closeModal} />}
@@ -300,7 +389,7 @@ export default function ManageBillingPage() {
           onClose={closeModal}
           onEditCard={() => handleEdit("card")}
           onDeleteCard={() => handleDelete("card")}
-          cardDetails={cardDetails}
+          cardDetails={toViewModalShape(cardDetails)}
         />
       )}
       {activeModal === "deleteCard" && (

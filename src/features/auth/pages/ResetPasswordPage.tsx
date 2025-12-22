@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
 import bgImage from "../../../assets/commonbackground.png";
-import { resetPassword } from "../../../api/auth/authapi"; 
+import { resetPassword } from "../../../api/auth/authapi";
+import { showError, showSuccess } from "../../../components/swalHelper";
 
 const ResetPasswordPage: React.FC = () => {
   const [password, setPassword] = useState("");
@@ -30,72 +30,81 @@ const ResetPasswordPage: React.FC = () => {
   }, [password]);
 
   const handleSubmit = async () => {
+    // 1. add at top
+
+    /* ---------- inside handleSubmit ---------- */
     if (password !== confirmPassword) {
-      Swal.fire("Error", "Passwords do not match", "error");
+      showError(
+        "Passwords do not match",
+        "Please make sure both passwords are identical."
+      );
       return;
     }
 
     if (!Object.values(validations).every(Boolean)) {
-      Swal.fire("Error", "Please meet all password requirements", "error");
+      showError("Weak password", "Please meet all password requirements.");
       return;
     }
 
     try {
-      await resetPassword(
-        email || "",
-        password,
-        confirmPassword
+      await resetPassword(email || "", password, confirmPassword);
+      showSuccess(
+        "Password Reset Successful",
+        "Your password has been updated successfully!",
+        () => navigate("/Resetpassword-Success")
       );
-
-      await Swal.fire({
-        icon: "success",
-        title: "Password Reset Successful",
-        text: "Your password has been updated successfully!",
-        confirmButtonColor: "#6A9ECF",
-      });
-
-      // ✅ Redirect after SweetAlert closes
-      navigate("/Resetpassword-Success"); // 👈 or navigate("/login") if you prefer
     } catch (error: unknown) {
-      Swal.fire({
-        icon: "error",
-        title: "Reset Failed",
-        text: error instanceof Error ? error.message : "Something went wrong. Try again.",
-        confirmButtonColor: "#6A9ECF",
-      });
+      showError(
+        "Reset Failed",
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Try again."
+      );
     }
   };
 
   const allValid = Object.values(validations).every(Boolean);
   const strength = Object.values(validations).filter(Boolean).length;
-  const strengthColors = ["bg-red-400", "bg-yellow-400", "bg-blue-400", "bg-green-500"];
+  const strengthColors = [
+    "bg-red-400",
+    "bg-yellow-400",
+    "bg-blue-400",
+    "bg-green-500",
+  ];
 
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl w-[380px] p-8 text-center z-10">
-        <h2 className="text-2xl font-semibold text-[#466b9d] mb-2">
+      <div
+        className="w-full max-w-sm p-8 rounded-2xl  
+          backdrop-blur-sm border border-white/50 
+          shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]
+          flex flex-col gap-4"
+        style={{
+          background:
+            "linear-gradient(112.13deg, rgba(255,255,255,0.6) 0%, rgba(113,156,191,0.25) 98.3%)",
+        }}
+      >
+        <h2 className="text-2xl font-semibold text-[#719CBF] mb-2">
           Reset Your Password
         </h2>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-[#719CBF] mb-6">
           Set a new password for your account.
         </p>
 
         {/* Password Input */}
         <div className="mb-4 relative">
           <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Enter New Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={`w-full px-4 py-2 border ${
-              !allValid && password
-                ? "border-red-400"
-                : "border-gray-300"
-            } rounded-md focus:outline-none focus:ring-2 focus:ring-[#a2b8da] text-gray-700`}
-          />
+  type={showPassword ? "text" : "password"}
+  placeholder="Enter New Password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  className="w-full px-4 py-2 rounded-md 
+             bg-[#124B7A24] text-[#719CBF] placeholder:text-[#719CBF] 
+             border-0 focus:outline-none focus:ring-2 focus:ring-[#a2b8da]"
+/>  
           <button
             type="button"
             className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
@@ -112,7 +121,9 @@ const ResetPasswordPage: React.FC = () => {
             placeholder="Confirm Password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#a2b8da] text-gray-700"
+            className="w-full px-4 py-2 rounded-md 
+             text-[#719CBF] placeholder:text-[#719CBF]      bg-[#124B7A24]
+              focus:outline-none focus:ring-2 focus:ring-[#a2b8da]"
           />
           <button
             type="button"
@@ -148,7 +159,11 @@ const ResetPasswordPage: React.FC = () => {
                 validations.upperCase ? "text-green-600" : "text-gray-400"
               }`}
             >
-              {validations.upperCase ? <CheckCircle size={14} /> : <XCircle size={14} />}{" "}
+              {validations.upperCase ? (
+                <CheckCircle size={14} />
+              ) : (
+                <XCircle size={14} />
+              )}{" "}
               At least 1 uppercase letter
             </li>
             <li
@@ -156,7 +171,11 @@ const ResetPasswordPage: React.FC = () => {
                 validations.number ? "text-green-600" : "text-gray-400"
               }`}
             >
-              {validations.number ? <CheckCircle size={14} /> : <XCircle size={14} />}{" "}
+              {validations.number ? (
+                <CheckCircle size={14} />
+              ) : (
+                <XCircle size={14} />
+              )}{" "}
               At least 1 number
             </li>
             <li
@@ -164,7 +183,11 @@ const ResetPasswordPage: React.FC = () => {
                 validations.length ? "text-green-600" : "text-gray-400"
               }`}
             >
-              {validations.length ? <CheckCircle size={14} /> : <XCircle size={14} />}{" "}
+              {validations.length ? (
+                <CheckCircle size={14} />
+              ) : (
+                <XCircle size={14} />
+              )}{" "}
               At least 8 characters
             </li>
           </ul>

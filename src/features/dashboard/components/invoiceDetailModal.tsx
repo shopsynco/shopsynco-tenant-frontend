@@ -1,5 +1,5 @@
-import Swal from "sweetalert2";
-import { BASE_URL } from "../../../api/axios_config";
+import { downloadInvoiceFile } from "../../../api/mainapi/invoiceapi";
+import { showError } from "../../../components/swalHelper";
 
 interface Invoice {
   id: string | number;
@@ -14,15 +14,15 @@ interface InvoiceDetailModalProps {
   closeModal: () => void;
 }
 
-const InvoiceDetailModal = ({ invoice, closeModal }: InvoiceDetailModalProps) => {
+const InvoiceDetailModal = ({
+  invoice,
+  closeModal,
+}: InvoiceDetailModalProps) => {
   const downloadInvoice = async () => {
     try {
-      window.open(
-        `${BASE_URL}/api/tenant/pqrs_company/billing/invoices/${invoice.id}/download`,
-        "_blank"
-      );
-    } catch (error) {
-      Swal.fire("Error", "Failed to download the invoice.", "error");
+      await downloadInvoiceFile(invoice.id);
+    } catch (err: any) {
+      showError("Error", err.message || "Failed to download invoice.");
     }
   };
 
@@ -35,16 +35,29 @@ const InvoiceDetailModal = ({ invoice, closeModal }: InvoiceDetailModalProps) =>
         >
           X
         </button>
+
         <h2 className="text-xl font-semibold mb-4 text-[#4A5C74]">
           Invoice Details
         </h2>
+
         <div className="space-y-3">
-          <p><strong>Invoice No:</strong> {invoice.id}</p>
-          <p><strong>Date:</strong> {invoice.date}</p>
-          <p><strong>Description:</strong> {invoice.description}</p>
-          <p><strong>Payment Method:</strong> {invoice.paymentMethod}</p>
-          <p><strong>Amount:</strong> {invoice.amount}</p>
+          <p>
+            <strong>Invoice No:</strong> {invoice.id}
+          </p>
+          <p>
+            <strong>Date:</strong> {invoice.date}
+          </p>
+          <p>
+            <strong>Description:</strong> {invoice.description}
+          </p>
+          <p>
+            <strong>Payment Method:</strong> {invoice.paymentMethod}
+          </p>
+          <p>
+            <strong>Amount:</strong> {invoice.amount}
+          </p>
         </div>
+
         <button
           onClick={downloadInvoice}
           className="mt-4 w-full bg-[#6A3CB1] text-white py-3 rounded-lg"

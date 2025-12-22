@@ -1,9 +1,9 @@
 // src/features/auth/pages/ForgotPassword.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import Swal from "sweetalert2";
 import AuthLayout from "../components/AuthLayout";
 import { authApi } from "../../../api/auth/authapi";
+import { showError, showSuccess } from "../../../components/swalHelper";
 
 type ApiErrors = Record<string, string[]>;
 
@@ -25,9 +25,8 @@ export default function ForgotPasswordPage() {
     const flat = Object.entries(apiErrors)
       .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
       .join("\n");
-    Swal.fire({ icon: "error", title: "Validation error", text: flat });
+    showError("Validation Error", flat);
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -39,50 +38,32 @@ export default function ForgotPasswordPage() {
 
     try {
       setLoading(true);
-
-      // If you don't need the API response body, don't assign it to a variable
-      // await authApi.forgotPassword(email);
-
-      // If you want to show server 'detail' message on success, capture it:
       const response = await authApi.forgotPassword(email);
-
-      // Example: if server returns { detail: "Sent" } or similar
       const serverMsg =
         response?.data?.detail ||
         response?.data?.message ||
         "If this email is registered, a reset code has been sent.";
 
-      // Show success using the styled Swal (or your swal helper)
-      await Swal.fire({
-        icon: "success",
-        title: "Verification Sent",
-        text: serverMsg,
-        confirmButtonColor: "#719CBF",
-      });
-
-      // Navigate to verification page (prefill email)
-      navigate(`/verification-sent?email=${encodeURIComponent(email)}`);
+      showSuccess("Verification Sent", serverMsg, () =>
+        navigate(`/verification-sent?email=${encodeURIComponent(email)}`)
+      );
     } catch (err: any) {
       const data = err?.response?.data;
 
       if (data && typeof data === "object") {
-        // DRF-style field errors
-        const fieldErrors: ApiErrors = {};
-
         if (Array.isArray(data)) {
-          // top-level array of messages
-          Swal.fire("Error", data.join("\n"), "error");
+          showError("Error", data.join("\n"));
         } else {
+          const fieldErrors: ApiErrors = {};
           Object.entries(data).forEach(([k, v]) => {
             if (Array.isArray(v)) fieldErrors[k] = v.map(String);
             else fieldErrors[k] = [String(v)];
           });
-
           setErrors(fieldErrors);
           showApiErrorsWithSwal(fieldErrors);
         }
       } else {
-        Swal.fire("Error", err?.message || "Request failed", "error");
+        showError("Error", err?.message || "Request failed.");
       }
     } finally {
       setLoading(false);
@@ -103,7 +84,7 @@ export default function ForgotPasswordPage() {
         }}
         noValidate
       >
-        <h2 className="text-3xl font-bold text-center text-[#4A5C74] mb-2">
+        <h2 className="text-3xl font-bold text-center text-[#719CBF] mb-2">
           Forgot Password
         </h2>
 
@@ -149,7 +130,7 @@ export default function ForgotPasswordPage() {
         <button
           type="button"
           onClick={() => navigate("/login")}
-          className="text-[#4A5C74] hover:text-[#6A9ECF] hover:underline text-sm font-medium transition text-center mt-2"
+          className="text-[#719CBF] hover:text-[#6A9ECF] hover:underline text-sm font-medium transition text-center mt-2"
         >
           Back to Login
         </button>

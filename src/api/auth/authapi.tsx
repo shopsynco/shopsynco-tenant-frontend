@@ -193,7 +193,8 @@ export const discoverTenant = async (domain: string) => {
 
 export const fetchUserProfile = async () => {
   try {
-    const response = await axiosInstance.get("api/tenants/auth/profile/");
+    const response = await axiosInstance.get("api/tenants/tenant_slug/auth/profile/");
+    console.log("User Profile Response:", response.data);
     return response.data; // expected: { user_name: "...", user_email: "..." }
   } catch (error: any) {
     console.error("Error fetching user profile:", error);
