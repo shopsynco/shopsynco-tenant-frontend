@@ -1,6 +1,15 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils";
 
+/** Returned from login thunk (also used by LoginPage for routing). */
+export type LoginSuccessPayload = {
+  access: string;
+  refresh: string;
+  requires_store_setup: boolean;
+  action_required: string | null;
+  loginMessage: string | null;
+};
+
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
@@ -16,27 +25,49 @@ const initialState: AuthState = {
 };
 
 // ✅ Login Thunk
-export const loginUser = createAsyncThunk(
-  "auth/loginUser",
-  async (
-    credentials: { email: string; password: string },
-    { rejectWithValue }
-  ) => {
-    try {
-      const res = await axiosInstance.post(LOGIN_URL, credentials);
-      const { access, refresh } = res.data;
+export const loginUser = createAsyncThunk<
+  LoginSuccessPayload,
+  { email: string; password: string },
+  { rejectValue: string }
+>("auth/loginUser", async (credentials, { rejectWithValue }) => {
+  try {
+    const res = await axiosInstance.post(LOGIN_URL, credentials);
+    const { access, refresh } = res.data;
 
-      localStorage.setItem("accessToken", access);
-      localStorage.setItem("refreshToken", refresh);
+    localStorage.setItem("accessToken", access);
+    localStorage.setItem("refreshToken", refresh);
 
-      return { access, refresh };
-    } catch (err: any) {
-      const msg =
-        err.response?.data?.detail || "Login failed, please try again.";
-      return rejectWithValue(msg);
+    const userEmail = res.data?.user?.email;
+    if (typeof userEmail === "string" && userEmail.trim()) {
+      localStorage.setItem("user_email", userEmail.trim());
     }
+
+    // Stale slug breaks onboarding: interceptor would call .../{slug}/store/setup/ → 404
+    if (Boolean(res.data?.requires_store_setup)) {
+      localStorage.removeItem("store_slug");
+    }
+
+    return {
+      access,
+      refresh,
+      requires_store_setup: Boolean(res.data?.requires_store_setup),
+      action_required:
+        typeof res.data?.action_required === "string"
+          ? res.data.action_required
+          : null,
+      loginMessage:
+        typeof res.data?.message === "string" ? res.data.message : null,
+    };
+  } catch (err: unknown) {
+    const ax = err as { response?: { data?: { detail?: unknown } } };
+    const detail = ax.response?.data?.detail;
+    const msg =
+      typeof detail === "string"
+        ? detail
+        : "Login failed, please try again.";
+    return rejectWithValue(msg);
   }
-);
+});
 
 // ✅ Refresh Token Thunk
 export const refreshAccessToken = createAsyncThunk(

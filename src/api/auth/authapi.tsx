@@ -2,6 +2,42 @@ import axios from "axios";
 import { BASE_URL } from "../axios_config";
 import axiosInstance from "../../store/refreshToken/tokenUtils";
 
+/** First human-readable string from DRF / standardized error payloads. */
+function messageFromResponseData(data: unknown, fallback: string): string {
+  if (!data || typeof data !== "object") return fallback;
+  const d = data as Record<string, unknown>;
+  const detail = d.detail;
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+    const fields = detail as Record<string, unknown>;
+    for (const key of Object.keys(fields)) {
+      const v = fields[key];
+      if (Array.isArray(v) && v.length > 0) {
+        const first = v[0];
+        if (typeof first === "string") return first;
+      }
+      if (typeof v === "string") return v;
+    }
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0];
+    if (typeof first === "string") return first;
+  }
+  if (typeof d.message === "string" && d.message !== "Validation failed") {
+    return d.message;
+  }
+  return fallback;
+}
+
+function messageFromAxiosError(error: unknown, fallback: string): string {
+  const err = error as { response?: { data?: unknown } };
+  const data = err.response?.data;
+  if (data !== undefined) {
+    return messageFromResponseData(data, fallback);
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
 // -----------------------------
 // 🔹 Forget Password Code API
 // -----------------------------
@@ -163,8 +199,10 @@ export const sendEmailVerificationCode = async (email: string) => {
       { headers: { "Content-Type": "application/json" } }
     );
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.detail || "Failed to send email verification code.");
+  } catch (error: unknown) {
+    throw new Error(
+      messageFromAxiosError(error, "Failed to send email verification code.")
+    );
   }
 };
 
@@ -179,8 +217,10 @@ export const verifyEmailCode = async (email: string, otp: string) => {
       { headers: { "Content-Type": "application/json" } }
     );
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.detail || "Invalid or expired verification code.");
+  } catch (error: unknown) {
+    throw new Error(
+      messageFromAxiosError(error, "Invalid or expired verification code.")
+    );
   }
 };
 

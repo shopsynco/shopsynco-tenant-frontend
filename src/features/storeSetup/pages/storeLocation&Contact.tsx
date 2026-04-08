@@ -85,11 +85,9 @@ const StoreSetupContactPage: React.FC = () => {
       }
 
       await storeContactSetup(formData);
-      const slugResponse = await discoverTenantSlug(email);
-
-      if (slugResponse?.slug) {
-        console.log("Slug saved:", slugResponse.slug);
-      }
+      const loginEmail = localStorage.getItem("user_email")?.trim();
+      const discoverEmail = loginEmail || email;
+      await discoverTenantSlug(discoverEmail);
 
       showSuccess(
         "Store Created",

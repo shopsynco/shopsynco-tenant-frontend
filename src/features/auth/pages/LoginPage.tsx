@@ -43,38 +43,42 @@ export default function LoginPage() {
       );
 
       if (loginUser.fulfilled.match(result)) {
-        // 1️⃣ Login success – discover & store tenant slug
-        try {
-          const slugResponse = (await discoverTenantSlug(
-            trimmedEmail
-          )) as TenantSlugResponse;
+        const payload = result.payload;
+        const needsStoreSetup =
+          payload.requires_store_setup === true ||
+          payload.action_required === "store_setup";
 
-          console.log("discoverTenantSlug response:", slugResponse);
-
-          const slug =
-            slugResponse?.slug ??
-            slugResponse?.tenant_slug ??
-            slugResponse?.data?.slug ??
-            slugResponse?.data?.tenant_slug;
-
-          if (slug) {
-            localStorage.setItem("store_slug", slug);
-            console.log("Slug created and saved:", slug);
-          } else {
-            console.warn(
-              "Slug not returned from API for email:",
+        // Discover tenant slug only when a store may already exist
+        if (!needsStoreSetup) {
+          try {
+            const slugResponse = (await discoverTenantSlug(
               trimmedEmail
-            );
+            )) as TenantSlugResponse;
+
+            const slug =
+              slugResponse?.slug ??
+              slugResponse?.tenant_slug ??
+              slugResponse?.data?.slug ??
+              slugResponse?.data?.tenant_slug;
+
+            if (slug) {
+              localStorage.setItem("store_slug", slug);
+            }
+          } catch (slugErr) {
+            console.error("Failed to discover tenant slug:", slugErr);
           }
-        } catch (slugErr) {
-          console.error("Failed to discover tenant slug:", slugErr);
-          // Do not block login if slug fails
         }
 
-        // 2️⃣ Show success modal + go to Plans when user clicks button
-        showSuccess("Success", "Login Successful", () => {
+        const successTitle = needsStoreSetup ? "Welcome" : "Success";
+        const successText =
+          needsStoreSetup && payload.loginMessage
+            ? payload.loginMessage
+            : "Login Successful";
+        const nextPath = needsStoreSetup ? "/setup-store" : "/plans";
+
+        showSuccess(successTitle, successText, () => {
           setErrorMessage("");
-          navigate("/plans");
+          navigate(nextPath);
         });
       } else {
         // build readable error message

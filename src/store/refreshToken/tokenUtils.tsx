@@ -61,6 +61,7 @@ axiosInstance.interceptors.request.use(
       // Define prefixes that should NEVER get the slug injected.
       // Add any other endpoints you want to exempt here.
       const noSlugPrefixes = [
+        "api/tenants/store", // create-store flow: POST .../store/setup/ (no tenant slug yet)
         "api/tenants/pricing", // pricing endpoints
         "api/tenants/payment", // payment endpoints (plural)
         "api/tenant/payment", // payment endpoints (singular)

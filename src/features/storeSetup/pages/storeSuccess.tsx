@@ -2,20 +2,20 @@ import React, { useEffect, useState } from "react";
 import bgImage from "../../../assets/backgroundsuccess.png";
 import { CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { resolvePostStoreSetupDashboard } from "../../../api/axios_config";
 
 const StoreSuccessPage: React.FC = () => {
   const [dashboardUrl, setDashboardUrl] = useState<string>("");
+  const [sameOriginPath, setSameOriginPath] = useState<string | null>(null);
+  const [leaveAppHref, setLeaveAppHref] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get store slug from localStorage
     const storeSlug = localStorage.getItem("store_slug");
-    if (storeSlug) {
-      setDashboardUrl(`https://${storeSlug}.shopsynco.com`);
-    } else {
-      // If no slug, redirect to dashboard
-      setDashboardUrl("/dashboard");
-    }
+    const resolved = resolvePostStoreSetupDashboard(storeSlug);
+    setDashboardUrl(resolved.displayUrl);
+    setSameOriginPath(resolved.sameOriginPath);
+    setLeaveAppHref(resolved.leaveAppHref);
   }, []);
 
   const handleCopy = () => {
@@ -80,10 +80,12 @@ const StoreSuccessPage: React.FC = () => {
 
           <button
             onClick={() => {
-              if (dashboardUrl.startsWith("http")) {
-                window.location.href = dashboardUrl;
+              if (sameOriginPath) {
+                navigate(sameOriginPath);
+              } else if (leaveAppHref) {
+                window.location.href = leaveAppHref;
               } else {
-                navigate(dashboardUrl);
+                navigate("/dashboard");
               }
             }}
             className="w-full bg-[#6A3CB1] hover:bg-[#5a2d9d] text-white py-3 rounded-lg font-medium transition"

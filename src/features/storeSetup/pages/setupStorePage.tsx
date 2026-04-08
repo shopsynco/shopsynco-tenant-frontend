@@ -36,9 +36,11 @@ export default function StoreSetupPage() {
     try {
       setLoading(true);
       const result = await storeSetup(formData);
-      console.log("✅ Store created:", result);
+      const schemaName = result?.tenant?.schema_name;
+      if (schemaName) {
+        localStorage.setItem("store_slug", schemaName);
+      }
 
-      // 🟢 No slug stored here — email will be added on next page
       navigate("/setup-store-contact");
     } catch (err) {
       console.error("❌ Failed to setup store:", err);

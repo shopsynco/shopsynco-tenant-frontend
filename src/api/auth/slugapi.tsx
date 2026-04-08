@@ -1,8 +1,12 @@
 import axiosInstance from "../../store/refreshToken/tokenUtils";
 
 export interface DiscoverResponse {
-  slug: string;
-  exists?: boolean;
+  slug?: string;
+  tenant_slug?: string;
+  user_exists?: boolean;
+  has_tenant?: boolean;
+  requires_store_setup?: boolean;
+  message?: string;
 }
 // 5️⃣ Discover store slug by email — no slug injection
 export const discoverTenantSlug = async (
@@ -13,13 +17,12 @@ export const discoverTenantSlug = async (
     const res = await axiosInstance.post(`api/tenants/discover/`, { email });
 
     // Check if the response contains tenant_slug
-    if (res.data?.tenant_slug) {
-      // Store the slug in localStorage
-      localStorage.setItem("store_slug", res.data.tenant_slug);
-      // Slug saved to localStorage
+    const slug = res.data?.tenant_slug ?? res.data?.slug;
+    if (slug) {
+      localStorage.setItem("store_slug", slug);
     }
 
-    return res.data; // Return the response data
+    return res.data;
   } catch (error) {
     console.error("Failed to get store slug:", error);
     throw error; // You can also handle the error here if needed

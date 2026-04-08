@@ -15,9 +15,17 @@ export interface StoreSetupPayload {
 
 // 🏪 Store creation response
 export interface StoreSetupResponse {
-  slug: string;
+  slug?: string;
   message?: string;
   success?: boolean;
+  tenant?: {
+    id?: string;
+    name?: string;
+    schema_name?: string;
+    domain?: string;
+    localhost_domain?: string;
+    trial_days?: number;
+  };
 }
 
 // 🌍 Country
