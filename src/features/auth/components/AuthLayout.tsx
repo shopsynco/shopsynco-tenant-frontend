@@ -34,7 +34,7 @@ export default function AuthLayout({
 
           <div className="w-full lg:w-1/2 flex flex-col items-center text-center lg:mr-2">
             <h1 className="text-display-lg font-poppins bg-purple-gradient bg-clip-text text-transparent">
-              START FRES
+              START FRE
               <br />
               DREAM BOLD
             </h1>
