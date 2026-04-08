@@ -41,23 +41,40 @@ const AppRoutes = () => {
           element={<PasswordResetSuccess />}
         />
         <Route path="/terms&condition" element={<LegalPolicies />} />
+        {/* Explicit protected routes (robust fallback for nested Outlet matching) */}
+        <Route
+          path="/plans"
+          element={
+            <PrivateRoute>
+              <ChoosePlanPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/plans/"
+          element={
+            <PrivateRoute>
+              <ChoosePlanPage />
+            </PrivateRoute>
+          }
+        />
         {/* Protected Routes */}
         <Route element={<PrivateRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/Plans" element={<Navigate to="/plans" replace />} />
-          <Route path="/plans" element={<ChoosePlanPage />} />
-          <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/upgrade-payment" element={<UpgradePaymentPage />} />
-          <Route path="/payment-success" element={<PaymentSuccessPage />} />
-          <Route path="/setup-store" element={<StoreSetupPage />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="Plans" element={<Navigate to="/plans" replace />} />
+          <Route path="Plans/" element={<Navigate to="/plans" replace />} />
+          <Route path="payment" element={<PaymentPage />} />
+          <Route path="upgrade-payment" element={<UpgradePaymentPage />} />
+          <Route path="payment-success" element={<PaymentSuccessPage />} />
+          <Route path="setup-store" element={<StoreSetupPage />} />
           <Route
-            path="/setup-store-contact"
+            path="setup-store-contact"
             element={<StoreSetupContactPage />}
           />
-          <Route path="/store-success" element={<StoreSuccessPage />} />
-          <Route path="/feature-store" element={<FeatureStorePage />} />
-          <Route path="/manage-billing" element={<ManageBillingPage />} />
-          <Route path="/invoice" element={<InvoicesPage />} />
+          <Route path="store-success" element={<StoreSuccessPage />} />
+          <Route path="feature-store" element={<FeatureStorePage />} />
+          <Route path="manage-billing" element={<ManageBillingPage />} />
+          <Route path="invoice" element={<InvoicesPage />} />
         </Route>
       </Routes>
     </Router>

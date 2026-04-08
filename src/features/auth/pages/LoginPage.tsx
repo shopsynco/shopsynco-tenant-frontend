@@ -44,9 +44,11 @@ export default function LoginPage() {
 
       if (loginUser.fulfilled.match(result)) {
         const payload = result.payload;
+        console.log("[PlansDebug] login fulfilled payload:", payload);
         const needsStoreSetup =
           payload.requires_store_setup === true ||
           payload.action_required === "store_setup";
+        console.log("[PlansDebug] needsStoreSetup:", needsStoreSetup);
 
         // Discover tenant slug only when a store may already exist
         if (!needsStoreSetup) {
@@ -75,11 +77,28 @@ export default function LoginPage() {
             ? payload.loginMessage
             : "Login Successful";
         const nextPath = needsStoreSetup ? "/setup-store" : "/plans";
+        console.log("[PlansDebug] navigate target:", nextPath);
 
         showSuccess(successTitle, successText, () => {
           setErrorMessage("");
+          console.log("[PlansDebug] showSuccess callback, navigating to:", nextPath);
           navigate(nextPath);
         });
+
+        // Fallback: if router transition is blocked/stale, force a hard navigation
+        // so /plans mounts and starts pricing API calls.
+        if (!needsStoreSetup) {
+          window.setTimeout(() => {
+            console.log(
+              "[PlansDebug] fallback check current path:",
+              window.location.pathname
+            );
+            if (window.location.pathname.toLowerCase() !== "/plans") {
+              console.log("[PlansDebug] forcing hard redirect to /plans");
+              window.location.assign("/plans");
+            }
+          }, 1200);
+        }
       } else {
         // build readable error message
         let errMsg = "Login failed";

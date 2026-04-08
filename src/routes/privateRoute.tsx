@@ -2,14 +2,14 @@ import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
 
-const PrivateRoute: React.FC = () => {
+const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   // Get token from Redux or localStorage
   const accessToken =
     useAppSelector((state) => state.auth.accessToken) ||
     localStorage.getItem("accessToken");
 
   // If token exists, allow access to children
-  if (accessToken) return <Outlet />;
+  if (accessToken) return children ? <>{children}</> : <Outlet />;
 
   // Else redirect to login
   return <Navigate to="/login" replace />;
