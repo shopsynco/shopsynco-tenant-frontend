@@ -1,18 +1,23 @@
 import axiosInstance from "../../store/refreshToken/tokenUtils";
 
 
-export const fetchPlans = async () => {
-  try {
-    // Making the GET request using Axios
-    const response = await axiosInstance.get("/api/tenants/pricing/options/");
-    console.log("Fetched plans:", response.data);
-    
-    return response.data.plans ?? [];
-    
-  } catch (error) {
-    console.error("Error fetching plans:", error);
-    throw error; 
+function normalizePlansPayload(data: unknown): unknown[] {
+  if (!data || typeof data !== "object") return [];
+  const d = data as Record<string, unknown>;
+  const raw = d.plans ?? d.data;
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") {
+    const inner = raw as Record<string, unknown>;
+    if (Array.isArray(inner.plans)) return inner.plans;
+    if (Array.isArray(inner.results)) return inner.results;
   }
+  return [];
+}
+
+export const fetchPlans = async () => {
+  const response = await axiosInstance.get("/api/tenants/pricing/options/");
+  const list = normalizePlansPayload(response.data);
+  return list;
 };
 
 

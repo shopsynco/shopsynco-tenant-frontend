@@ -21,7 +21,7 @@ export default function Header() {
     const getProfile = async () => {
       try {
         const data = await fetchUserProfile();
-        if (data?.user?.full_name && data?.user?.email) {
+        if (data && data?.user?.full_name && data?.user?.email) {
           const cleanName = data.user.full_name.trim(); // ← remove trailing space
           setUserData({ full_name: cleanName, email: data.user.email });
 

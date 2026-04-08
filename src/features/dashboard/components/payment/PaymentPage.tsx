@@ -473,7 +473,9 @@ export default function PaymentPage() {
           ) : (
             paymentMethods
               .filter((m) =>
-                ["credit_card", "bank_transfer", "upi"].includes(m.value)
+                ["credit_card", "debit_card", "bank_transfer", "upi"].includes(
+                  m.value
+                )
               )
               .map((method) => (
                 <div
@@ -684,7 +686,11 @@ export default function PaymentPage() {
                   GST 18%
                 </span>
                 <span className="font-poppins text-[20px] leading-[30px] text-black">
-                  ₹{quoteData?.taxes ?? "—"}
+                  ₹
+                  {quoteData?.taxes ??
+                    quoteData?.taxes_and_fees ??
+                    quoteData?.tax ??
+                    "—"}
                 </span>
               </div>
               <div className="flex justify-between">

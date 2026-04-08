@@ -131,17 +131,34 @@ export default function FeatureStorePage({
 
       // ...
     } catch (err: unknown) {
-      // keep the unknown signature
       console.error("Feature update error:", err);
 
-      // AxiosError guard
+      const data = axios.isAxiosError(err)
+        ? (err.response?.data as Record<string, unknown> | undefined)
+        : undefined;
+      const errLower =
+        typeof data?.error === "string" ? data.error.toLowerCase() : "";
+      const requiresSubscription =
+        data?.requires_subscription === true ||
+        errLower.includes("no active subscription") ||
+        errLower.includes("select a plan first");
+
       const msg =
-        (axios.isAxiosError(err) && (err.response?.data as any)?.error) ||
-        (axios.isAxiosError(err) && (err.response?.data as any)?.detail) ||
-        (err as Error)?.message || // plain JS error
+        (typeof data?.error === "string" && data.error) ||
+        (typeof data?.detail === "string" && data.detail) ||
+        (err as Error)?.message ||
         "Unable to update feature selection. Please try again.";
 
-      showError("Update failed", msg);
+      showError(
+        "Update failed",
+        msg,
+        requiresSubscription
+          ? () => {
+              onClose?.();
+              navigate("/plans");
+            }
+          : undefined
+      );
     } finally {
       setLoading(false);
     }

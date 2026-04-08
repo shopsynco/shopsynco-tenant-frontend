@@ -231,13 +231,20 @@ export const discoverTenant = async (domain: string) => {
   return response.data;
 };
 
+/** GET /api/tenants/{tenant_slug}/auth/profile/ — slug must match localStorage store_slug */
 export const fetchUserProfile = async () => {
+  const slug = localStorage.getItem("store_slug")?.trim();
+  if (!slug) {
+    console.warn("fetchUserProfile: missing store_slug");
+    return null;
+  }
   try {
-    const response = await axiosInstance.get("api/tenants/tenant_slug/auth/profile/");
-    console.log("User Profile Response:", response.data);
-    return response.data; // expected: { user_name: "...", user_email: "..." }
-  } catch (error: any) {
+    const response = await axiosInstance.get(
+      `api/tenants/${slug}/auth/profile/`
+    );
+    return response.data;
+  } catch (error: unknown) {
     console.error("Error fetching user profile:", error);
-    throw error;
+    return null;
   }
 };

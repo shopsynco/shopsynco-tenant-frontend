@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Check } from "lucide-react";
 import { fetchPlans, getPricingQuote } from "../../../api/mainapi/planapi";
 import { useNavigate } from "react-router-dom";
+import PlansPageHeader from "../components/PlansPageHeader";
 
 interface BillingPeriodOption {
   months: number;
@@ -12,7 +13,7 @@ interface BillingPeriodOption {
 }
 
 interface Plan {
-  id: string;
+  id: string | number;
   name: string;
   base_monthly: number;
   billing_cycle: string;
@@ -21,6 +22,37 @@ interface Plan {
   variant?: "green" | "blue" | "yellow";
   /** From GET /api/tenants/pricing/options/ — drives billing period row when present */
   billing_periods?: BillingPeriodOption[];
+}
+
+const CARD_VARIANTS = {
+  green: {
+    accent: "#75AB66",
+    shadow: "#75AB6682",
+    text: "#75AB66",
+    border: "#75AB66",
+  },
+  blue: {
+    accent: "#5882A4",
+    shadow: "#5882A482",
+    text: "#5882A4",
+    border: "#5882A4",
+  },
+  yellow: {
+    accent: "#D19026",
+    shadow: "#D1902682",
+    text: "#D19026",
+    border: "#D19026",
+  },
+} as const;
+
+type CardVariant = keyof typeof CARD_VARIANTS;
+
+function resolveCardVariant(
+  raw: string | undefined,
+  index: number
+): CardVariant {
+  if (raw === "green" || raw === "blue" || raw === "yellow") return raw;
+  return index % 3 === 0 ? "green" : index % 3 === 1 ? "blue" : "yellow";
 }
 
 /* ----------  tiny card component – keeps useState inside  ---------- */
@@ -34,27 +66,13 @@ const PlanCard = ({
   onSelect: () => void;
 }) => {
   const [showMore, setShowMore] = useState(false);
-  const v = plan.variant ?? "yellow";
-  const colors = {
-    green: {
-      accent: "#75AB66",
-      shadow: "#75AB6682",
-      text: "#75AB66",
-      border: "#75AB66",
-    },
-    blue: {
-      accent: "#5882A4",
-      shadow: "#5882A482",
-      text: "#5882A4",
-      border: "#5882A4",
-    },
-    yellow: {
-      accent: "#D19026",
-      shadow: "#D1902682",
-      text: "#D19026",
-      border: "#D19026",
-    },
-  }[v];
+  const v: CardVariant =
+    plan.variant === "green" ||
+    plan.variant === "blue" ||
+    plan.variant === "yellow"
+      ? plan.variant
+      : "yellow";
+  const colors = CARD_VARIANTS[v];
 
   return (
     <div
@@ -161,18 +179,23 @@ export default function ChoosePlanPage() {
   const [couponCode, setCouponCode] = useState("");
   const [isCouponFieldVisible, setIsCouponFieldVisible] = useState(false);
   const [error, setError] = useState("");
+  const [plansError, setPlansError] = useState<string | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
   useEffect(() => {
     const getPlans = async () => {
       try {
+        setPlansError(null);
         const fetched = await fetchPlans();
-        const withVariants = (fetched || []).map((p: Plan, i: number) => ({
+        const list = (Array.isArray(fetched) ? fetched : []) as Plan[];
+        const withVariants = list.map((p, i) => ({
           ...p,
-          variant:
-            p.variant ??
-            (i % 3 === 0 ? "green" : i % 3 === 1 ? "blue" : "yellow"),
+          variant: resolveCardVariant(
+            typeof p.variant === "string" ? p.variant : undefined,
+            i
+          ),
         }));
         setPlans(withVariants);
         if (withVariants.length) {
@@ -180,9 +203,12 @@ export default function ChoosePlanPage() {
           setSelectedPlan(first);
           const bp = first.billing_periods?.[0]?.months;
           if (bp != null) setBillingPeriod(String(bp));
+        } else {
+          setPlansError("No plans are available right now. Please try again later.");
         }
       } catch {
         setPlans([]);
+        setPlansError("Could not load plans. Please refresh or try again.");
       }
     };
     getPlans();
@@ -190,9 +216,14 @@ export default function ChoosePlanPage() {
 
   useEffect(() => {
     if (!selectedPlan || !billingPeriod) return;
+    setQuoteError(null);
     setLoading(true);
-    getPricingQuote(selectedPlan.id, billingPeriod, "India")
+    getPricingQuote(String(selectedPlan.id), billingPeriod, "India")
       .then(setQuoteData)
+      .catch(() => {
+        setQuoteData(null);
+        setQuoteError("Could not load pricing for this selection.");
+      })
       .finally(() => setLoading(false));
   }, [selectedPlan, billingPeriod]);
 
@@ -209,14 +240,20 @@ export default function ChoosePlanPage() {
     } else setError("Invalid Coupon Code");
   };
 
-  const goPayment = () =>
+  const goPayment = () => {
+    if (!selectedPlan?.id) return;
     navigate(
-      `/payment?plan_id=${selectedPlan?.id}&months=${billingPeriod}&country=India`
+      `/payment?plan_id=${encodeURIComponent(String(selectedPlan.id))}&months=${encodeURIComponent(billingPeriod)}&country=${encodeURIComponent("India")}`
     );
+  };
 
   const sorted = [...plans].sort((a, b) => {
-    const o = { green: 0, blue: 1, yellow: 2 };
-    return (o[a.variant ?? "green"] || 0) - (o[b.variant ?? "green"] || 0);
+    const rank = (v: Plan["variant"]): number => {
+      if (v === "green") return 0;
+      if (v === "blue") return 1;
+      return 2;
+    };
+    return rank(a.variant) - rank(b.variant);
   });
 
   const billingChoices = useMemo(() => {
@@ -241,10 +278,31 @@ export default function ChoosePlanPage() {
     }
   }, [billingChoices, billingPeriod]);
 
+  const quoteTaxes =
+    quoteData?.taxes ?? quoteData?.taxes_and_fees ?? quoteData?.tax;
+
   return (
-    <div className="w-screen h-screen bg-white flex justify-center items-start overflow-auto">
-      {/* no padding here – content touches edges */}
-      <div className="w-full max-w-7xl h-full flex flex-col lg:flex-row gap-0">
+    <div className="min-h-screen w-full bg-white flex flex-col">
+      <PlansPageHeader />
+      <div
+        style={{
+          position: "fixed",
+          top: 8,
+          left: 8,
+          zIndex: 9999,
+          background: "#111827",
+          color: "white",
+          padding: "6px 10px",
+          borderRadius: 10,
+          fontSize: 12,
+          opacity: 0.85,
+          pointerEvents: "none",
+        }}
+      >
+        Plans page mounted
+      </div>
+      <div className="w-full flex-1 flex justify-center items-start overflow-auto px-2 sm:px-4">
+      <div className="w-full max-w-7xl min-h-0 flex flex-col lg:flex-row gap-0 py-6">
         {/* white panel now carries the padding */}
         <div className="flex-1 flex flex-col p-6 md:p-10">
           {/* LEFT - nudged left on large screens */}
@@ -256,13 +314,24 @@ export default function ChoosePlanPage() {
               Pick the plan and billing period that fit your business best.
             </p>
 
+            {plansError && (
+              <p className="text-red-600 text-sm mb-4" role="alert">
+                {plansError}
+              </p>
+            )}
+            {quoteError && (
+              <p className="text-amber-700 text-sm mb-4" role="status">
+                {quoteError}
+              </p>
+            )}
+
             {/* Cards – parent stays hook-safe */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start auto-rows-min">
               {sorted.map((plan) => (
                 <PlanCard
-                  key={plan.id}
+                  key={String(plan.id ?? plan.name)}
                   plan={plan}
-                  isSelected={selectedPlan?.id === plan.id}
+                  isSelected={String(selectedPlan?.id) === String(plan.id)}
                   onSelect={() => setSelectedPlan(plan)}
                 />
               ))}
@@ -273,12 +342,26 @@ export default function ChoosePlanPage() {
               <h3 className="font-poppins font-medium text-[25px] leading-[30px] text-[#1E1E1E] mb-3">
                 Select billing period
               </h3>
-              <div className="space-y-3 md:space-y-4">
+              <div
+                className="space-y-3 md:space-y-4"
+                role="radiogroup"
+                aria-label="Billing period"
+              >
                 {billingChoices.map((o) => {
                   const a = billingPeriod === o.m;
                   return (
-                    <label
+                    <div
                       key={o.m}
+                      role="radio"
+                      aria-checked={a}
+                      tabIndex={0}
+                      onClick={() => setBillingPeriod(o.m)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setBillingPeriod(o.m);
+                        }
+                      }}
                       className={`flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 sm:px-5 sm:py-4 cursor-pointer rounded-[10px] border transition-all ${
                         a
                           ? "border-2 border-[#7658A0]"
@@ -286,14 +369,7 @@ export default function ChoosePlanPage() {
                       } hover:border-[#7658A0] hover:border-opacity-50`}
                     >
                       <div className="flex items-center gap-3 mb-1 sm:mb-0">
-                        <label className="relative flex items-center justify-center w-5 h-5 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="billing"
-                            checked={a}
-                            onChange={() => setBillingPeriod(o.m)}
-                            className="opacity-0 w-0 h-0"
-                          />
+                        <span className="relative flex items-center justify-center w-5 h-5 shrink-0 pointer-events-none">
                           <span
                             className={`absolute inset-0 rounded-full border-2 transition ${
                               a ? "border-[#7658A0]" : "border-[#D1D1D1]"
@@ -302,7 +378,7 @@ export default function ChoosePlanPage() {
                           {a && (
                             <span className="absolute w-2.5 h-2.5 rounded-full bg-[#7658A0]" />
                           )}
-                        </label>
+                        </span>
                         <div
                           className={`font-poppins font-medium text-[24px] leading-[50px] ${
                             a ? "text-[#7658A0]" : "text-black"
@@ -327,12 +403,12 @@ export default function ChoosePlanPage() {
                           a ? "text-[#1E1E1E]" : "text-black"
                         }`}
                       >
-                        ₹{o.p}
+                        ₹{o.p != null && !Number.isNaN(Number(o.p)) ? o.p : "—"}
                         <span className="text-xs text-[#6E6E6E] ml-2">
                           /month
                         </span>
                       </div>
-                    </label>
+                    </div>
                   );
                 })}
               </div>
@@ -366,7 +442,7 @@ export default function ChoosePlanPage() {
                       Taxes & Fees
                     </span>
                     <span className="font-poppins text-[20px] leading-[30px] text-black">
-                      ₹{quoteData?.taxes ?? "—"}
+                      ₹{quoteTaxes ?? "—"}
                     </span>
                   </div>
 
@@ -444,6 +520,8 @@ export default function ChoosePlanPage() {
                   <div className="flex gap-3">
                     {/* Cancel – 162 px (smaller) */}
                     <button
+                      type="button"
+                      onClick={() => navigate("/dashboard")}
                       className="flex items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold"
                       style={{
                         width: 162,
@@ -457,8 +535,9 @@ export default function ChoosePlanPage() {
 
                     {/* Choose Payment – 246 px (wider) */}
                     <button
+                      type="button"
                       onClick={goPayment}
-                      disabled={loading}
+                      disabled={loading || !selectedPlan?.id}
                       className="flex items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold"
                       style={{
                         width: 162,
@@ -477,7 +556,7 @@ export default function ChoosePlanPage() {
           </div>
         </div>
       </div>
+      </div>
     </div>
-    // </div>
   );
 }
