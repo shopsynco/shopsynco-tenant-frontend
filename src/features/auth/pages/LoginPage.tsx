@@ -74,7 +74,7 @@ export default function LoginPage() {
         // 2️⃣ Show success modal + go to Plans when user clicks button
         showSuccess("Success", "Login Successful", () => {
           setErrorMessage("");
-          navigate("/Plans");
+          navigate("/plans");
         });
       } else {
         // build readable error message

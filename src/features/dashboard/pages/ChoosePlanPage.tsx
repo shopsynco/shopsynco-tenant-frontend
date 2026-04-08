@@ -1,7 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Check } from "lucide-react";
 import { fetchPlans, getPricingQuote } from "../../../api/mainapi/planapi";
 import { useNavigate } from "react-router-dom";
+
+interface BillingPeriodOption {
+  months: number;
+  discount_rate: number;
+  monthly_price: number;
+  total_price: number;
+  label: string;
+}
 
 interface Plan {
   id: string;
@@ -11,6 +19,8 @@ interface Plan {
   is_active: boolean;
   date_added: string;
   variant?: "green" | "blue" | "yellow";
+  /** From GET /api/tenants/pricing/options/ — drives billing period row when present */
+  billing_periods?: BillingPeriodOption[];
 }
 
 /* ----------  tiny card component – keeps useState inside  ---------- */
@@ -67,7 +77,10 @@ const PlanCard = ({
       {/* price */}
       <div className="flex items-baseline shrink-0">
         <div className="text-[32px] leading-[50px] font-poppins font-semibold text-[#1E1E1E]">
-          ₹{plan.base_monthly}
+          ₹
+          {plan.base_monthly != null && !Number.isNaN(Number(plan.base_monthly))
+            ? Number(plan.base_monthly).toLocaleString("en-IN")
+            : "—"}
         </div>
         <span className="ml-2 text-[16px] leading-[50px] font-poppins text-[#6E6E6E]">
           /{plan.billing_cycle}
@@ -87,6 +100,7 @@ const PlanCard = ({
       {/* features – expands/collapses */}
       <div className="mt-3 border-t border-gray-100 flex-1 min-h-0">
         <ul className="space-y-2 pt-3">
+          {/* Placeholder bullets — replace with plan.features from API when available */}
           {["Active Plan", "Standard support"].map((f) => (
             <li key={f} className="flex items-center gap-3">
               <Check size={12} style={{ color: colors.accent }} />
@@ -141,7 +155,7 @@ const PlanCard = ({
 export default function ChoosePlanPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState("48");
+  const [billingPeriod, setBillingPeriod] = useState("12");
   const [quoteData, setQuoteData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -161,7 +175,12 @@ export default function ChoosePlanPage() {
             (i % 3 === 0 ? "green" : i % 3 === 1 ? "blue" : "yellow"),
         }));
         setPlans(withVariants);
-        if (withVariants.length) setSelectedPlan(withVariants[0]);
+        if (withVariants.length) {
+          const first = withVariants[0];
+          setSelectedPlan(first);
+          const bp = first.billing_periods?.[0]?.months;
+          if (bp != null) setBillingPeriod(String(bp));
+        }
       } catch {
         setPlans([]);
       }
@@ -200,6 +219,28 @@ export default function ChoosePlanPage() {
     return (o[a.variant ?? "green"] || 0) - (o[b.variant ?? "green"] || 0);
   });
 
+  const billingChoices = useMemo(() => {
+    if (selectedPlan?.billing_periods?.length) {
+      return selectedPlan.billing_periods.map((bp) => ({
+        m: String(bp.months),
+        p: bp.monthly_price,
+        s: Math.round((bp.discount_rate || 0) * 100),
+      }));
+    }
+    return [
+      { m: "48", p: 1699, s: 30 },
+      { m: "24", p: 1799, s: 20 },
+      { m: "12", p: 1899, s: 0 },
+    ];
+  }, [selectedPlan]);
+
+  useEffect(() => {
+    if (!billingChoices.length) return;
+    if (!billingChoices.some((o) => o.m === billingPeriod)) {
+      setBillingPeriod(billingChoices[0].m);
+    }
+  }, [billingChoices, billingPeriod]);
+
   return (
     <div className="w-screen h-screen bg-white flex justify-center items-start overflow-auto">
       {/* no padding here – content touches edges */}
@@ -233,11 +274,7 @@ export default function ChoosePlanPage() {
                 Select billing period
               </h3>
               <div className="space-y-3 md:space-y-4">
-                {[
-                  { m: "48", p: 1699, s: 30 },
-                  { m: "24", p: 1799, s: 20 },
-                  { m: "12", p: 1899, s: 0 },
-                ].map((o) => {
+                {billingChoices.map((o) => {
                   const a = billingPeriod === o.m;
                   return (
                     <label

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import PrivateRoute from "./privateRoute";
 import Dashboard from "../features/dashboard/pages/Dashboard";
 import ForgotPasswordPage from "../features/auth/pages/ForgotPassword";
@@ -44,6 +44,7 @@ const AppRoutes = () => {
         {/* Protected Routes */}
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/Plans" element={<Navigate to="/plans" replace />} />
           <Route path="/plans" element={<ChoosePlanPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/upgrade-payment" element={<UpgradePaymentPage />} />

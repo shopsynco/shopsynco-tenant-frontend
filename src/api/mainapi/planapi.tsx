@@ -7,7 +7,7 @@ export const fetchPlans = async () => {
     const response = await axiosInstance.get("/api/tenants/pricing/options/");
     console.log("Fetched plans:", response.data);
     
-    return response.data.plans; // Assuming the API response has 'plans' field
+    return response.data.plans ?? [];
     
   } catch (error) {
     console.error("Error fetching plans:", error);
