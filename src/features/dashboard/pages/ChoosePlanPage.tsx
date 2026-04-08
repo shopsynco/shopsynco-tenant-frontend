@@ -346,14 +346,21 @@ export default function ChoosePlanPage() {
 
             {/* Cards – parent stays hook-safe */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start auto-rows-min">
-              {sorted.map((plan) => (
-                <PlanCard
-                  key={String(plan.id ?? plan.name)}
-                  plan={plan}
-                  isSelected={String(selectedPlan?.id) === String(plan.id)}
-                  onSelect={() => setSelectedPlan(plan)}
-                />
-              ))}
+              {sorted.length > 0 ? (
+                sorted.map((plan) => (
+                  <PlanCard
+                    key={String(plan.id ?? plan.name)}
+                    plan={plan}
+                    isSelected={String(selectedPlan?.id) === String(plan.id)}
+                    onSelect={() => setSelectedPlan(plan)}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 font-poppins">
+                  No plans available to display right now. Please retry in a few
+                  seconds.
+                </div>
+              )}
             </div>
 
             {/* Billing period */}
