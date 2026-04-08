@@ -190,7 +190,28 @@ export default function ChoosePlanPage() {
         setPlansError(null);
         const fetched = await fetchPlans();
         const list = (Array.isArray(fetched) ? fetched : []) as Plan[];
-        const withVariants = list.map((p, i) => ({
+
+        // Remove duplicate plans (same display name) returned by mixed/legacy payloads.
+        const byName = new Map<string, Plan>();
+        for (const item of list) {
+          const key = String(item?.name ?? "").trim().toLowerCase();
+          if (!key) continue;
+          const existing = byName.get(key);
+          if (!existing) {
+            byName.set(key, item);
+            continue;
+          }
+          // Prefer monthly entry if both monthly/yearly variants exist for same plan name.
+          if (
+            existing.billing_cycle !== "monthly" &&
+            item.billing_cycle === "monthly"
+          ) {
+            byName.set(key, item);
+          }
+        }
+
+        const deduped = Array.from(byName.values());
+        const withVariants = deduped.map((p, i) => ({
           ...p,
           variant: resolveCardVariant(
             typeof p.variant === "string" ? p.variant : undefined,
@@ -264,11 +285,10 @@ export default function ChoosePlanPage() {
         s: Math.round((bp.discount_rate || 0) * 100),
       }));
     }
-    return [
-      { m: "48", p: 1699, s: 30 },
-      { m: "24", p: 1799, s: 20 },
-      { m: "12", p: 1899, s: 0 },
-    ];
+    if (!selectedPlan?.base_monthly || Number.isNaN(Number(selectedPlan.base_monthly))) {
+      return [];
+    }
+    return [{ m: "12", p: Number(selectedPlan.base_monthly), s: 0 }];
   }, [selectedPlan]);
 
   useEffect(() => {
@@ -280,27 +300,26 @@ export default function ChoosePlanPage() {
 
   const quoteTaxes =
     quoteData?.taxes ?? quoteData?.taxes_and_fees ?? quoteData?.tax;
+  const selectedMonths = Number(billingPeriod || 0);
+  const selectedMonthly = billingChoices.find((o) => o.m === billingPeriod)?.p;
+  const fallbackBasePrice =
+    selectedMonthly != null && selectedMonths > 0
+      ? Number(selectedMonthly) * selectedMonths
+      : selectedPlan?.base_monthly != null && selectedMonths > 0
+      ? Number(selectedPlan.base_monthly) * selectedMonths
+      : null;
+  const basePrice =
+    quoteData?.base_price != null ? Number(quoteData.base_price) : fallbackBasePrice;
+  const totalPayable =
+    quoteData?.total != null
+      ? Number(quoteData.total)
+      : basePrice != null
+      ? Number(basePrice) + Number(quoteTaxes ?? 0) - Number(quoteData?.discount ?? 0)
+      : null;
 
   return (
     <div className="min-h-screen w-full bg-white flex flex-col">
       <PlansPageHeader />
-      <div
-        style={{
-          position: "fixed",
-          top: 8,
-          left: 8,
-          zIndex: 9999,
-          background: "#111827",
-          color: "white",
-          padding: "6px 10px",
-          borderRadius: 10,
-          fontSize: 12,
-          opacity: 0.85,
-          pointerEvents: "none",
-        }}
-      >
-        Plans page mounted
-      </div>
       <div className="w-full flex-1 flex justify-center items-start overflow-auto px-2 sm:px-4">
       <div className="w-full max-w-7xl min-h-0 flex flex-col lg:flex-row gap-0 py-6">
         {/* white panel now carries the padding */}
@@ -434,7 +453,10 @@ export default function ChoosePlanPage() {
                       Base Price
                     </span>
                     <span className="font-poppins text-[20px] leading-[30px] text-black">
-                      ₹{quoteData?.base_price ?? "—"}
+                      ₹
+                      {basePrice != null && !Number.isNaN(basePrice)
+                        ? basePrice.toLocaleString("en-IN")
+                        : "—"}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -442,7 +464,21 @@ export default function ChoosePlanPage() {
                       Taxes & Fees
                     </span>
                     <span className="font-poppins text-[20px] leading-[30px] text-black">
-                      ₹{quoteTaxes ?? "—"}
+                      ₹
+                      {quoteTaxes != null && !Number.isNaN(Number(quoteTaxes))
+                        ? Number(quoteTaxes).toLocaleString("en-IN")
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-[#E2D9F0]">
+                    <span className="font-poppins text-[24px] leading-[30px] text-black font-semibold">
+                      Total Payable
+                    </span>
+                    <span className="font-poppins text-[24px] leading-[30px] text-black font-semibold">
+                      ₹
+                      {totalPayable != null && !Number.isNaN(totalPayable)
+                        ? totalPayable.toLocaleString("en-IN")
+                        : "—"}
                     </span>
                   </div>
 
