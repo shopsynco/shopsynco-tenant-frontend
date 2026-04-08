@@ -183,20 +183,12 @@ export default function ChoosePlanPage() {
   const [quoteError, setQuoteError] = useState<string | null>(null);
 
   const navigate = useNavigate();
-  useEffect(() => {
-    console.log("[PlansDebug] ChoosePlanPage mounted");
-    console.log("[PlansDebug] current pathname:", window.location.pathname);
-    console.log("[PlansDebug] accessToken exists:", !!localStorage.getItem("accessToken"));
-    console.log("[PlansDebug] store_slug:", localStorage.getItem("store_slug"));
-  }, []);
 
   useEffect(() => {
     const getPlans = async () => {
       try {
-        console.log("[PlansDebug] fetchPlans start");
         setPlansError(null);
         const fetched = await fetchPlans();
-        console.log("[PlansDebug] fetchPlans raw response list:", fetched);
         const list = (Array.isArray(fetched) ? fetched : []) as Plan[];
 
         // Remove duplicate plans (same display name) returned by mixed/legacy payloads.
@@ -219,7 +211,6 @@ export default function ChoosePlanPage() {
         }
 
         const deduped = Array.from(byName.values());
-        console.log("[PlansDebug] plans deduped count:", deduped.length);
         const withVariants = deduped.map((p, i) => ({
           ...p,
           variant: resolveCardVariant(
@@ -228,19 +219,15 @@ export default function ChoosePlanPage() {
           ),
         }));
         setPlans(withVariants);
-        console.log("[PlansDebug] plans after variant mapping:", withVariants);
         if (withVariants.length) {
           const first = withVariants[0];
           setSelectedPlan(first);
-          console.log("[PlansDebug] selected first plan:", first);
           const bp = first.billing_periods?.[0]?.months;
           if (bp != null) setBillingPeriod(String(bp));
         } else {
           setPlansError("No plans are available right now. Please try again later.");
-          console.warn("[PlansDebug] plans empty after fetch/dedupe");
         }
-      } catch (e) {
-        console.error("[PlansDebug] fetchPlans failed:", e);
+      } catch {
         setPlans([]);
         setPlansError("Could not load plans. Please refresh or try again.");
       }
@@ -250,19 +237,11 @@ export default function ChoosePlanPage() {
 
   useEffect(() => {
     if (!selectedPlan || !billingPeriod) return;
-    console.log("[PlansDebug] getPricingQuote start", {
-      planId: selectedPlan.id,
-      billingPeriod,
-    });
     setQuoteError(null);
     setLoading(true);
     getPricingQuote(String(selectedPlan.id), billingPeriod, "India")
-      .then((data) => {
-        console.log("[PlansDebug] getPricingQuote success:", data);
-        setQuoteData(data);
-      })
+      .then(setQuoteData)
       .catch(() => {
-        console.error("[PlansDebug] getPricingQuote failed");
         setQuoteData(null);
         setQuoteError("Could not load pricing for this selection.");
       })
