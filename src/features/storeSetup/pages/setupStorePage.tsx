@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import bgImage from "../../../assets/backgroundstore.png";
 import {
+  getStoreSlug,
   getStoreCategories,
   storeSetup,
 } from "../../../api/mainapi/StoreCreateapi";
@@ -105,6 +106,8 @@ export default function StoreSetupPage() {
               }
             | undefined)
         : undefined;
+      const axiosCode = axios.isAxiosError(err) ? err.code : undefined;
+      const isTimeout = axiosCode === "ECONNABORTED";
 
       let detailMessage = "";
       if (typeof responseData?.detail === "string") {
@@ -125,9 +128,35 @@ export default function StoreSetupPage() {
         responseData?.message ||
         responseData?.error ||
         "Failed to create store. Please check inputs or server.";
+
+      // Timeout can happen after server created the tenant; verify by discover
+      // before showing a hard failure to avoid accidental duplicate creation.
+      if (isTimeout) {
+        try {
+          const loginEmail = localStorage.getItem("user_email")?.trim();
+          if (loginEmail) {
+            const discover = await getStoreSlug(loginEmail);
+            if (discover?.slug) {
+              localStorage.setItem("store_slug", discover.slug);
+              navigate("/setup-store-contact");
+              return;
+            }
+          }
+        } catch (discoverErr) {
+          console.warn("Store setup timeout and discover fallback failed", discoverErr);
+        }
+      }
+
+      const msgLower = backendMessage.toLowerCase();
+      const friendlyMessage =
+        msgLower.includes("schema_name_key") ||
+        msgLower.includes("duplicate key value") ||
+        msgLower.includes("already exists")
+          ? "A store with similar details already exists. Please try a different store/domain name."
+          : backendMessage;
       showError(
         "Store Creation Failed",
-        backendMessage
+        friendlyMessage
       );
     } finally {
       setLoading(false);
