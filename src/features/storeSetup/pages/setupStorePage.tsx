@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import bgImage from "../../../assets/backgroundstore.png";
 import { storeSetup } from "../../../api/mainapi/StoreCreateapi";
@@ -32,10 +33,32 @@ export default function StoreSetupPage() {
   // ✅ Submit handler
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return;
+
+    const domainValue = formData.domain.trim().toLowerCase();
+    const storeName = formData.store_name.trim();
+    const category = formData.product_service.trim();
+
+    if (!storeName || !category || !domainValue) {
+      showError("Validation", "Please fill all required fields.");
+      return;
+    }
+    if (!/^[a-z0-9-]{3,40}$/.test(domainValue)) {
+      showError(
+        "Invalid domain",
+        "Domain can contain lowercase letters, numbers, and hyphen only (3-40 chars)."
+      );
+      return;
+    }
 
     try {
       setLoading(true);
-      const result = await storeSetup(formData);
+      const result = await storeSetup({
+        ...formData,
+        store_name: storeName,
+        product_service: category,
+        domain: domainValue,
+      });
       const schemaName = result?.tenant?.schema_name;
       if (schemaName) {
         localStorage.setItem("store_slug", schemaName);
@@ -44,9 +67,38 @@ export default function StoreSetupPage() {
       navigate("/setup-store-contact");
     } catch (err) {
       console.error("❌ Failed to setup store:", err);
+      const responseData = axios.isAxiosError(err)
+        ? (err.response?.data as
+            | {
+                error?: string;
+                message?: string;
+                detail?: string | Record<string, unknown> | string[];
+              }
+            | undefined)
+        : undefined;
+
+      let detailMessage = "";
+      if (typeof responseData?.detail === "string") {
+        detailMessage = responseData.detail;
+      } else if (Array.isArray(responseData?.detail)) {
+        detailMessage = String(responseData?.detail[0] ?? "");
+      } else if (
+        responseData?.detail &&
+        typeof responseData.detail === "object"
+      ) {
+        const first = Object.values(responseData.detail)[0];
+        if (Array.isArray(first)) detailMessage = String(first[0] ?? "");
+        else if (typeof first === "string") detailMessage = first;
+      }
+
+      const backendMessage =
+        detailMessage ||
+        responseData?.message ||
+        responseData?.error ||
+        "Failed to create store. Please check inputs or server.";
       showError(
         "Store Creation Failed",
-        "Failed to create store. Please check inputs or server."
+        backendMessage
       );
     } finally {
       setLoading(false);
@@ -162,13 +214,14 @@ export default function StoreSetupPage() {
               {/* Check button */}
               <button
                 type="button"
+                disabled={loading}
                 onClick={() => {
                   /* call your availability API here */
                   alert(`Checking "${formData.domain}.shopsynco.com"`);
                 }}
                 className="whitespace-nowrap bg-[#719CBF] text-white px-4 py-3
                  rounded-xl text-sm font-semibold hover:bg-[#5c91c4]
-                 transition"
+                 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Check Availability
               </button>

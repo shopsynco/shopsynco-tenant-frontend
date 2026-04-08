@@ -48,12 +48,18 @@ interface UpiPaymentPayload {
   upi_id: string;
 }
 
+interface GenericPaymentPayload {
+  subscription_id: string;
+  method: "paypal" | "stripe" | "cash" | "check";
+}
+
 // Union type for all payment methods (INCLUDE debit_card)
 type SubmitPaymentPayload = 
   | CreditCardPaymentPayload 
   | DebitCardPaymentPayload 
   | BankTransferPaymentPayload 
-  | UpiPaymentPayload;
+  | UpiPaymentPayload
+  | GenericPaymentPayload;
 
 // Type for the response of UPI verification
 interface UpiVerificationResponse {
@@ -62,7 +68,26 @@ interface UpiVerificationResponse {
 
 // Type for the response of a successful payment
 interface PaymentResponse {
-  success: boolean;
+  success?: boolean;
+  message?: string;
+  subscription_id?: string;
+  receipt?: unknown;
+}
+
+interface CheckoutPayload {
+  plan_id: string;
+  months: number;
+  payment_method?: string;
+}
+
+interface CheckoutResponse {
+  message?: string;
+  subscription_id?: string;
+  payment?: {
+    method?: string;
+    action?: string;
+    payment_url?: string | null;
+  };
 }
 
 // Type for adding a new payment method
@@ -123,7 +148,7 @@ export const getPaymentMethods = async (): Promise<{ methods: PaymentMethod[] }>
 /* ---------------------- 💳 SUBMIT PAYMENT ---------------------- */
 export const submitPayment = async (payload: SubmitPaymentPayload): Promise<PaymentResponse> => {
   try {
-    const res = await axiosInstance.post("/api/tenant/payment/submit/", payload);
+    const res = await axiosInstance.post("/api/tenants/payment/submit/", payload);
     return res.data;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -133,10 +158,25 @@ export const submitPayment = async (payload: SubmitPaymentPayload): Promise<Paym
   }
 };
 
+/* ---------------------- 🧾 CREATE CHECKOUT SUBSCRIPTION ---------------------- */
+export const createCheckoutSubscription = async (
+  payload: CheckoutPayload
+): Promise<CheckoutResponse> => {
+  try {
+    const res = await axiosInstance.post("/api/tenants/pricing/checkout/", payload);
+    return res.data;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Error creating checkout subscription:", errorData || errorMessage);
+    throw error;
+  }
+};
+
 /* ---------------------- 📱 VERIFY UPI ---------------------- */
 export const verifyUpi = async (upi_id: string): Promise<UpiVerificationResponse> => {
   try {
-    const res = await axiosInstance.post("/api/tenant/payment/upi/verify/", { upi_id });
+    const res = await axiosInstance.post("/api/tenants/payment/upi/verify/", { upi_id });
     return res.data;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -149,7 +189,7 @@ export const verifyUpi = async (upi_id: string): Promise<UpiVerificationResponse
 /* ---------------------- 📱 UPI PAYMENT FINALIZATION ---------------------- */
 export const payWithUpi = async (payload: UpiPaymentPayload): Promise<PaymentResponse> => {
   try {
-    const res = await axiosInstance.post("/api/tenant/payment/upi/pay/", payload);
+    const res = await axiosInstance.post("/api/tenants/payment/submit/", payload);
     return res.data;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

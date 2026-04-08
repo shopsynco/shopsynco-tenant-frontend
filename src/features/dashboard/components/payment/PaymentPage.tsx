@@ -3,6 +3,7 @@ import { ChevronLeft, Eye } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
+  createCheckoutSubscription,
   getPaymentMethods,
   submitPayment,
   verifyUpi,
@@ -62,11 +63,13 @@ export default function PaymentPage() {
   const months = params.get("months");
   const country = params.get("country");
 
-  // Get subscription ID from localStorage or URL params
-  const subscriptionId =
+  // Subscription ID can come from URL/localStorage or be created from checkout.
+  const [subscriptionId, setSubscriptionId] = useState<string>(
     params.get("subscription_id") ||
-    localStorage.getItem("subscription_id") ||
-    "";
+      localStorage.getItem("subscription_id") ||
+      ""
+  );
+  const [creatingSubscription, setCreatingSubscription] = useState(false);
 
   // Fetch payment methods on load
   useEffect(() => {
@@ -105,9 +108,34 @@ export default function PaymentPage() {
     }
   }, [planId, months, country]);
 
+  // Ensure we always have a subscription_id before payment submit.
+  useEffect(() => {
+    const ensureSubscription = async () => {
+      if (subscriptionId || !planId || !months) return;
+      try {
+        setCreatingSubscription(true);
+        const checkout = await createCheckoutSubscription({
+          plan_id: planId,
+          months: Number(months),
+          payment_method: selectedMethod || "credit_card",
+        });
+        const createdId = checkout?.subscription_id;
+        if (createdId) {
+          setSubscriptionId(createdId);
+          localStorage.setItem("subscription_id", createdId);
+        }
+      } catch (err) {
+        console.error("Error creating checkout subscription:", err);
+      } finally {
+        setCreatingSubscription(false);
+      }
+    };
+    ensureSubscription();
+  }, [subscriptionId, planId, months, selectedMethod]);
+
   // Handle method selection
   const handleMethodSelect = (methodValue: string) => {
-    setSelectedMethod(methodValue);
+    setSelectedMethod((prev) => (prev === methodValue ? "" : methodValue));
   };
 
   // Handle card input changes
@@ -141,27 +169,81 @@ export default function PaymentPage() {
   };
 
   // Validate forms
+  const isValidLuhn = (digitsOnly: string): boolean => {
+    let sum = 0;
+    let shouldDouble = false;
+    for (let i = digitsOnly.length - 1; i >= 0; i--) {
+      let digit = Number(digitsOnly[i]);
+      if (shouldDouble) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      sum += digit;
+      shouldDouble = !shouldDouble;
+    }
+    return sum % 10 === 0;
+  };
+
   const validateCardForm = (): boolean => {
-    if (!cardFormData.cardHolder.trim()) {
+    const holder = cardFormData.cardHolder.trim();
+    if (!holder) {
       Swal.fire("Validation Error", "Please enter card holder name", "warning");
       return false;
     }
-    if (
-      !cardFormData.cardNumber ||
-      cardFormData.cardNumber.replace(/\s/g, "").length < 16
-    ) {
+    // Basic real-name check (avoid emails/random symbols)
+    if (holder.includes("@") || !/^[A-Za-z][A-Za-z\s.'-]{1,}$/.test(holder)) {
       Swal.fire(
         "Validation Error",
-        "Please enter valid 16-digit card number",
+        "Enter a valid card holder name (letters only).",
         "warning"
       );
       return false;
     }
+
+    const cardDigits = cardFormData.cardNumber.replace(/\s/g, "");
+    if (!/^\d{13,19}$/.test(cardDigits)) {
+      Swal.fire(
+        "Validation Error",
+        "Please enter a valid card number",
+        "warning"
+      );
+      return false;
+    }
+    if (!isValidLuhn(cardDigits)) {
+      Swal.fire(
+        "Validation Error",
+        "Invalid card number. Please check and try again.",
+        "warning"
+      );
+      return false;
+    }
+
     if (!cardFormData.expiryDate) {
       Swal.fire("Validation Error", "Please select expiry date", "warning");
       return false;
     }
-    if (!cardFormData.cvv || cardFormData.cvv.length !== 3) {
+
+    const [yearStr, monthStr] = cardFormData.expiryDate.split("-");
+    const expYear = Number(yearStr);
+    const expMonth = Number(monthStr);
+    if (
+      !Number.isInteger(expYear) ||
+      !Number.isInteger(expMonth) ||
+      expMonth < 1 ||
+      expMonth > 12
+    ) {
+      Swal.fire("Validation Error", "Please select a valid expiry date", "warning");
+      return false;
+    }
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+      Swal.fire("Validation Error", "Card expiry date cannot be in the past", "warning");
+      return false;
+    }
+
+    if (!/^\d{3,4}$/.test(cardFormData.cvv)) {
       Swal.fire("Validation Error", "Please enter valid CVV", "warning");
       return false;
     }
@@ -173,6 +255,17 @@ export default function PaymentPage() {
       Swal.fire(
         "Validation Error",
         "Please enter account holder name",
+        "warning"
+      );
+      return false;
+    }
+    if (
+      bankFormData.accountHolder.includes("@") ||
+      !/^[A-Za-z][A-Za-z\s.'-]{1,}$/.test(bankFormData.accountHolder.trim())
+    ) {
+      Swal.fire(
+        "Validation Error",
+        "Enter a valid account holder name (letters only).",
         "warning"
       );
       return false;
@@ -296,7 +389,7 @@ export default function PaymentPage() {
           cvv_present: true,
         };
         const paymentResponse = await submitPayment(paymentPayload);
-        if (paymentResponse.success) {
+        if (paymentResponse.success === true || !!paymentResponse.message) {
           await Swal.fire("Success", "Card Payment Successful!", "success");
           navigate("/payment-success");
         } else {
@@ -314,7 +407,7 @@ export default function PaymentPage() {
           cvv_present: true,
         };
         const paymentResponse = await submitPayment(paymentPayload);
-        if (paymentResponse.success) {
+        if (paymentResponse.success === true || !!paymentResponse.message) {
           await Swal.fire("Success", "Card Payment Successful!", "success");
           navigate("/payment-success");
         } else {
@@ -363,7 +456,7 @@ export default function PaymentPage() {
       };
 
       const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success) {
+      if (paymentResponse.success === true || !!paymentResponse.message) {
         await Swal.fire(
           "Success",
           "Bank Transfer Initiated Successfully!",
@@ -407,6 +500,41 @@ export default function PaymentPage() {
         break;
       case "bank_transfer":
         handleBankSubmit();
+        break;
+      case "paypal":
+      case "stripe":
+      case "cash":
+      case "check":
+        if (!subscriptionId) {
+          Swal.fire(
+            "Error",
+            "Subscription ID is required. Please try again.",
+            "error"
+          );
+          return;
+        }
+        setLoading(true);
+        submitPayment({
+          subscription_id: subscriptionId,
+          method: selectedMethod as "paypal" | "stripe" | "cash" | "check",
+        })
+          .then(async (paymentResponse) => {
+            if (paymentResponse.success === true || !!paymentResponse.message) {
+              await Swal.fire("Success", "Payment Successful!", "success");
+              navigate("/payment-success");
+            } else {
+              throw new Error("Payment failed");
+            }
+          })
+          .catch((err: any) => {
+            Swal.fire(
+              "Error",
+              err.response?.data?.message ||
+                "Payment failed. Please try again.",
+              "error"
+            );
+          })
+          .finally(() => setLoading(false));
         break;
       default:
         Swal.fire("Error", "This payment method is not yet supported", "error");
@@ -471,35 +599,35 @@ export default function PaymentPage() {
           {paymentMethods.length === 0 ? (
             <p className="text-gray-500">Loading payment methods...</p>
           ) : (
-            paymentMethods
-              .filter((m) =>
-                ["credit_card", "debit_card", "bank_transfer", "upi"].includes(
-                  m.value
-                )
-              )
-              .map((method) => (
+            paymentMethods.map((method) => (
                 <div
                   key={method.value}
-                  className={`border rounded-xl mb-5 transition-all cursor-pointer ${
+                  className={`border rounded-xl mb-5 transition-all ${
                     selectedMethod === method.value
                       ? "border-[#6A3CB1] bg-white shadow-sm ring-2 ring-[#6A3CB1] ring-opacity-20"
                       : "border-gray-200 bg-white hover:border-gray-300"
                   }`}
-                  onClick={() => handleMethodSelect(method.value)}
                 >
                   {/* header + forms stay identical */}
 
-                  <div className="w-full flex justify-between items-center p-5 text-left font-medium text-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => handleMethodSelect(method.value)}
+                    className="w-full flex justify-between items-center p-5 text-left font-medium text-gray-800"
+                  >
                     <span>{method.label}</span>
                     <span className="text-gray-400">
                       {selectedMethod === method.value ? "▲" : "▼"}
                     </span>
-                  </div>
+                  </button>
 
                   {/* UPI Form */}
                   {selectedMethod === method.value &&
                     method.value === "upi" && (
-                      <div className="border-t border-gray-200 p-5">
+                      <div
+                        className="border-t border-gray-200 p-5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <InputField
                           label="UPI ID"
                           placeholder="example@okaxis"
@@ -513,7 +641,10 @@ export default function PaymentPage() {
                   {selectedMethod === method.value &&
                     (method.value === "credit_card" ||
                       method.value === "debit_card") && (
-                      <div className="border-t border-gray-200 p-5 space-y-4">
+                      <div
+                        className="border-t border-gray-200 p-5 space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <InputField
                           label="Card Holder Name"
                           placeholder="Enter card holder name"
@@ -578,7 +709,10 @@ export default function PaymentPage() {
                   {/* Bank Transfer Form */}
                   {selectedMethod === method.value &&
                     method.value === "bank_transfer" && (
-                      <div className="border-t border-gray-200 p-5 space-y-4">
+                      <div
+                        className="border-t border-gray-200 p-5 space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <InputField
                           label="Account Holder Name"
                           placeholder="Enter account holder name"
@@ -656,6 +790,19 @@ export default function PaymentPage() {
                             )
                           }
                         />
+                      </div>
+                    )}
+
+                  {selectedMethod === method.value &&
+                    ["paypal", "stripe", "cash", "check"].includes(
+                      method.value
+                    ) && (
+                      <div
+                        className="border-t border-gray-200 p-5 text-sm text-gray-600"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Continue with <span className="font-medium">{method.label}</span>.
+                        No additional details are required for this method.
                       </div>
                     )}
                 </div>
@@ -749,7 +896,7 @@ export default function PaymentPage() {
                 </button>
                 <button
                   onClick={handlePaymentSubmit}
-                  disabled={loading || !selectedMethod}
+                  disabled={loading || creatingSubscription || !selectedMethod}
                   className="flex items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold disabled:opacity-60 shrink-0"
                   style={{
                     width: 175,
@@ -758,7 +905,9 @@ export default function PaymentPage() {
                     gap: 10,
                   }}
                 >
-                  {loading ? "Processing..." : "Submit Payment"}
+                  {loading || creatingSubscription
+                    ? "Processing..."
+                    : "Submit Payment"}
                 </button>
               </div>
             </div>

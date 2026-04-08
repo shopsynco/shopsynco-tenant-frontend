@@ -74,7 +74,9 @@ export interface DiscoverResponse {
 
 // 1️⃣ Create Store — No slug required yet
 export const storeSetup = async (data: StoreSetupPayload): Promise<StoreSetupResponse> => {
-  const response = await axiosInstance.post(`api/tenants/store/setup/`, data);
+  const response = await axiosInstance.post(`api/tenants/store/setup/`, data, {
+    timeout: 15000,
+  });
   return response.data;
 };
 
