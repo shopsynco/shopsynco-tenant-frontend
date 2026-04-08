@@ -28,6 +28,10 @@ export interface StoreSetupResponse {
   };
 }
 
+export interface StoreCategoriesResponse {
+  categories: string[];
+}
+
 // 🌍 Country
 export interface Country {
   id: number;
@@ -78,6 +82,13 @@ export const storeSetup = async (data: StoreSetupPayload): Promise<StoreSetupRes
     timeout: 15000,
   });
   return response.data;
+};
+
+// 1.1️⃣ Get backend-driven store setup categories
+export const getStoreCategories = async (): Promise<string[]> => {
+  const response = await axiosInstance.get(`api/tenants/store/categories/`);
+  const list = (response.data as StoreCategoriesResponse | undefined)?.categories;
+  return Array.isArray(list) ? list : [];
 };
 
 // 2️⃣ Get all countries

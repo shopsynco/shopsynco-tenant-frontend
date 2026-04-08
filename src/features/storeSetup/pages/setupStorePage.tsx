@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import bgImage from "../../../assets/backgroundstore.png";
-import { storeSetup } from "../../../api/mainapi/StoreCreateapi";
+import {
+  getStoreCategories,
+  storeSetup,
+} from "../../../api/mainapi/StoreCreateapi";
 import shopLogo from "../../../assets/Name-Logo.png";
 import { showError } from "../../../components/swalHelper";
 
@@ -12,6 +15,17 @@ interface FormData {
   domain: string;
 }
 
+const FALLBACK_CATEGORY_OPTIONS = [
+  "Fashion",
+  "Retail",
+  "Food & Beverage",
+  "Beauty & Wellness",
+  "Electronics",
+  "Home & Decor",
+  "Services",
+  "Other",
+];
+
 export default function StoreSetupPage() {
   const [formData, setFormData] = useState<FormData>({
     store_name: "",
@@ -20,7 +34,22 @@ export default function StoreSetupPage() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadCategoryOptions = async () => {
+      try {
+        const categories = await getStoreCategories();
+        setCategoryOptions(
+          categories.length > 0 ? categories : FALLBACK_CATEGORY_OPTIONS
+        );
+      } catch {
+        setCategoryOptions(FALLBACK_CATEGORY_OPTIONS);
+      }
+    };
+    loadCategoryOptions();
+  }, []);
 
   // ✅ Handle input change
   const handleChange = (
@@ -160,15 +189,13 @@ export default function StoreSetupPage() {
               />
             </div>
 
-            {/* Category (changed to input field) */}
+            {/* Category */}
             <div className="flex-1">
               <label className="block text-left text-sm font-medium text-[#719CBF] mb-2">
                 Category
               </label>
-              <input
-                type="text"
+              <select
                 name="product_service"
-                placeholder="e.g., Fashion, Cleaning, Retail..."
                 value={formData.product_service}
                 onChange={handleChange}
                 className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black
@@ -176,7 +203,16 @@ export default function StoreSetupPage() {
              focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg
              resize-none"
                 required
-              />
+              >
+                <option value="" disabled>
+                  Select category
+                </option>
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -187,7 +223,7 @@ export default function StoreSetupPage() {
               Domain
             </label>
 
-            {/* flex container → input + suffix + button */}
+            {/* flex container → input + suffix */}
             <div className="flex items-center gap-2">
               {/* editable prefix */}
               <input
@@ -210,21 +246,6 @@ export default function StoreSetupPage() {
               >
                 .shopsynco.com
               </span>
-
-              {/* Check button */}
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  /* call your availability API here */
-                  alert(`Checking "${formData.domain}.shopsynco.com"`);
-                }}
-                className="whitespace-nowrap bg-[#719CBF] text-white px-4 py-3
-                 rounded-xl text-sm font-semibold hover:bg-[#5c91c4]
-                 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Check Availability
-              </button>
             </div>
           </div>
 
