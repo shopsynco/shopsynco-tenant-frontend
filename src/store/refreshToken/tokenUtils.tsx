@@ -183,6 +183,11 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = res.data.access;
 
         localStorage.setItem("accessToken", newAccessToken);
+        // SIMPLE_JWT ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION: server returns a new refresh;
+        // if we don't persist it, the next refresh uses a blacklisted token → 401 on all APIs.
+        if (typeof res.data.refresh === "string" && res.data.refresh.length > 0) {
+          localStorage.setItem("refreshToken", res.data.refresh);
+        }
         axiosInstance.defaults.headers.common[
           "Authorization"
         ] = `Bearer ${newAccessToken}`;

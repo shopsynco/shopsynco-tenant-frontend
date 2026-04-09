@@ -8,12 +8,47 @@ import {
   storeSetup,
 } from "../../../api/mainapi/StoreCreateapi";
 import shopLogo from "../../../assets/Name-Logo.png";
-import { showError } from "../../../components/swalHelper";
-
 interface FormData {
   store_name: string;
   product_service: string;
   domain: string;
+}
+
+type FieldKey = keyof FormData | "general";
+
+const DOMAIN_PATTERN = /^[a-z0-9-]{3,63}$/;
+
+function parseStoreSetupFieldErrors(data: unknown): Partial<Record<FieldKey, string>> {
+  if (!data || typeof data !== "object") return {};
+  const o = data as Record<string, unknown>;
+  const fe = o.field_errors;
+  if (fe && typeof fe === "object" && !Array.isArray(fe)) {
+    const out: Partial<Record<FieldKey, string>> = {};
+    for (const key of ["store_name", "domain", "product_service", "general"] as const) {
+      const v = (fe as Record<string, unknown>)[key];
+      if (typeof v === "string" && v.trim()) out[key] = v.trim();
+    }
+    return out;
+  }
+  const detail = o.detail;
+  if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+    const out: Partial<Record<FieldKey, string>> = {};
+    for (const [k, val] of Object.entries(detail as Record<string, unknown>)) {
+      const msg = Array.isArray(val)
+        ? val[0]
+        : typeof val === "string"
+          ? val
+          : null;
+      if (typeof msg !== "string" || !msg.trim()) continue;
+      if (k === "store_name" || k === "domain" || k === "product_service") {
+        out[k] = msg.trim();
+      } else if (k === "non_field_errors") {
+        out.general = msg.trim();
+      }
+    }
+    return out;
+  }
+  return {};
 }
 
 const FALLBACK_CATEGORY_OPTIONS = [
@@ -36,6 +71,7 @@ export default function StoreSetupPage() {
 
   const [loading, setLoading] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -57,7 +93,14 @@ export default function StoreSetupPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    const key = name as keyof FormData;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      delete next.general;
+      return next;
+    });
   };
 
   // ✅ Submit handler
@@ -69,17 +112,27 @@ export default function StoreSetupPage() {
     const storeName = formData.store_name.trim();
     const category = formData.product_service.trim();
 
-    if (!storeName || !category || !domainValue) {
-      showError("Validation", "Please fill all required fields.");
+    const nextErrors: Partial<Record<FieldKey, string>> = {};
+    if (!storeName) nextErrors.store_name = "Store name is required.";
+    else if (storeName.length < 2)
+      nextErrors.store_name = "Store name must be at least 2 characters.";
+    else if (storeName.length > 200)
+      nextErrors.store_name = "Store name must be at most 200 characters.";
+
+    if (!category) nextErrors.product_service = "Please select a category.";
+
+    if (!domainValue) nextErrors.domain = "Domain is required.";
+    else if (!DOMAIN_PATTERN.test(domainValue)) {
+      nextErrors.domain =
+        "Use 3–63 characters: lowercase letters, numbers, and hyphens only (no spaces).";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
       return;
     }
-    if (!/^[a-z0-9-]{3,40}$/.test(domainValue)) {
-      showError(
-        "Invalid domain",
-        "Domain can contain lowercase letters, numbers, and hyphen only (3-40 chars)."
-      );
-      return;
-    }
+
+    setFieldErrors({});
 
     try {
       setLoading(true);
@@ -102,6 +155,7 @@ export default function StoreSetupPage() {
             | {
                 error?: string;
                 message?: string;
+                field_errors?: Record<string, string>;
                 detail?: string | Record<string, unknown> | string[];
               }
             | undefined)
@@ -147,17 +201,24 @@ export default function StoreSetupPage() {
         }
       }
 
+      const fromApi = parseStoreSetupFieldErrors(responseData);
+      if (Object.keys(fromApi).length > 0) {
+        setFieldErrors(fromApi);
+        return;
+      }
+
       const msgLower = backendMessage.toLowerCase();
+      if (msgLower.includes("already taken") && msgLower.includes("domain")) {
+        setFieldErrors({ domain: backendMessage });
+        return;
+      }
       const friendlyMessage =
         msgLower.includes("schema_name_key") ||
         msgLower.includes("duplicate key value") ||
         msgLower.includes("already exists")
-          ? "A store with similar details already exists. Please try a different store/domain name."
+          ? "A store with similar details already exists. Please try a different store or domain name."
           : backendMessage;
-      showError(
-        "Store Creation Failed",
-        friendlyMessage
-      );
+      setFieldErrors({ general: friendlyMessage });
     } finally {
       setLoading(false);
     }
@@ -200,6 +261,15 @@ export default function StoreSetupPage() {
           onSubmit={handleSubmit}
           className="flex flex-col items-center gap-6 w-full mx-auto"
         >
+          {fieldErrors.general ? (
+            <p
+              className="w-full text-left text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3"
+              role="alert"
+            >
+              {fieldErrors.general}
+            </p>
+          ) : null}
+
           <div className="flex flex-col md:flex-row gap-6 w-full mb-2">
             {/* Store Name */}
             <div className="flex-1">
@@ -212,10 +282,18 @@ export default function StoreSetupPage() {
                 placeholder="Your Store Home"
                 value={formData.store_name}
                 onChange={handleChange}
-                className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black placeholder:text-gray-500 
-                focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg bg-transparent"
+                aria-invalid={Boolean(fieldErrors.store_name)}
+                className={`w-full rounded-xl px-5 py-4 border text-black placeholder:text-gray-500 
+                focus:outline-none focus:ring-2 text-lg bg-transparent ${
+                  fieldErrors.store_name
+                    ? "border-red-500 focus:ring-red-400"
+                    : "border-gray-300 focus:ring-purple-400"
+                }`}
                 required
               />
+              {fieldErrors.store_name ? (
+                <p className="text-left text-sm text-red-600 mt-1">{fieldErrors.store_name}</p>
+              ) : null}
             </div>
 
             {/* Category */}
@@ -227,10 +305,15 @@ export default function StoreSetupPage() {
                 name="product_service"
                 value={formData.product_service}
                 onChange={handleChange}
-                className="w-full rounded-xl px-5 py-4 border border-gray-300 text-black
+                aria-invalid={Boolean(fieldErrors.product_service)}
+                className={`w-full rounded-xl px-5 py-4 border text-black
              placeholder:text-gray-500 bg-transparent
-             focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg
-             resize-none"
+             focus:outline-none focus:ring-2 text-lg
+             resize-none ${
+               fieldErrors.product_service
+                 ? "border-red-500 focus:ring-red-400"
+                 : "border-gray-300 focus:ring-purple-400"
+             }`}
                 required
               >
                 <option value="" disabled>
@@ -242,6 +325,9 @@ export default function StoreSetupPage() {
                   </option>
                 ))}
               </select>
+              {fieldErrors.product_service ? (
+                <p className="text-left text-sm text-red-600 mt-1">{fieldErrors.product_service}</p>
+              ) : null}
             </div>
           </div>
 
@@ -253,7 +339,7 @@ export default function StoreSetupPage() {
             </label>
 
             {/* flex container → input + suffix */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-stretch gap-0">
               {/* editable prefix */}
               <input
                 type="text"
@@ -261,21 +347,31 @@ export default function StoreSetupPage() {
                 placeholder="my-store"
                 value={formData.domain}
                 onChange={handleChange}
-                className="flex-1 rounded-l-xl px-5 py-4 border border-gray-300 border-r-0
+                aria-invalid={Boolean(fieldErrors.domain)}
+                className={`flex-1 rounded-l-xl px-5 py-4 border border-r-0
            text-black placeholder:text-gray-500
-           focus:outline-none focus:ring-2 focus:ring-purple-400
-           text-lg bg-transparent"
+           focus:outline-none focus:ring-2
+           text-lg bg-transparent ${
+             fieldErrors.domain
+               ? "border-red-500 focus:ring-red-400"
+               : "border-gray-300 focus:ring-purple-400"
+           }`}
                 required
               />
 
               {/* locked suffix */}
               <span
-                className="px-4 py-4 border-y border-r border-gray-300 rounded-r-xl
-                     bg-white/10 text-black select-none"
+                className={`px-4 py-4 border-y border-r rounded-r-xl flex items-center
+                     bg-white/10 text-black select-none ${
+                       fieldErrors.domain ? "border-red-500" : "border-gray-300"
+                     }`}
               >
                 .shopsynco.com
               </span>
             </div>
+            {fieldErrors.domain ? (
+              <p className="text-left text-sm text-red-600 mt-1">{fieldErrors.domain}</p>
+            ) : null}
           </div>
 
           {/* Submit */}

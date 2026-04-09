@@ -81,6 +81,9 @@ export const refreshAccessToken = createAsyncThunk(
       const { access } = res.data;
 
       localStorage.setItem("accessToken", access);
+      if (typeof res.data.refresh === "string" && res.data.refresh.length > 0) {
+        localStorage.setItem("refreshToken", res.data.refresh);
+      }
       return access;
     } catch {
       return rejectWithValue("Token refresh failed");
@@ -116,6 +119,7 @@ const authSlice = createSlice({
       })
       .addCase(refreshAccessToken.fulfilled, (state, action) => {
         state.accessToken = action.payload;
+        state.refreshToken = localStorage.getItem("refreshToken");
       });
   },
 });
