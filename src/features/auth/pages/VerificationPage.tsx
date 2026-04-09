@@ -4,6 +4,8 @@ import Swal from "sweetalert2";
 import {
   verifyEmailCode,
   sendEmailVerificationCode,
+  verifyResetCode,
+  resendVerificationCode,
 } from "../../../api/auth/authapi";
 import bgImage from "../../../assets/commonbackground.png";
 
@@ -15,16 +17,25 @@ const VerificationPage: React.FC = () => {
 
   const queryParams = new URLSearchParams(location.search);
   const email: string = queryParams.get("email") || "";
+  const flow = queryParams.get("flow") || "signup";
+  const isResetFlow = flow === "reset-password";
 
   // refs for inputs (properly typed)
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   // ⏱ Countdown timer
   useEffect(() => {
-    if (timer === 0) {
-      navigate(`/verification-expired?email=${encodeURIComponent(email)}`);
+    if (timer <= 0) {
+      navigate(`/verify-email-expired?email=${encodeURIComponent(email)}`);
+      return;
     }
-  }, [timer]);
+
+    const intervalId = window.setInterval(() => {
+      setTimer((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [timer, navigate, email]);
 
   // focus first input on mount
   useEffect(() => {
@@ -97,7 +108,11 @@ const VerificationPage: React.FC = () => {
     }
 
     try {
-      await sendEmailVerificationCode(email);
+      if (isResetFlow) {
+        await resendVerificationCode({ email });
+      } else {
+        await sendEmailVerificationCode(email);
+      }
       Swal.fire({
         icon: "success",
         title: "Verification Code Resent",
@@ -124,6 +139,9 @@ const VerificationPage: React.FC = () => {
     }
   };
 
+  const minutes = Math.floor(timer / 60);
+  const seconds = timer % 60;
+
   const handleSubmit = async () => {
     const verificationCode = code.join("");
 
@@ -142,18 +160,28 @@ const VerificationPage: React.FC = () => {
     }
 
     try {
-      // ✅ Verify email (pre-signup verify)
-      await verifyEmailCode(email, verificationCode);
+      if (isResetFlow) {
+        await verifyResetCode({ email, verification_code: verificationCode });
+      } else {
+        // ✅ Verify email (pre-signup verify)
+        await verifyEmailCode(email, verificationCode);
+      }
 
       await Swal.fire({
         icon: "success",
-        title: "Email Verified!",
-        text: "Your email has been verified. Now create your account.",
+        title: isResetFlow ? "Code Verified!" : "Email Verified!",
+        text: isResetFlow
+          ? "Now set a new password for your account."
+          : "Your email has been verified. Now create your account.",
         confirmButtonColor: "#719CBF",
       });
 
-      // 👉 Go to SIGNUP page with email prefilled
-      navigate(`/signup?email=${encodeURIComponent(email)}`);
+      if (isResetFlow) {
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      } else {
+        // 👉 Go to SIGNUP page with email prefilled
+        navigate(`/signup?email=${encodeURIComponent(email)}`);
+      }
     } catch (error: unknown) {
       Swal.fire({
         icon: "error",
@@ -259,7 +287,8 @@ const VerificationPage: React.FC = () => {
         {/* Timer */}
         <p className="text-center text-sm mb-5" style={{ color: "#bf4141" }}>
           <span className="font-mono">
-            00:{timer.toString().padStart(2, "0")}
+            {minutes.toString().padStart(2, "0")}:
+            {seconds.toString().padStart(2, "0")}
           </span>
         </p>
 

@@ -45,7 +45,11 @@ export default function ForgotPasswordPage() {
         "If this email is registered, a reset code has been sent.";
 
       showSuccess("Verification Sent", serverMsg, () =>
-        navigate(`/verification-sent?email=${encodeURIComponent(email)}`)
+        navigate(
+          `/verify-email?email=${encodeURIComponent(
+            email
+          )}&flow=reset-password`
+        )
       );
     } catch (err: any) {
       const data = err?.response?.data;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   X,
@@ -21,11 +21,14 @@ import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
 import axios from "axios";
 
 interface Feature {
-  id: string;
+  id: string | number;
   name: string;
   description: string;
   price: number;
   tag?: string;
+  category?: string;
+  billing_cycle?: string;
+  created_at?: string;
 }
 
 export default function FeatureStorePage({
@@ -38,13 +41,68 @@ export default function FeatureStorePage({
   const [stage, setStage] = useState<"list" | "checkout">("list");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null); // State to handle errors
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sortBy, setSortBy] = useState<
+    "default" | "name_asc" | "name_desc" | "price_low_high" | "price_high_low"
+  >("default");
 
   const navigate = useNavigate();
+  const getFeatureId = (id: string | number) => String(id);
 
-  const selectedFeatures = features.filter((f) => selected.includes(f.id));
+  const selectedFeatures = features.filter((f) =>
+    selected.includes(getFeatureId(f.id))
+  );
   const subtotal = selectedFeatures.reduce((sum, f) => sum + f.price, 0);
   const gst = subtotal * 0.18;
   const total = subtotal + gst;
+
+  const categoryOptions = useMemo(() => {
+    const categories = Array.from(
+      new Set(
+        features
+          .map((f) => (f.category || "").trim())
+          .filter((c): c is string => Boolean(c))
+      )
+    ).sort((a, b) => a.localeCompare(b));
+    return ["all", ...categories];
+  }, [features]);
+
+  const filteredFeatures = useMemo(() => {
+    let next = [...features];
+
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      next = next.filter(
+        (f) =>
+          f.name.toLowerCase().includes(q) ||
+          (f.description || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (selectedCategory !== "all") {
+      next = next.filter((f) => (f.category || "").trim() === selectedCategory);
+    }
+
+    switch (sortBy) {
+      case "name_asc":
+        next.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "name_desc":
+        next.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "price_low_high":
+        next.sort((a, b) => Number(a.price) - Number(b.price));
+        break;
+      case "price_high_low":
+        next.sort((a, b) => Number(b.price) - Number(a.price));
+        break;
+      default:
+        break;
+    }
+
+    return next;
+  }, [features, searchTerm, selectedCategory, sortBy]);
 
   const handleClose = () => {
     if (onClose) onClose();
@@ -119,15 +177,16 @@ export default function FeatureStorePage({
   }, []);
 
   // ✅ Toggle Add/Remove Feature (API integrated)
-  const toggleSelect = async (id: string) => {
+  const toggleSelect = async (id: string | number) => {
+    const normalizedId = getFeatureId(id);
     try {
       setLoading(true);
-      if (selected.includes(id)) {
-        await removeFeature(id);
-        setSelected((prev) => prev.filter((x) => x !== id));
+      if (selected.includes(normalizedId)) {
+        await removeFeature(normalizedId);
+        setSelected((prev) => prev.filter((x) => x !== normalizedId));
       } else {
-        await addFeature(id);
-        setSelected((prev) => [...prev, id]);
+        await addFeature(normalizedId);
+        setSelected((prev) => [...prev, normalizedId]);
       }
 
       // ...
@@ -217,6 +276,8 @@ export default function FeatureStorePage({
                   <input
                     type="text"
                     placeholder="Search feature"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#6A3CB1] outline-none"
                   />
                 </div>
@@ -225,43 +286,62 @@ export default function FeatureStorePage({
                 <div className="flex gap-2 sm:ml-auto">
                   {/* Category */}
                   <div className="relative flex items-center border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#7658A0B2] bg-white">
-                    <span>All Category</span>
-                    <Funnel
-                      size={20}
-                      className="ml-2 text-[#7658A0B2]"
-                      style={{
-                        margin: "0 auto",
-                        flex: "none",
-                        order: 1,
-                        flexGrow: 0,
-                      }}
-                    />
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="bg-transparent outline-none pr-6 appearance-none cursor-pointer"
+                      aria-label="Filter by category"
+                    >
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category === "all" ? "All Category" : category}
+                        </option>
+                      ))}
+                    </select>
+                    <Funnel size={20} className="ml-2 text-[#7658A0B2]" />
                   </div>
 
                   {/* Filter */}
                   <div className="relative flex items-center border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#7658A0B2] bg-white">
-                    <span>Sort By: All</span>
-                    <Funnel
-                      size={20}
-                      className="ml-2 text-[#7658A0B2]"
-                      style={{
-                        margin: "0 auto",
-                        flex: "none",
-                        order: 1,
-                        flexGrow: 0,
-                      }}
-                    />
+                    <select
+                      value={sortBy}
+                      onChange={(e) =>
+                        setSortBy(
+                          e.target.value as
+                            | "default"
+                            | "name_asc"
+                            | "name_desc"
+                            | "price_low_high"
+                            | "price_high_low"
+                        )
+                      }
+                      className="bg-transparent outline-none pr-6 appearance-none cursor-pointer"
+                      aria-label="Sort features"
+                    >
+                      <option value="default">Sort By: Default</option>
+                      <option value="name_asc">Name: A-Z</option>
+                      <option value="name_desc">Name: Z-A</option>
+                      <option value="price_low_high">Price: Low to High</option>
+                      <option value="price_high_low">Price: High to Low</option>
+                    </select>
+                    <Funnel size={20} className="ml-2 text-[#7658A0B2]" />
                   </div>
                 </div>
               </div>
 
               {/* Feature Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {features.map((f) => {
-                  const isAdded = selected.includes(f.id);
+                {filteredFeatures.length === 0 && (
+                  <div className="col-span-full text-center text-gray-500 py-10">
+                    No features match your search/filter.
+                  </div>
+                )}
+                {filteredFeatures.map((f) => {
+                  const fid = getFeatureId(f.id);
+                  const isAdded = selected.includes(fid);
                   return (
                     <div
-                      key={f.id}
+                      key={fid}
                       className={`rounded-xl p-4 transition bg-white ${
                         isAdded
                           ? "border border-[#22c55e]" // green border when added
@@ -295,7 +375,7 @@ export default function FeatureStorePage({
                         </p>
 
                         <button
-                          onClick={() => toggleSelect(f.id)}
+                          onClick={() => toggleSelect(fid)}
                           disabled={loading}
                           className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition ${
                             isAdded
