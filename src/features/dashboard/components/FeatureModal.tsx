@@ -17,6 +17,7 @@ import {
   getMyFeatures,
 } from "../../../api/mainapi/featureapi";
 import { showError } from "../../../components/swalHelper";
+import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
 import axios from "axios";
 
 interface Feature {
@@ -155,6 +156,7 @@ export default function FeatureStorePage({
         requiresSubscription
           ? () => {
               onClose?.();
+              setPlansEntryFromDashboard();
               navigate("/plans");
             }
           : undefined

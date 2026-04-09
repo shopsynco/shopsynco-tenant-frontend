@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchTenantDashboard } from "../../../api/mainapi/statusapi";
+import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
 import FeatureStorePage from "../components/FeatureModal";
 import Header from "../components/dashboardHeader";
 
@@ -328,7 +329,10 @@ export default function Dashboard() {
               </p>
 
               <button
-                onClick={() => navigate("/plans")}
+                onClick={() => {
+                  setPlansEntryFromDashboard();
+                  navigate("/plans");
+                }}
                 className="absolute text-center"
                 style={{
                   top: 199,

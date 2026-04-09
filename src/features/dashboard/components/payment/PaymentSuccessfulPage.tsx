@@ -1,8 +1,14 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import bgImage from "../../../../assets/backgroundsuccess.png";
 import { CheckCircle } from "lucide-react";
+import { markTenantSubscriptionActive } from "../../../../utils/planFlow";
 
 export default function PaymentSuccessPage() {
+  useEffect(() => {
+    markTenantSubscriptionActive();
+  }, []);
+
   return (
     <div
       className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center justify-center px-6 py-10"

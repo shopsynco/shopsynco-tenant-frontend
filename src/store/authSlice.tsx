@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils";
+import { clearPlanFlowFlags } from "../utils/planFlow";
 
 /** Returned from login thunk (also used by LoginPage for routing). */
 export type LoginSuccessPayload = {
@@ -100,6 +101,7 @@ const authSlice = createSlice({
       state.refreshToken = null;
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
+      clearPlanFlowFlags();
     },
   },
   extraReducers: (builder) => {

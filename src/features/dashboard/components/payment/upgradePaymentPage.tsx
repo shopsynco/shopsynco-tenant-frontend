@@ -10,6 +10,7 @@ import {
   getCardDetails,
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
+import { setPlansEntryFromDashboard } from "../../../../utils/planFlow";
 
 // Define types
 interface PaymentMethod {
@@ -482,7 +483,11 @@ export default function UpgradePaymentPage() {
       {/* Header */}
       <div className="w-full max-w-6xl mb-6 flex items-center gap-2 text-gray-500">
         <ChevronLeft className="w-4 h-4" />
-        <Link to="/plans" className="text-sm text-gray-700 hover:underline">
+        <Link
+          to="/plans"
+          onClick={() => setPlansEntryFromDashboard()}
+          className="text-sm text-gray-700 hover:underline"
+        >
           Back to Choose Plan
         </Link>
       </div>

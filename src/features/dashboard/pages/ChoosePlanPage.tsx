@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Check } from "lucide-react";
 import { fetchPlans, getPricingQuote } from "../../../api/mainapi/planapi";
 import { useNavigate } from "react-router-dom";
 import PlansPageHeader from "../components/PlansPageHeader";
+import { canExitPlansToDashboard } from "../../../utils/planFlow";
 
 interface BillingPeriodOption {
   months: number;
@@ -184,6 +185,15 @@ export default function ChoosePlanPage() {
   const [quoteError, setQuoteError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const allowDashboardExit = useMemo(() => canExitPlansToDashboard(), []);
+
+  const handlePlanStepBack = useCallback(() => {
+    if (allowDashboardExit) {
+      navigate("/dashboard");
+    } else {
+      navigate(-1);
+    }
+  }, [allowDashboardExit, navigate]);
 
   useEffect(() => {
     const getPlans = async () => {
@@ -584,7 +594,7 @@ export default function ChoosePlanPage() {
                     {/* Cancel – 162 px (smaller) */}
                     <button
                       type="button"
-                      onClick={() => navigate("/dashboard")}
+                      onClick={handlePlanStepBack}
                       className="flex items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold"
                       style={{
                         width: 162,
@@ -593,7 +603,7 @@ export default function ChoosePlanPage() {
                         gap: 10,
                       }}
                     >
-                      Cancel
+                      {allowDashboardExit ? "Cancel" : "Back"}
                     </button>
 
                     {/* Choose Payment – 246 px (wider) */}

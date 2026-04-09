@@ -11,6 +11,10 @@ import {
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
 import { showError } from "../../../../components/swalHelper";
+import {
+  markTenantSubscriptionActive,
+  setPlansEntryFromCheckout,
+} from "../../../../utils/planFlow";
 
 // Define types
 interface PaymentMethod {
@@ -57,6 +61,10 @@ export default function PaymentPage() {
   });
 
   const navigate = useNavigate();
+  const goPaymentSuccess = () => {
+    markTenantSubscriptionActive();
+    navigate("/payment-success");
+  };
   const { search } = useLocation();
   const params = new URLSearchParams(search);
   const planId = params.get("plan_id");
@@ -338,7 +346,7 @@ export default function PaymentPage() {
       const paymentResponse = await payWithUpi(upiPayload);
       if (paymentResponse.success) {
         await Swal.fire("Success", "UPI Payment Successful!", "success");
-        navigate("/payment-success");
+        goPaymentSuccess();
       } else {
         throw new Error("UPI payment failed");
       }
@@ -391,7 +399,7 @@ export default function PaymentPage() {
         const paymentResponse = await submitPayment(paymentPayload);
         if (paymentResponse.success === true || !!paymentResponse.message) {
           await Swal.fire("Success", "Card Payment Successful!", "success");
-          navigate("/payment-success");
+          goPaymentSuccess();
         } else {
           throw new Error("Card payment failed");
         }
@@ -409,7 +417,7 @@ export default function PaymentPage() {
         const paymentResponse = await submitPayment(paymentPayload);
         if (paymentResponse.success === true || !!paymentResponse.message) {
           await Swal.fire("Success", "Card Payment Successful!", "success");
-          navigate("/payment-success");
+          goPaymentSuccess();
         } else {
           throw new Error("Card payment failed");
         }
@@ -462,7 +470,7 @@ export default function PaymentPage() {
           "Bank Transfer Initiated Successfully!",
           "success"
         );
-        navigate("/payment-success");
+        goPaymentSuccess();
       } else {
         throw new Error("Bank transfer failed");
       }
@@ -521,7 +529,7 @@ export default function PaymentPage() {
           .then(async (paymentResponse) => {
             if (paymentResponse.success === true || !!paymentResponse.message) {
               await Swal.fire("Success", "Payment Successful!", "success");
-              navigate("/payment-success");
+              goPaymentSuccess();
             } else {
               throw new Error("Payment failed");
             }
@@ -583,7 +591,11 @@ export default function PaymentPage() {
       {/* Header */}
       <div className="w-full max-w-6xl mb-6 flex items-center gap-2 text-gray-500">
         <ChevronLeft className="w-4 h-4" />
-        <Link to="/plans" className="text-sm text-gray-700 hover:underline">
+        <Link
+          to="/plans"
+          onClick={() => setPlansEntryFromCheckout()}
+          className="text-sm text-gray-700 hover:underline"
+        >
           Back to Choose Plan
         </Link>
       </div>

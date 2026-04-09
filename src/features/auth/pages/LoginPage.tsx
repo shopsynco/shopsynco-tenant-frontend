@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../components/AuthLayout";
 import { showSuccess } from "../../../components/swalHelper";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
+import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
 
 type TenantSlugResponse = {
   slug?: string;
@@ -75,6 +76,9 @@ export default function LoginPage() {
             ? payload.loginMessage
             : "Login Successful";
         const nextPath = needsStoreSetup ? "/setup-store" : "/plans";
+        if (!needsStoreSetup) {
+          setPlansEntryFromCheckout();
+        }
 
         showSuccess(successTitle, successText, () => {
           setErrorMessage("");
