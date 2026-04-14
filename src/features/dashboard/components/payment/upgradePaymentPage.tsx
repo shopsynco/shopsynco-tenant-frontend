@@ -293,7 +293,11 @@ export default function UpgradePaymentPage() {
 
       // Verify UPI ID first
       const verifyResponse = await verifyUpi(upiID);
-      if (!verifyResponse.success) {
+      const upiVerified =
+        verifyResponse.success === true ||
+        verifyResponse.valid === true ||
+        verifyResponse.verified === true;
+      if (!upiVerified) {
         Swal.fire("Validation Error", "Invalid UPI ID. Please check and try again.", "error");
         return;
       }
@@ -306,7 +310,7 @@ export default function UpgradePaymentPage() {
       };
 
       const paymentResponse = await payWithUpi(upiPayload);
-      if (paymentResponse.success) {
+      if (paymentResponse.success === true || !!paymentResponse.message) {
         await Swal.fire("Success", "UPI Payment Successful!", "success");
         navigate("/payment-success");
       } else {
@@ -366,7 +370,7 @@ export default function UpgradePaymentPage() {
       }
 
       const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success) {
+      if (paymentResponse.success === true || !!paymentResponse.message) {
         await Swal.fire("Success", "Card Payment Successful!", "success");
         navigate("/payment-success");
       } else {
@@ -404,7 +408,7 @@ export default function UpgradePaymentPage() {
       };
 
       const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success) {
+      if (paymentResponse.success === true || !!paymentResponse.message) {
         await Swal.fire("Success", "Bank Transfer Initiated Successfully!", "success");
         navigate("/payment-success");
       } else {

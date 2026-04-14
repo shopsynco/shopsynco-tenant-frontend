@@ -143,7 +143,7 @@ export default function PaymentPage() {
 
   // Handle method selection
   const handleMethodSelect = (methodValue: string) => {
-    setSelectedMethod((prev) => (prev === methodValue ? "" : methodValue));
+    setSelectedMethod(methodValue);
   };
 
   // Handle card input changes
@@ -327,10 +327,15 @@ export default function PaymentPage() {
 
       // Verify UPI ID first
       const verifyResponse = await verifyUpi(upiID);
-      if (!verifyResponse.success) {
+      const upiVerified =
+        verifyResponse.success === true ||
+        verifyResponse.valid === true ||
+        verifyResponse.verified === true;
+      if (!upiVerified) {
         Swal.fire(
           "Validation Error",
-          "Invalid UPI ID. Please check and try again.",
+          verifyResponse.message ||
+            "Invalid UPI ID. Please check and try again.",
           "error"
         );
         return;

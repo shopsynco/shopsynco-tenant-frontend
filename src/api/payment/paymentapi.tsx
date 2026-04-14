@@ -63,7 +63,10 @@ type SubmitPaymentPayload =
 
 // Type for the response of UPI verification
 interface UpiVerificationResponse {
-  success: boolean;
+  success?: boolean;
+  valid?: boolean;
+  verified?: boolean;
+  message?: string;
 }
 
 // Type for the response of a successful payment
