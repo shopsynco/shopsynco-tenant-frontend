@@ -220,7 +220,17 @@ export function AddUpiModal({ onClose, onBack }: ModalProps) {
   const handleVerify = async () => {
     try {
       setLoading(true);
-      await verifyUpi(upiId);
+      const verifyResponse = await verifyUpi(upiId);
+      const isVerified =
+        verifyResponse.success === true || verifyResponse.verified === true;
+      if (!isVerified) {
+        showError(
+          "Verification Failed",
+          verifyResponse.message || "UPI could not be verified."
+        );
+        setVerified(false);
+        return;
+      }
       showSuccess("Verified", "UPI verified successfully.");
       setVerified(true);
     } catch (error: any) {
@@ -247,8 +257,15 @@ export function AddUpiModal({ onClose, onBack }: ModalProps) {
 
     try {
       setLoading(true);
-      await payWithUpi(payload);
-      showSuccess("UPI Added", "UPI payment saved successfully.", onClose);
+      const paymentResponse = await payWithUpi(payload);
+      if (paymentResponse.success === true) {
+        showSuccess("UPI Added", "UPI payment saved successfully.", onClose);
+        return;
+      }
+      showError(
+        "Payment Pending",
+        paymentResponse.message || "Complete payment in provider app to continue."
+      );
     } catch (error: any) {
       showError(
         "Save Failed",

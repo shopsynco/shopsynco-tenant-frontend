@@ -361,9 +361,7 @@ export default function PaymentPage() {
       // Verify UPI ID first
       const verifyResponse = await verifyUpi(upiID);
       const upiVerified =
-        verifyResponse.success === true ||
-        verifyResponse.valid === true ||
-        verifyResponse.verified === true;
+        verifyResponse.success === true || verifyResponse.verified === true;
       if (!upiVerified) {
         Swal.fire(
           "Validation Error",
@@ -382,13 +380,26 @@ export default function PaymentPage() {
       };
 
       const paymentResponse = await payWithUpi(upiPayload);
-      const paymentAccepted =
-        paymentResponse.success === true ||
-        !!paymentResponse.message ||
-        !!paymentResponse.receipt;
+      const redirectUrl = paymentResponse.payment?.payment_url || "";
+      const requiresRedirect = paymentResponse.payment?.requires_redirect === true;
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+        return;
+      }
+
+      const paymentAccepted = paymentResponse.success === true;
       if (paymentAccepted) {
         await Swal.fire("Success", "UPI Payment Successful!", "success");
         goPaymentSuccess();
+      } else if (requiresRedirect || paymentResponse.status === "pending") {
+        await Swal.fire(
+          "Complete payment in app",
+          paymentResponse.payment?.note ||
+            paymentResponse.message ||
+            "UPI app redirect is not configured yet. No amount was collected.",
+          "info"
+        );
       } else {
         throw new Error("UPI payment failed");
       }
@@ -439,7 +450,7 @@ export default function PaymentPage() {
           cvv_present: true,
         };
         const paymentResponse = await submitPayment(paymentPayload);
-        if (paymentResponse.success === true || !!paymentResponse.message) {
+        if (paymentResponse.success === true) {
           await Swal.fire("Success", "Card Payment Successful!", "success");
           goPaymentSuccess();
         } else {
@@ -457,7 +468,7 @@ export default function PaymentPage() {
           cvv_present: true,
         };
         const paymentResponse = await submitPayment(paymentPayload);
-        if (paymentResponse.success === true || !!paymentResponse.message) {
+        if (paymentResponse.success === true) {
           await Swal.fire("Success", "Card Payment Successful!", "success");
           goPaymentSuccess();
         } else {
@@ -506,7 +517,7 @@ export default function PaymentPage() {
       };
 
       const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success === true || !!paymentResponse.message) {
+      if (paymentResponse.success === true) {
         await Swal.fire(
           "Success",
           "Bank Transfer Initiated Successfully!",
@@ -569,7 +580,7 @@ export default function PaymentPage() {
           method: selectedMethod as "paypal" | "stripe" | "cash" | "check",
         })
           .then(async (paymentResponse) => {
-            if (paymentResponse.success === true || !!paymentResponse.message) {
+            if (paymentResponse.success === true) {
               await Swal.fire("Success", "Payment Successful!", "success");
               goPaymentSuccess();
             } else {

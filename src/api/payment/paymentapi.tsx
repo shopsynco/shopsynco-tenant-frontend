@@ -72,9 +72,16 @@ interface UpiVerificationResponse {
 // Type for the response of a successful payment
 interface PaymentResponse {
   success?: boolean;
+  status?: string;
   message?: string;
   subscription_id?: string;
   receipt?: unknown;
+  payment?: {
+    action?: string;
+    payment_url?: string | null;
+    requires_redirect?: boolean;
+    note?: string;
+  };
 }
 
 interface CheckoutPayload {

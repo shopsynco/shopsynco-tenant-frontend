@@ -327,9 +327,7 @@ export default function UpgradePaymentPage() {
       // Verify UPI ID first
       const verifyResponse = await verifyUpi(upiID);
       const upiVerified =
-        verifyResponse.success === true ||
-        verifyResponse.valid === true ||
-        verifyResponse.verified === true;
+        verifyResponse.success === true || verifyResponse.verified === true;
       if (!upiVerified) {
         Swal.fire("Validation Error", "Invalid UPI ID. Please check and try again.", "error");
         return;
@@ -343,9 +341,25 @@ export default function UpgradePaymentPage() {
       };
 
       const paymentResponse = await payWithUpi(upiPayload);
-      if (paymentResponse.success === true || !!paymentResponse.message) {
+      const redirectUrl = paymentResponse.payment?.payment_url || "";
+      const requiresRedirect = paymentResponse.payment?.requires_redirect === true;
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+        return;
+      }
+
+      if (paymentResponse.success === true) {
         await Swal.fire("Success", "UPI Payment Successful!", "success");
         navigate("/payment-success");
+      } else if (requiresRedirect || paymentResponse.status === "pending") {
+        await Swal.fire(
+          "Complete payment in app",
+          paymentResponse.payment?.note ||
+            paymentResponse.message ||
+            "UPI app redirect is not configured yet. No amount was collected.",
+          "info"
+        );
       } else {
         throw new Error("UPI payment failed");
       }
@@ -403,7 +417,7 @@ export default function UpgradePaymentPage() {
       }
 
       const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success === true || !!paymentResponse.message) {
+      if (paymentResponse.success === true) {
         await Swal.fire("Success", "Card Payment Successful!", "success");
         navigate("/payment-success");
       } else {
@@ -441,7 +455,7 @@ export default function UpgradePaymentPage() {
       };
 
       const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success === true || !!paymentResponse.message) {
+      if (paymentResponse.success === true) {
         await Swal.fire("Success", "Bank Transfer Initiated Successfully!", "success");
         navigate("/payment-success");
       } else {
