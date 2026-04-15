@@ -46,6 +46,7 @@ interface UpiPaymentPayload {
   subscription_id: string;
   method: "upi";
   upi_id: string;
+  amount?: number;
 }
 
 interface GenericPaymentPayload {

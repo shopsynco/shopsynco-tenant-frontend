@@ -75,6 +75,9 @@ export default function PaymentPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [upiID, setUpiID] = useState("");
+  const [isUpiVerifying, setIsUpiVerifying] = useState(false);
+  const [isUpiVerified, setIsUpiVerified] = useState(false);
+  const [upiVerifyMessage, setUpiVerifyMessage] = useState("");
   const [showCardNumber, setShowCardNumber] = useState(false);
   const [loading, setLoading] = useState(false);
   const [quoteData, setQuoteData] = useState<any>(null);
@@ -111,16 +114,23 @@ export default function PaymentPage() {
       ""
   );
   const [creatingSubscription, setCreatingSubscription] = useState(false);
+  const allowedMethodValues = new Set([
+    "credit_card",
+    "debit_card",
+    "upi",
+  ]);
 
   // Fetch payment methods on load
   useEffect(() => {
     const fetchMethods = async () => {
       try {
         const res = await getPaymentMethods();
-        console.log("Payment methods:", res.methods);
-        setPaymentMethods(res.methods || []);
-        if (res.methods?.length > 0) {
-          setSelectedMethod(res.methods[0].value);
+        const filteredMethods = (res.methods || []).filter((m) =>
+          allowedMethodValues.has(m.value)
+        );
+        setPaymentMethods(filteredMethods);
+        if (filteredMethods.length > 0) {
+          setSelectedMethod(filteredMethods[0].value);
         }
       } catch (err) {
   console.error("Error fetching payment methods:", err);
@@ -177,6 +187,12 @@ export default function PaymentPage() {
   // Handle method selection
   const handleMethodSelect = (methodValue: string) => {
     setSelectedMethod(methodValue);
+  };
+
+  const handleUpiInputChange = (value: string) => {
+    setUpiID(value);
+    setIsUpiVerified(false);
+    setUpiVerifyMessage("");
   };
 
   // Handle card input changes
@@ -291,45 +307,6 @@ export default function PaymentPage() {
     return true;
   };
 
-  const validateBankForm = (): boolean => {
-    if (!bankFormData.accountHolder.trim()) {
-      Swal.fire(
-        "Validation Error",
-        "Please enter account holder name",
-        "warning"
-      );
-      return false;
-    }
-    if (
-      bankFormData.accountHolder.includes("@") ||
-      !/^[A-Za-z][A-Za-z\s.'-]{1,}$/.test(bankFormData.accountHolder.trim())
-    ) {
-      Swal.fire(
-        "Validation Error",
-        "Enter a valid account holder name (letters only).",
-        "warning"
-      );
-      return false;
-    }
-    if (!bankFormData.accountNumber) {
-      Swal.fire("Validation Error", "Please enter account number", "warning");
-      return false;
-    }
-    if (bankFormData.accountNumber !== bankFormData.confirmAccountNumber) {
-      Swal.fire("Validation Error", "Account numbers don't match", "warning");
-      return false;
-    }
-    if (!bankFormData.bankName) {
-      Swal.fire("Validation Error", "Please select bank", "warning");
-      return false;
-    }
-    if (!bankFormData.ifscCode) {
-      Swal.fire("Validation Error", "Please enter IFSC code", "warning");
-      return false;
-    }
-    return true;
-  };
-
   const validateUpiForm = (): boolean => {
     if (!upiID.trim()) {
       Swal.fire("Validation Error", "Please enter UPI ID", "warning");
@@ -346,9 +323,54 @@ export default function PaymentPage() {
     return true;
   };
 
+  const handleVerifyUpi = async () => {
+    if (!validateUpiForm()) return;
+    try {
+      setIsUpiVerifying(true);
+      const verifyResponse = await verifyUpi(upiID);
+      const upiVerified =
+        verifyResponse.success === true || verifyResponse.verified === true;
+      if (!upiVerified) {
+        setIsUpiVerified(false);
+        setUpiVerifyMessage(
+          verifyResponse.message || "UPI could not be verified."
+        );
+        Swal.fire(
+          "Verification Failed",
+          verifyResponse.message || "UPI could not be verified.",
+          "error"
+        );
+        return;
+      }
+      setIsUpiVerified(true);
+      setUpiVerifyMessage(verifyResponse.message || "UPI verified. You can proceed.");
+      Swal.fire("Verified", "UPI verified successfully.", "success");
+    } catch (err: any) {
+      setIsUpiVerified(false);
+      setUpiVerifyMessage(
+        err?.response?.data?.message || "UPI verification failed. Please try again."
+      );
+      Swal.fire(
+        "Verification Failed",
+        err?.response?.data?.message || "UPI verification failed. Please try again.",
+        "error"
+      );
+    } finally {
+      setIsUpiVerifying(false);
+    }
+  };
+
   // Handle UPI payment
   const handleUpiSubmit = async () => {
     if (!validateUpiForm()) return;
+    if (!isUpiVerified) {
+      Swal.fire(
+        "Verification Required",
+        "Please verify your UPI ID before proceeding.",
+        "warning"
+      );
+      return;
+    }
 
     if (!subscriptionId) {
      showError("Missing subscription ID", "Please try again.");
@@ -358,25 +380,12 @@ export default function PaymentPage() {
     try {
       setLoading(true);
 
-      // Verify UPI ID first
-      const verifyResponse = await verifyUpi(upiID);
-      const upiVerified =
-        verifyResponse.success === true || verifyResponse.verified === true;
-      if (!upiVerified) {
-        Swal.fire(
-          "Validation Error",
-          verifyResponse.message ||
-            "Invalid UPI ID. Please check and try again.",
-          "error"
-        );
-        return;
-      }
-
       // Process UPI payment with proper type annotation
       const upiPayload = {
         subscription_id: subscriptionId,
         method: "upi" as const,
         upi_id: upiID,
+        amount: Number(quoteData?.total ?? 0) || undefined,
       };
 
       const paymentResponse = await payWithUpi(upiPayload);
@@ -489,57 +498,6 @@ export default function PaymentPage() {
     }
   };
 
-  // Handle bank transfer
-  const handleBankSubmit = async () => {
-    if (!validateBankForm()) return;
-
-    if (!subscriptionId) {
-      Swal.fire(
-        "Error",
-        "Subscription ID is required. Please try again.",
-        "error"
-      );
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Create properly typed payload
-      const paymentPayload = {
-        subscription_id: subscriptionId,
-        method: "bank_transfer" as const,
-        account_holder: bankFormData.accountHolder,
-        account_number: bankFormData.accountNumber,
-        bank_name: bankFormData.bankName,
-        branch_name: bankFormData.branchName,
-        ifsc: bankFormData.ifscCode,
-      };
-
-      const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success === true) {
-        await Swal.fire(
-          "Success",
-          "Bank Transfer Initiated Successfully!",
-          "success"
-        );
-        goPaymentSuccess();
-      } else {
-        throw new Error("Bank transfer failed");
-      }
-    } catch (err: any) {
-      console.error("❌ Bank Transfer Error:", err);
-      Swal.fire(
-        "Error",
-        err.response?.data?.message ||
-          "Bank transfer failed. Please try again.",
-        "error"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Main payment handler
   const handlePaymentSubmit = () => {
     if (!selectedMethod) {
@@ -558,44 +516,6 @@ export default function PaymentPage() {
       case "credit_card":
       case "debit_card":
         handleCardSubmit();
-        break;
-      case "bank_transfer":
-        handleBankSubmit();
-        break;
-      case "paypal":
-      case "stripe":
-      case "cash":
-      case "check":
-        if (!subscriptionId) {
-          Swal.fire(
-            "Error",
-            "Subscription ID is required. Please try again.",
-            "error"
-          );
-          return;
-        }
-        setLoading(true);
-        submitPayment({
-          subscription_id: subscriptionId,
-          method: selectedMethod as "paypal" | "stripe" | "cash" | "check",
-        })
-          .then(async (paymentResponse) => {
-            if (paymentResponse.success === true) {
-              await Swal.fire("Success", "Payment Successful!", "success");
-              goPaymentSuccess();
-            } else {
-              throw new Error("Payment failed");
-            }
-          })
-          .catch((err: any) => {
-            Swal.fire(
-              "Error",
-              err.response?.data?.message ||
-                "Payment failed. Please try again.",
-              "error"
-            );
-          })
-          .finally(() => setLoading(false));
         break;
       default:
         Swal.fire("Error", "This payment method is not yet supported", "error");
@@ -666,8 +586,25 @@ export default function PaymentPage() {
                           label="UPI ID"
                           placeholder="example@okaxis"
                           value={upiID}
-                          onChange={setUpiID}
+                          onChange={handleUpiInputChange}
                         />
+                        <div className="mt-3 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={handleVerifyUpi}
+                            disabled={isUpiVerifying || !upiID.trim()}
+                            className="rounded-md bg-[#E5E0FF] px-4 py-2 text-sm font-medium text-[#6A3CB1] hover:bg-[#dcd3fa] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isUpiVerifying ? "Verifying..." : isUpiVerified ? "Verified" : "Verify UPI"}
+                          </button>
+                          {upiVerifyMessage && (
+                            <span
+                              className={`text-sm ${isUpiVerified ? "text-green-600" : "text-amber-600"}`}
+                            >
+                              {upiVerifyMessage}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -827,18 +764,6 @@ export default function PaymentPage() {
                       </div>
                     )}
 
-                  {selectedMethod === method.value &&
-                    ["paypal", "stripe", "cash", "check"].includes(
-                      method.value
-                    ) && (
-                      <div
-                        className="border-t border-gray-200 p-5 text-sm text-gray-600"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Continue with <span className="font-medium">{method.label}</span>.
-                        No additional details are required for this method.
-                      </div>
-                    )}
                 </div>
               ))
           )}
