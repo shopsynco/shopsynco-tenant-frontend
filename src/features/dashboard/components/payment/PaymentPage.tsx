@@ -38,6 +38,39 @@ interface BankFormData {
   confirmAccountNumber: string;
 }
 
+type PaymentInputFieldProps = {
+  label: string;
+  placeholder?: string;
+  type?: string;
+  value: string;
+  onChange: (value: string) => void;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
+
+function InputField({
+  label,
+  placeholder,
+  type = "text",
+  value,
+  onChange,
+  ...props
+}: PaymentInputFieldProps) {
+  return (
+    <div>
+      {label && (
+        <label className="text-sm text-gray-600 mb-1 block">{label}</label>
+      )}
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
+        {...props}
+      />
+    </div>
+  );
+}
+
 export default function PaymentPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string>("");
@@ -559,37 +592,6 @@ export default function PaymentPage() {
   //   const method = paymentMethods.find(m => m.value === selectedMethod);
   //   return method?.label || "";
   // };
-
-  // Input Field Component
-  const InputField = ({
-    label,
-    placeholder,
-    type = "text",
-    value,
-    onChange,
-    ...props
-  }: {
-    label: string;
-    placeholder?: string;
-    type?: string;
-    value: string;
-    onChange: (value: string) => void;
-    [key: string]: any;
-  }) => (
-    <div>
-      {label && (
-        <label className="text-sm text-gray-600 mb-1 block">{label}</label>
-      )}
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
-        {...props}
-      />
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10">
