@@ -382,7 +382,11 @@ export default function PaymentPage() {
       };
 
       const paymentResponse = await payWithUpi(upiPayload);
-      if (paymentResponse.success) {
+      const paymentAccepted =
+        paymentResponse.success === true ||
+        !!paymentResponse.message ||
+        !!paymentResponse.receipt;
+      if (paymentAccepted) {
         await Swal.fire("Success", "UPI Payment Successful!", "success");
         goPaymentSuccess();
       } else {
