@@ -85,6 +85,30 @@ interface PaymentResponse {
   };
 }
 
+interface RazorpayOrderPayload {
+  subscription_id: string;
+  amount: number;
+  currency?: string;
+  method?: "credit_card" | "debit_card" | "upi";
+}
+
+interface RazorpayOrderResponse {
+  key_id: string;
+  order_id: string;
+  amount: number;
+  currency: string;
+  subscription_id: string;
+  status: "pending";
+}
+
+interface RazorpayVerifyPayload {
+  subscription_id: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+  method?: "credit_card" | "debit_card" | "upi";
+}
+
 interface CheckoutPayload {
   plan_id: string;
   months: number;
@@ -206,6 +230,36 @@ export const payWithUpi = async (payload: UpiPaymentPayload): Promise<PaymentRes
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorData = (error as { response?: { data?: unknown } })?.response?.data;
     console.error("❌ UPI payment submission error:", errorData || errorMessage);
+    throw error;
+  }
+};
+
+/* ---------------------- 🧾 CREATE RAZORPAY ORDER ---------------------- */
+export const createRazorpayOrder = async (
+  payload: RazorpayOrderPayload
+): Promise<RazorpayOrderResponse> => {
+  try {
+    const res = await axiosInstance.post("/api/tenants/payment/create-order/", payload);
+    return res.data;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Razorpay order create error:", errorData || errorMessage);
+    throw error;
+  }
+};
+
+/* ---------------------- ✅ VERIFY RAZORPAY PAYMENT ---------------------- */
+export const verifyRazorpayPayment = async (
+  payload: RazorpayVerifyPayload
+): Promise<PaymentResponse> => {
+  try {
+    const res = await axiosInstance.post("/api/tenants/payment/verify/", payload);
+    return res.data;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Razorpay payment verification error:", errorData || errorMessage);
     throw error;
   }
 };

@@ -5,9 +5,9 @@ import Swal from "sweetalert2";
 import {
   createCheckoutSubscription,
   getPaymentMethods,
-  submitPayment,
   verifyUpi,
-  payWithUpi,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
 import { showError } from "../../../../components/swalHelper";
@@ -15,6 +15,12 @@ import {
   markTenantSubscriptionActive,
   setPlansEntryFromCheckout,
 } from "../../../../utils/planFlow";
+
+declare global {
+  interface Window {
+    Razorpay?: any;
+  }
+}
 
 // Define types
 interface PaymentMethod {
@@ -360,63 +366,104 @@ export default function PaymentPage() {
     }
   };
 
+  const loadRazorpayScript = async (): Promise<boolean> => {
+    if (window.Razorpay) return true;
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const startRazorpayCheckout = async (
+    method: "credit_card" | "debit_card" | "upi"
+  ) => {
+    if (!subscriptionId) {
+      showError("Missing subscription ID", "Please try again.");
+      return;
+    }
+    const total = Number(quoteData?.total ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      Swal.fire("Error", "Invalid payable amount. Please refresh and try again.", "error");
+      return;
+    }
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded || !window.Razorpay) {
+      Swal.fire("Error", "Failed to load Razorpay checkout.", "error");
+      return;
+    }
+
+    const order = await createRazorpayOrder({
+      subscription_id: subscriptionId,
+      amount: total,
+      currency: "INR",
+      method,
+    });
+
+    const methodOptions =
+      method === "upi"
+        ? { upi: true, card: false, netbanking: false, wallet: false }
+        : { upi: false, card: true, netbanking: false, wallet: false };
+
+    const razorpay = new window.Razorpay({
+      key: order.key_id,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.order_id,
+      name: "Shopsynco",
+      description: "Subscription payment",
+      method: methodOptions,
+      handler: async (response: any) => {
+        try {
+          const verification = await verifyRazorpayPayment({
+            subscription_id: subscriptionId,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            method,
+          });
+          if (verification.success === true) {
+            await Swal.fire("Success", "Payment successful!", "success");
+            goPaymentSuccess();
+            return;
+          }
+          throw new Error("Payment verification failed");
+        } catch (verifyErr: any) {
+          Swal.fire(
+            "Error",
+            verifyErr?.response?.data?.error ||
+              verifyErr?.response?.data?.message ||
+              "Payment verification failed.",
+            "error"
+          );
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          Swal.fire("Cancelled", "Payment was cancelled.", "info");
+        },
+      },
+    });
+    razorpay.open();
+  };
+
   // Handle UPI payment
   const handleUpiSubmit = async () => {
     if (!validateUpiForm()) return;
-    if (!isUpiVerified) {
-      Swal.fire(
-        "Verification Required",
-        "Please verify your UPI ID before proceeding.",
-        "warning"
-      );
-      return;
-    }
-
-    if (!subscriptionId) {
-     showError("Missing subscription ID", "Please try again.");
-      return;
-    }
 
     try {
       setLoading(true);
-
-      // Process UPI payment with proper type annotation
-      const upiPayload = {
-        subscription_id: subscriptionId,
-        method: "upi" as const,
-        upi_id: upiID,
-        amount: Number(quoteData?.total ?? 0) || undefined,
-      };
-
-      const paymentResponse = await payWithUpi(upiPayload);
-      const redirectUrl = paymentResponse.payment?.payment_url || "";
-      const requiresRedirect = paymentResponse.payment?.requires_redirect === true;
-
-      if (redirectUrl) {
-        window.location.href = redirectUrl;
-        return;
-      }
-
-      const paymentAccepted = paymentResponse.success === true;
-      if (paymentAccepted) {
-        await Swal.fire("Success", "UPI Payment Successful!", "success");
-        goPaymentSuccess();
-      } else if (requiresRedirect || paymentResponse.status === "pending") {
-        await Swal.fire(
-          "Complete payment in app",
-          paymentResponse.payment?.note ||
-            paymentResponse.message ||
-            "UPI app redirect is not configured yet. No amount was collected.",
-          "info"
-        );
-      } else {
-        throw new Error("UPI payment failed");
-      }
+      await startRazorpayCheckout("upi");
     } catch (err: any) {
       console.error("❌ UPI Payment Error:", err);
       Swal.fire(
         "Error",
-        err.response?.data?.message || "UPI Payment failed. Please try again.",
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "UPI Payment failed. Please try again.",
         "error"
       );
     } finally {
@@ -428,61 +475,10 @@ export default function PaymentPage() {
   const handleCardSubmit = async () => {
     if (!validateCardForm()) return;
 
-    if (!subscriptionId) {
-      Swal.fire(
-        "Error",
-        "Subscription ID is required. Please try again.",
-        "error"
-      );
-      return;
-    }
-
     try {
       setLoading(true);
-
-      // Extract last 4 digits of card number
-      const cardLast4 = cardFormData.cardNumber.replace(/\s/g, "").slice(-4);
-
-      // Extract expiry month and year
-      const [expYear, expMonth] = cardFormData.expiryDate.split("-");
-
-      // Create properly typed payload based on selected method
-      if (selectedMethod === "credit_card") {
-        const paymentPayload = {
-          subscription_id: subscriptionId,
-          method: "credit_card" as const,
-          card_holder: cardFormData.cardHolder,
-          card_last4: cardLast4,
-          brand: "VISA",
-          exp_month: parseInt(expMonth),
-          exp_year: parseInt(expYear),
-          cvv_present: true,
-        };
-        const paymentResponse = await submitPayment(paymentPayload);
-        if (paymentResponse.success === true) {
-          await Swal.fire("Success", "Card Payment Successful!", "success");
-          goPaymentSuccess();
-        } else {
-          throw new Error("Card payment failed");
-        }
-      } else if (selectedMethod === "debit_card") {
-        const paymentPayload = {
-          subscription_id: subscriptionId,
-          method: "debit_card" as const,
-          card_holder: cardFormData.cardHolder,
-          card_last4: cardLast4,
-          brand: "VISA",
-          exp_month: parseInt(expMonth),
-          exp_year: parseInt(expYear),
-          cvv_present: true,
-        };
-        const paymentResponse = await submitPayment(paymentPayload);
-        if (paymentResponse.success === true) {
-          await Swal.fire("Success", "Card Payment Successful!", "success");
-          goPaymentSuccess();
-        } else {
-          throw new Error("Card payment failed");
-        }
+      if (selectedMethod === "credit_card" || selectedMethod === "debit_card") {
+        await startRazorpayCheckout(selectedMethod);
       } else {
         throw new Error("Invalid payment method");
       }
@@ -490,7 +486,9 @@ export default function PaymentPage() {
       console.error("❌ Card Payment Error:", err);
       Swal.fire(
         "Error",
-        err.response?.data?.message || "Card payment failed. Please try again.",
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Card payment failed. Please try again.",
         "error"
       );
     } finally {
