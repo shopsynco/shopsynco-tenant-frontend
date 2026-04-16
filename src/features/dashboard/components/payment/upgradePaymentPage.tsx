@@ -308,8 +308,8 @@ export default function UpgradePaymentPage() {
     method: "credit_card" | "debit_card" | "upi"
   ) => {
     const waitForPaymentConfirmation = async (subId: string) => {
-      const maxAttempts = 8;
-      const delayMs = 2000;
+      const maxAttempts = 15;
+      const delayMs = 2500;
       for (let i = 0; i < maxAttempts; i += 1) {
         const statusRes = await getPaymentStatus(subId);
         if (statusRes.status === "success") return true;
@@ -377,8 +377,8 @@ export default function UpgradePaymentPage() {
 
     const methodOptions =
       method === "upi"
-        ? { upi: true, card: false, netbanking: false, wallet: false }
-        : { upi: false, card: true, netbanking: false, wallet: false };
+        ? { upi: true }
+        : { card: true };
 
     const razorpay = new window.Razorpay({
       key: order.key_id,
@@ -398,6 +398,11 @@ export default function UpgradePaymentPage() {
             method,
           });
           if (verification.success === true) {
+            if (verification.status === "success") {
+              await Swal.fire("Success", "Payment successful!", "success");
+              navigate("/payment-success");
+              return;
+            }
             const confirmed = await waitForPaymentConfirmation(activeSubscriptionId);
             if (confirmed) {
               await Swal.fire("Success", "Payment successful!", "success");
