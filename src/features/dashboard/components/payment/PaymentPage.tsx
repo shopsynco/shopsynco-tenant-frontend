@@ -5,9 +5,9 @@ import Swal from "sweetalert2";
 import {
   createCheckoutSubscription,
   getPaymentMethods,
-  verifyUpi,
   createRazorpayOrder,
   verifyRazorpayPayment,
+  getPaymentStatus,
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
 import { showError } from "../../../../components/swalHelper";
@@ -80,10 +80,6 @@ function InputField({
 export default function PaymentPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string>("");
-  const [upiID, setUpiID] = useState("");
-  const [isUpiVerifying, setIsUpiVerifying] = useState(false);
-  const [isUpiVerified, setIsUpiVerified] = useState(false);
-  const [upiVerifyMessage, setUpiVerifyMessage] = useState("");
   const [showCardNumber, setShowCardNumber] = useState(false);
   const [loading, setLoading] = useState(false);
   const [quoteData, setQuoteData] = useState<any>(null);
@@ -193,12 +189,6 @@ export default function PaymentPage() {
   // Handle method selection
   const handleMethodSelect = (methodValue: string) => {
     setSelectedMethod(methodValue);
-  };
-
-  const handleUpiInputChange = (value: string) => {
-    setUpiID(value);
-    setIsUpiVerified(false);
-    setUpiVerifyMessage("");
   };
 
   // Handle card input changes
@@ -313,59 +303,6 @@ export default function PaymentPage() {
     return true;
   };
 
-  const validateUpiForm = (): boolean => {
-    if (!upiID.trim()) {
-      Swal.fire("Validation Error", "Please enter UPI ID", "warning");
-      return false;
-    }
-    if (!upiID.includes("@")) {
-      Swal.fire(
-        "Validation Error",
-        "Please enter valid UPI ID (e.g., example@okaxis)",
-        "warning"
-      );
-      return false;
-    }
-    return true;
-  };
-
-  const handleVerifyUpi = async () => {
-    if (!validateUpiForm()) return;
-    try {
-      setIsUpiVerifying(true);
-      const verifyResponse = await verifyUpi(upiID);
-      const upiVerified =
-        verifyResponse.success === true || verifyResponse.verified === true;
-      if (!upiVerified) {
-        setIsUpiVerified(false);
-        setUpiVerifyMessage(
-          verifyResponse.message || "UPI could not be verified."
-        );
-        Swal.fire(
-          "Verification Failed",
-          verifyResponse.message || "UPI could not be verified.",
-          "error"
-        );
-        return;
-      }
-      setIsUpiVerified(true);
-      setUpiVerifyMessage(verifyResponse.message || "UPI verified. You can proceed.");
-      Swal.fire("Verified", "UPI verified successfully.", "success");
-    } catch (err: any) {
-      setIsUpiVerified(false);
-      setUpiVerifyMessage(
-        err?.response?.data?.message || "UPI verification failed. Please try again."
-      );
-      Swal.fire(
-        "Verification Failed",
-        err?.response?.data?.message || "UPI verification failed. Please try again.",
-        "error"
-      );
-    } finally {
-      setIsUpiVerifying(false);
-    }
-  };
-
   const loadRazorpayScript = async (): Promise<boolean> => {
     if (window.Razorpay) return true;
     return new Promise((resolve) => {
@@ -381,7 +318,37 @@ export default function PaymentPage() {
   const startRazorpayCheckout = async (
     method: "credit_card" | "debit_card" | "upi"
   ) => {
-    if (!subscriptionId) {
+    const waitForPaymentConfirmation = async (subId: string) => {
+      const maxAttempts = 8;
+      const delayMs = 2000;
+      for (let i = 0; i < maxAttempts; i += 1) {
+        const statusRes = await getPaymentStatus(subId);
+        if (statusRes.status === "success") return true;
+        if (statusRes.status === "failed") return false;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return false;
+    };
+    const ensureFreshSubscriptionId = async () => {
+      if (!planId || !months) return "";
+      const checkout = await createCheckoutSubscription({
+        plan_id: planId,
+        months: Number(months),
+        payment_method: method,
+      });
+      const createdId = checkout?.subscription_id || "";
+      if (createdId) {
+        setSubscriptionId(createdId);
+        localStorage.setItem("subscription_id", createdId);
+      }
+      return createdId;
+    };
+
+    let activeSubscriptionId = subscriptionId;
+    if (!activeSubscriptionId) {
+      activeSubscriptionId = await ensureFreshSubscriptionId();
+    }
+    if (!activeSubscriptionId) {
       showError("Missing subscription ID", "Please try again.");
       return;
     }
@@ -396,12 +363,28 @@ export default function PaymentPage() {
       return;
     }
 
-    const order = await createRazorpayOrder({
-      subscription_id: subscriptionId,
-      amount: total,
-      currency: "INR",
-      method,
-    });
+    let order;
+    try {
+      order = await createRazorpayOrder({
+        subscription_id: activeSubscriptionId,
+        amount: total,
+        currency: "INR",
+        method,
+      });
+    } catch (err: any) {
+      const isSubscriptionMissing =
+        err?.response?.status === 404 &&
+        String(err?.response?.data?.error || "").toLowerCase().includes("subscription not found");
+      if (!isSubscriptionMissing) throw err;
+      activeSubscriptionId = await ensureFreshSubscriptionId();
+      if (!activeSubscriptionId) throw err;
+      order = await createRazorpayOrder({
+        subscription_id: activeSubscriptionId,
+        amount: total,
+        currency: "INR",
+        method,
+      });
+    }
 
     const methodOptions =
       method === "upi"
@@ -419,15 +402,24 @@ export default function PaymentPage() {
       handler: async (response: any) => {
         try {
           const verification = await verifyRazorpayPayment({
-            subscription_id: subscriptionId,
+            subscription_id: activeSubscriptionId,
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
             method,
           });
           if (verification.success === true) {
-            await Swal.fire("Success", "Payment successful!", "success");
-            goPaymentSuccess();
+            const confirmed = await waitForPaymentConfirmation(activeSubscriptionId);
+            if (confirmed) {
+              await Swal.fire("Success", "Payment successful!", "success");
+              goPaymentSuccess();
+              return;
+            }
+            await Swal.fire(
+              "Payment pending",
+              "Signature verified. Waiting for gateway capture confirmation. Please check payment status shortly.",
+              "info"
+            );
             return;
           }
           throw new Error("Payment verification failed");
@@ -450,10 +442,8 @@ export default function PaymentPage() {
     razorpay.open();
   };
 
-  // Handle UPI payment
+  // Handle UPI payment (Razorpay Checkout only — no separate /upi/verify/ step)
   const handleUpiSubmit = async () => {
-    if (!validateUpiForm()) return;
-
     try {
       setLoading(true);
       await startRazorpayCheckout("upi");
@@ -573,36 +563,20 @@ export default function PaymentPage() {
                     </span>
                   </button>
 
-                  {/* UPI Form */}
+                  {/* UPI: Razorpay Checkout handles VPA / app intent — no stub verify API */}
                   {selectedMethod === method.value &&
                     method.value === "upi" && (
                       <div
-                        className="border-t border-gray-200 p-5"
+                        className="border-t border-gray-200 p-5 text-sm text-gray-600"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <InputField
-                          label="UPI ID"
-                          placeholder="example@okaxis"
-                          value={upiID}
-                          onChange={handleUpiInputChange}
-                        />
-                        <div className="mt-3 flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={handleVerifyUpi}
-                            disabled={isUpiVerifying || !upiID.trim()}
-                            className="rounded-md bg-[#E5E0FF] px-4 py-2 text-sm font-medium text-[#6A3CB1] hover:bg-[#dcd3fa] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {isUpiVerifying ? "Verifying..." : isUpiVerified ? "Verified" : "Verify UPI"}
-                          </button>
-                          {upiVerifyMessage && (
-                            <span
-                              className={`text-sm ${isUpiVerified ? "text-green-600" : "text-amber-600"}`}
-                            >
-                              {upiVerifyMessage}
-                            </span>
-                          )}
-                        </div>
+                        <p className="font-medium text-gray-800">Pay with UPI</p>
+                        <p className="mt-2">
+                          Click <span className="font-medium">Submit Payment</span> below. Razorpay
+                          Checkout will open — choose UPI, pick your app (PhonePe, Google Pay, etc.),
+                          or enter your UPI ID there. Payment is not started from a separate verify
+                          step on this page.
+                        </p>
                       </div>
                     )}
 

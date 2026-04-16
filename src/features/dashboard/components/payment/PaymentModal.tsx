@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  submitPayment,
-  verifyUpi,
-  payWithUpi,
-} from "../../../../api/payment/paymentapi";
+import { submitPayment } from "../../../../api/payment/paymentapi";
 import { ModalWrapper } from "../../../../components/ui/modalWrapper";
 import { showError, showSuccess } from "../../../../components/swalHelper";
 
@@ -210,102 +206,39 @@ export function AddBankModal({ onClose, onBack }: ModalProps) {
   );
 }
 
-/* 📱 UPI MODAL */
+/* 📱 UPI — informational only: real UPI flow is Razorpay Checkout on the payment page */
 export function AddUpiModal({ onClose, onBack }: ModalProps) {
-  const [upiId, setUpiId] = useState("");
-  const [verified, setVerified] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const subscriptionId = localStorage.getItem("subscription_id");
-
-  const handleVerify = async () => {
-    try {
-      setLoading(true);
-      const verifyResponse = await verifyUpi(upiId);
-      const isVerified =
-        verifyResponse.success === true || verifyResponse.verified === true;
-      if (!isVerified) {
-        showError(
-          "Verification Failed",
-          verifyResponse.message || "UPI could not be verified."
-        );
-        setVerified(false);
-        return;
-      }
-      showSuccess("Verified", "UPI verified successfully.");
-      setVerified(true);
-    } catch (error: any) {
-      showError(
-        "Verification Failed",
-        error.response?.data?.message || "UPI verification failed."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!subscriptionId) {
-      showError("Missing subscription ID", "Please try again.");
-      return;
-    }
-
-    const payload = {
-      subscription_id: subscriptionId,
-      method: "upi" as const,
-      upi_id: upiId,
-    };
-
-    try {
-      setLoading(true);
-      const paymentResponse = await payWithUpi(payload);
-      if (paymentResponse.success === true) {
-        showSuccess("UPI Added", "UPI payment saved successfully.", onClose);
-        return;
-      }
-      showError(
-        "Payment Pending",
-        paymentResponse.message || "Complete payment in provider app to continue."
-      );
-    } catch (error: any) {
-      showError(
-        "Save Failed",
-        error.response?.data?.message || "UPI payment failed."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <ModalWrapper
-      title="Add UPI ID"
+      title="Pay with UPI"
       onClose={onClose}
       width="w-[90%] sm:w-[600px]"
     >
-      <label className="block text-sm text-gray-600 mb-1">Enter UPI ID</label>
-      <div className="flex gap-3">
-        <input
-          type="text"
-          value={upiId}
-          onChange={(e) => setUpiId(e.target.value)}
-          placeholder="example@okaxis"
-          className={`${inputClass} flex-1`}
-        />
+      <p className="text-sm text-gray-600 leading-relaxed">
+        UPI is handled inside <span className="font-medium text-gray-800">Razorpay Checkout</span>,
+        not through a separate verify API. Open <span className="font-medium">Manage Billing</span>{" "}
+        or your plan payment screen, choose <span className="font-medium">UPI</span>, then{" "}
+        <span className="font-medium">Submit Payment</span>. Razorpay will let you pick PhonePe,
+        Google Pay, or enter your UPI ID there.
+      </p>
+      <div className="mt-6 flex justify-end gap-2">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="px-4 py-2 rounded-md border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Back
+          </button>
+        )}
         <button
-          onClick={handleVerify}
-          disabled={loading || !upiId}
-          className="px-4 py-2 rounded-md bg-[#E5E0FF] text-[#6A3CB1] font-medium hover:bg-[#dcd3fa] transition disabled:opacity-50"
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 rounded-md bg-[#6A3CB1] text-sm font-medium text-white hover:bg-[#5b32a2]"
         >
-          {loading ? "..." : verified ? "Verified" : "Verify"}
+          OK
         </button>
       </div>
-
-      <ModalFooter
-        loading={loading}
-        onBack={onBack}
-        onSubmit={handleSubmit}
-        disabled={!verified}
-      />
     </ModalWrapper>
   );
 }

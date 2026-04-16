@@ -208,7 +208,10 @@ export const createCheckoutSubscription = async (
   }
 };
 
-/* ---------------------- 📱 VERIFY UPI ---------------------- */
+/* ---------------------- 📱 VERIFY UPI (legacy / non-production) ----------------------
+ * Not used by the Razorpay Checkout flow. UPI is completed inside Razorpay Checkout only.
+ * Kept for optional tooling or old integrations.
+ */
 export const verifyUpi = async (upi_id: string): Promise<UpiVerificationResponse> => {
   try {
     const res = await axiosInstance.post("/api/tenants/payment/upi/verify/", { upi_id });
