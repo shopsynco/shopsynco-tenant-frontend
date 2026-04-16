@@ -177,7 +177,9 @@ const VerificationPage: React.FC = () => {
       });
 
       if (isResetFlow) {
-        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+        navigate(
+          `/reset-password?email=${encodeURIComponent(email)}&verification_code=${encodeURIComponent(verificationCode)}`
+        );
       } else {
         // 👉 Go to SIGNUP page with email prefilled
         navigate(`/signup?email=${encodeURIComponent(email)}`);

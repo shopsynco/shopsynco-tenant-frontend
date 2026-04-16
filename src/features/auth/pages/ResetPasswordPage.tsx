@@ -20,6 +20,7 @@ const ResetPasswordPage: React.FC = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const email = queryParams.get("email");
+  const verificationCode = queryParams.get("verification_code");
 
   useEffect(() => {
     setValidations({
@@ -46,8 +47,16 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
 
+    if (!verificationCode) {
+      showError(
+        "Verification code missing",
+        "Please restart forgot-password and verify your code again."
+      );
+      return;
+    }
+
     try {
-      await resetPassword(email || "", password, confirmPassword);
+      await resetPassword(email || "", verificationCode, password, confirmPassword);
       showSuccess(
         "Password Reset Successful",
         "Your password has been updated successfully!",
