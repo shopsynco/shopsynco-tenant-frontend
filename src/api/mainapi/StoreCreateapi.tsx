@@ -15,9 +15,12 @@ export interface StoreSetupPayload {
 
 // 🏪 Store creation response
 export interface StoreSetupResponse {
+  task_id?: string;
+  status?: "pending" | "running" | "completed" | "failed";
   slug?: string;
   message?: string;
   success?: boolean;
+  error?: string;
   tenant?: {
     id?: string;
     name?: string;
@@ -79,8 +82,14 @@ export interface DiscoverResponse {
 // 1️⃣ Create Store — No slug required yet
 export const storeSetup = async (data: StoreSetupPayload): Promise<StoreSetupResponse> => {
   const response = await axiosInstance.post(`api/tenants/store/setup/`, data, {
-    timeout: 45000,
+    // Tenant/schema bootstrap can take longer on cold infra.
+    timeout: 120000,
   });
+  return response.data;
+};
+
+export const getStoreSetupStatus = async (taskId: string): Promise<StoreSetupResponse> => {
+  const response = await axiosInstance.get(`api/tenants/store/setup/status/${taskId}/`);
   return response.data;
 };
 

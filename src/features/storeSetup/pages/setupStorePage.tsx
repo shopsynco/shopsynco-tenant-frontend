@@ -6,6 +6,7 @@ import {
   getStoreSlug,
   getStoreCategories,
   storeSetup,
+  getStoreSetupStatus,
 } from "../../../api/mainapi/StoreCreateapi";
 import shopLogo from "../../../assets/Name-Logo.png";
 interface FormData {
@@ -142,11 +143,31 @@ export default function StoreSetupPage() {
         product_service: category,
         domain: domainValue,
       });
+      if (result?.task_id && (result.status === "pending" || result.status === "running")) {
+        for (let i = 0; i < 90; i += 1) {
+          const statusRes = await getStoreSetupStatus(result.task_id);
+          if (statusRes.status === "completed" && statusRes.tenant?.schema_name) {
+            localStorage.setItem("store_slug", statusRes.tenant.schema_name);
+            navigate("/setup-store-contact");
+            return;
+          }
+          if (statusRes.status === "failed") {
+            setFieldErrors({ general: statusRes.error || statusRes.message || "Store setup failed." });
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+        setFieldErrors({
+          general:
+            "Store setup is still in progress. Please wait a bit and try again.",
+        });
+        return;
+      }
+
       const schemaName = result?.tenant?.schema_name;
       if (schemaName) {
         localStorage.setItem("store_slug", schemaName);
       }
-
       navigate("/setup-store-contact");
     } catch (err) {
       console.error("❌ Failed to setup store:", err);
@@ -189,11 +210,15 @@ export default function StoreSetupPage() {
         try {
           const loginEmail = localStorage.getItem("user_email")?.trim();
           if (loginEmail) {
-            const discover = await getStoreSlug(loginEmail);
-            if (discover?.slug) {
-              localStorage.setItem("store_slug", discover.slug);
-              navigate("/setup-store-contact");
-              return;
+            // Backend may still be finalizing schema; poll discover briefly.
+            for (let i = 0; i < 6; i += 1) {
+              const discover = await getStoreSlug(loginEmail);
+              if (discover?.slug) {
+                localStorage.setItem("store_slug", discover.slug);
+                navigate("/setup-store-contact");
+                return;
+              }
+              await new Promise((resolve) => setTimeout(resolve, 3000));
             }
           }
         } catch (discoverErr) {
