@@ -183,6 +183,13 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = res.data.access;
 
         localStorage.setItem("accessToken", newAccessToken);
+        try {
+          const { readTenantSlugFromAccessToken } = await import("../../utils/tenantStoreSlug");
+          const slug = readTenantSlugFromAccessToken();
+          if (slug) localStorage.setItem("store_slug", slug);
+        } catch {
+          /* ignore */
+        }
         // SIMPLE_JWT ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION: server returns a new refresh;
         // if we don't persist it, the next refresh uses a blacklisted token → 401 on all APIs.
         if (typeof res.data.refresh === "string" && res.data.refresh.length > 0) {

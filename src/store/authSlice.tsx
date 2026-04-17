@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils";
 import { clearPlanFlowFlags, markTenantSubscriptionActive } from "../utils/planFlow";
+import { readTenantSlugFromAccessToken } from "../utils/tenantStoreSlug";
 
 /** Returned from login thunk (also used by LoginPage for routing). */
 export type LoginSuccessPayload = {
@@ -39,6 +40,11 @@ export const loginUser = createAsyncThunk<
 
     localStorage.setItem("accessToken", access);
     localStorage.setItem("refreshToken", refresh);
+
+    const jwtSlug = readTenantSlugFromAccessToken();
+    if (jwtSlug) {
+      localStorage.setItem("store_slug", jwtSlug);
+    }
 
     const userEmail = res.data?.user?.email;
     if (typeof userEmail === "string" && userEmail.trim()) {

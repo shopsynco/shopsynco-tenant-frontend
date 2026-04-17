@@ -11,12 +11,19 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchTenantDashboard } from "../../../api/mainapi/statusapi";
+import {
+  defaultTenantHostFromSlug,
+  resolveTenantManagerBaseUrl,
+} from "../../../api/axios_config";
+import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
 import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
 import FeatureStorePage from "../components/FeatureModal";
 import Header from "../components/dashboardHeader";
 
 export default function Dashboard() {
   const [isFeatureStoreOpen, setIsFeatureStoreOpen] = useState(false);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   const [userData, setUserData] = useState({
     user_name: "",
@@ -37,6 +44,13 @@ export default function Dashboard() {
     next_renewal_date: "",
   });
 
+  const displayName =
+    userData.user_name.trim() ||
+    (userData.user_email.includes("@")
+      ? userData.user_email.split("@")[0]
+      : userData.user_email) ||
+    "there";
+
   const [tenantData, setTenantData] = useState({
     domain: "",
     features: [] as string[],
@@ -45,6 +59,26 @@ export default function Dashboard() {
   const [showSetupBanner, setShowSetupBanner] = useState(false);
 
   const navigate = useNavigate();
+
+  const slugForDisplay = localStorage.getItem("store_slug")?.trim() || "";
+  const domainHost =
+    tenantData.domain.trim() ||
+    (slugForDisplay ? defaultTenantHostFromSlug(slugForDisplay) : "");
+  const domainUrl =
+    domainHost && !domainHost.startsWith("http")
+      ? `https://${domainHost}`
+      : domainHost;
+
+  const openManagerDashboard = () => {
+    const base = resolveTenantManagerBaseUrl();
+    if (!base) {
+      window.alert(
+        "Manager dashboard URL is not configured. Set VITE_TENANT_MANAGER_ORIGIN in your environment.",
+      );
+      return;
+    }
+    window.open(`${base}/store-overview`, "_blank", "noopener,noreferrer");
+  };
 
   useEffect(() => {
     try {
@@ -59,46 +93,114 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const getDashboardData = async () => {
+    let cancelled = false;
+
+    const load = async () => {
+      setDashboardLoading(true);
+      setDashboardError(null);
+
+      const slug = await ensureTenantStoreSlugForApi();
+      if (cancelled) return;
+
+      if (!slug) {
+        setDashboardError(
+          "We could not resolve your store (missing tenant). Try logging in again or finish store setup.",
+        );
+        const email = localStorage.getItem("user_email")?.trim() || "";
+        setUserData((prev) => ({
+          ...prev,
+          user_email: email || prev.user_email,
+        }));
+        setDashboardLoading(false);
+        return;
+      }
+
       try {
         const tenant = await fetchTenantDashboard();
+        if (cancelled) return;
         const data = tenant?.dashboard || {};
+        const summary = data?.account_summary || {};
+        const billing = summary?.billing_summary?.last_payment;
+        const nextRen = summary?.next_renewal;
+        const pmRaw = summary?.payment_method;
 
-        const user_name = data?.user_info?.name || "";
-        const user_email = data?.user_info?.email || "";
+        const user_name = String(data?.user_info?.name || "").trim();
+        const user_email = String(data?.user_info?.email || "").trim();
         setUserData({ user_name, user_email });
 
-        const plan_name = data?.current_plan?.name || "";
-        const renew_date = data?.current_plan?.renewal_date || "";
-        const status = data?.account_summary?.domain?.status || "";
+        const plan_name = String(data?.current_plan?.name || "").trim();
+        const renew_date = String(data?.current_plan?.renewal_date || "").trim();
+        const status = String(summary?.domain?.status || "").trim();
         setPlanData({ plan_name, renew_date, status });
 
+        const pmDisplay =
+          pmRaw && typeof pmRaw === "object"
+            ? String(
+                (pmRaw as { masked_info?: string; method?: string }).masked_info ||
+                  (pmRaw as { method?: string }).method ||
+                  "",
+              ).trim() || "—"
+            : typeof pmRaw === "string" && pmRaw.trim()
+              ? pmRaw.trim()
+              : "—";
+
+        const lastAmt =
+          billing?.amount != null && !Number.isNaN(Number(billing.amount))
+            ? Number(billing.amount).toLocaleString("en-IN")
+            : "";
+        const nextAmt =
+          nextRen?.amount != null && !Number.isNaN(Number(nextRen.amount))
+            ? Number(nextRen.amount).toLocaleString("en-IN")
+            : "";
+
         setHistoryData({
-          last_payment_amount: "—",
-          last_payment_date: "—",
-          payment_method: data?.payment_method || "—",
-          next_renewal_amount: "—",
-          next_renewal_date: renew_date || "—",
+          last_payment_amount: lastAmt,
+          last_payment_date: billing?.date ? String(billing.date) : "",
+          payment_method: pmDisplay,
+          next_renewal_amount: nextAmt,
+          next_renewal_date: nextRen?.date ? String(nextRen.date) : renew_date,
         });
 
-        const domain = data?.account_summary?.domain?.name || "";
+        const apiDomain = String(summary?.domain?.name || "").trim();
+        const fallbackDomain = defaultTenantHostFromSlug(slug);
+        const domain = apiDomain || fallbackDomain;
         const features =
-          data?.plan_features?.included_features?.map((f: any) => f.name) || [];
+          data?.plan_features?.included_features?.map((f: { name?: string }) => f.name) ||
+          [];
         setTenantData({ domain, features });
 
-        localStorage.setItem("user_name", user_name);
-        localStorage.setItem("user_email", user_email);
+        if (user_name) localStorage.setItem("user_name", user_name);
+        if (user_email) localStorage.setItem("user_email", user_email);
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
+        if (!cancelled) {
+          setDashboardError(
+            "Could not load your dashboard. Check your connection and try refreshing the page.",
+          );
+        }
+      } finally {
+        if (!cancelled) setDashboardLoading(false);
       }
     };
-    getDashboardData();
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
     <div className="min-h-screen bg-white text-gray-800 relative">
       <Header />
       <main className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-10 flex flex-col gap-8">
+        {dashboardError && (
+          <div
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+            role="alert"
+          >
+            {dashboardError}
+          </div>
+        )}
         {showSetupBanner && (
           <div
             className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
@@ -126,7 +228,7 @@ export default function Dashboard() {
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl font-semibold text-black">
-              Welcome, {userData.user_name || "Loading..."}
+              Welcome, {dashboardLoading ? "Loading..." : displayName}
             </h1>
             <p className="text-gray-500">
               Here’s an overview of your account and subscription.
@@ -138,7 +240,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-700">
                 <span className="font-medium text-gray-800">Current Plan:</span>{" "}
                 <span className="text-[#6A3CB1] font-semibold">
-                  {planData.plan_name || "Loading..."}
+                  {dashboardLoading ? "Loading..." : planData.plan_name || "—"}
                 </span>
               </p>
             </div>
@@ -187,17 +289,23 @@ export default function Dashboard() {
                   <Globe size={20} className="text-[#8B6BB6]" />
                   Your Domain
                 </p>
-                <a
-                  href={`https://${tenantData.domain}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[#6A3CB1] hover:underline text-sm break-all"
-                >
-                  {tenantData.domain}
-                </a>
+                {domainUrl ? (
+                  <a
+                    href={domainUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#6A3CB1] hover:underline text-sm break-all"
+                  >
+                    {domainHost}
+                  </a>
+                ) : (
+                  <span className="text-sm text-gray-400">—</span>
+                )}
               </div>
               <button
-                className="inline-flex items-center gap-[10px]"
+                type="button"
+                onClick={openManagerDashboard}
+                className="inline-flex items-center gap-[10px] cursor-pointer hover:opacity-90"
                 style={{
                   width: 254,
                   height: 38,
@@ -227,15 +335,13 @@ export default function Dashboard() {
                   </p>
                   <p className="text-sm text-black mt-1">
                     Last payment: ₹{historyData.last_payment_amount || "—"} on{" "}
-                    {historyData.last_payment_date
-                      ? new Date(historyData.last_payment_date).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "—"}
+                    {historyData.last_payment_date || "—"}
                   </p>
-                  <button className="mt-2 text-xs sm:text-sm flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-md text-black hover:bg-[#F5F1FF] transition font-medium">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/invoice")}
+                    className="mt-2 text-xs sm:text-sm flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-md text-black hover:bg-[#F5F1FF] transition font-medium"
+                  >
                     Download Invoice
                   </button>
                 </div>
@@ -257,13 +363,7 @@ export default function Dashboard() {
                   </p>
                   <p className="text-sm text-black mt-1">
                     Next payment: ₹{historyData.next_renewal_amount || "—"} on{" "}
-                    {historyData.next_renewal_date
-                      ? new Date(historyData.next_renewal_date).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "—"}
+                    {historyData.next_renewal_date || "—"}
                   </p>
                 </div>
               </div>

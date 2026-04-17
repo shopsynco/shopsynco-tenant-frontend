@@ -68,3 +68,33 @@ export function resolvePostStoreSetupDashboard(
     leaveAppHref: null,
   };
 }
+
+/** Public storefront host for a tenant schema slug (e.g. acme → acme.shopsynco.com). */
+export function defaultTenantHostFromSlug(slug: string): string {
+  const s = (slug || "").trim().toLowerCase();
+  if (!s) return "";
+  const suffix = (
+    (import.meta.env.VITE_PLATFORM_TENANT_DOMAIN_SUFFIX as string | undefined)
+      ?.trim()
+      .toLowerCase()
+      .replace(/^\./, "") || "shopsynco.com"
+  );
+  return `${s}.${suffix}`;
+}
+
+/**
+ * Base URL for the tenant manager (ShopSynco SaaS dashboard) SPA.
+ * Set VITE_TENANT_MANAGER_ORIGIN (no trailing slash). Falls back from API host on staging.
+ */
+export function resolveTenantManagerBaseUrl(): string {
+  const fromEnv = (
+    import.meta.env.VITE_TENANT_MANAGER_ORIGIN as string | undefined
+  )?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+
+  const api = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+  if (api.includes("stagingbackend.shopsynco.com")) {
+    return "https://stagingmanager.shopsynco.com";
+  }
+  return "";
+}
