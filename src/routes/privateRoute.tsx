@@ -22,6 +22,8 @@ const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
 
     const needsStoreSetup =
       sessionStorage.getItem("tenant_requires_store_setup") === "1";
+    const storeSetupIncomplete =
+      sessionStorage.getItem("tenant_store_setup_incomplete") === "1";
     const hasActiveSubscription =
       localStorage.getItem("tenant_subscription_active") === "1";
 
@@ -33,6 +35,11 @@ const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
     // Enforce store setup after payment when account has no tenant yet.
     if (needsStoreSetup && !allowsStoreSetupFlow) {
       return <Navigate to="/setup-store" replace />;
+    }
+
+    // Tenant exists and payment is active, but onboarding/profile setup not finished.
+    if (hasActiveSubscription && storeSetupIncomplete && !allowsStoreSetupFlow) {
+      return <Navigate to="/setup-store-contact" replace />;
     }
 
     return children ? <>{children}</> : <Outlet />;

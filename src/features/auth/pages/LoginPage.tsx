@@ -50,6 +50,7 @@ export default function LoginPage() {
           payload.action_required === "store_setup";
 
         const hasPaidAccess = payload.has_active_subscription === true;
+        const setupIncomplete = payload.store_setup_incomplete === true;
 
         // Discover tenant slug only when a store may already exist
         if (!needsStoreSetup) {
@@ -78,11 +79,15 @@ export default function LoginPage() {
             ? payload.loginMessage
             : "Login Successful";
 
-        // No tenant yet → store creation flow. Paid / active subscription → dashboard (setup banner if incomplete).
-        // Otherwise → choose plan / checkout.
+        // No tenant yet -> store creation flow.
+        // Paid but profile/location setup incomplete -> force setup completion.
+        // Paid + complete -> dashboard.
+        // Otherwise -> choose plan / checkout.
         let nextPath = "/plans";
         if (needsStoreSetup) {
           nextPath = "/setup-store";
+        } else if (hasPaidAccess && setupIncomplete) {
+          nextPath = "/setup-store-contact";
         } else if (hasPaidAccess) {
           nextPath = "/dashboard";
         } else {
