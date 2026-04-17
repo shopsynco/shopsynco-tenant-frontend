@@ -49,6 +49,8 @@ export default function LoginPage() {
           payload.requires_store_setup === true ||
           payload.action_required === "store_setup";
 
+        const hasPaidAccess = payload.has_active_subscription === true;
+
         // Discover tenant slug only when a store may already exist
         if (!needsStoreSetup) {
           try {
@@ -75,8 +77,16 @@ export default function LoginPage() {
           needsStoreSetup && payload.loginMessage
             ? payload.loginMessage
             : "Login Successful";
-        const nextPath = needsStoreSetup ? "/setup-store" : "/plans";
-        if (!needsStoreSetup) {
+
+        // No tenant yet → store creation flow. Paid / active subscription → dashboard (setup banner if incomplete).
+        // Otherwise → choose plan / checkout.
+        let nextPath = "/plans";
+        if (needsStoreSetup) {
+          nextPath = "/setup-store";
+        } else if (hasPaidAccess) {
+          nextPath = "/dashboard";
+        } else {
+          nextPath = "/plans";
           setPlansEntryFromCheckout();
         }
 
@@ -85,9 +95,8 @@ export default function LoginPage() {
           navigate(nextPath);
         });
 
-        // Fallback: if router transition is blocked/stale, force a hard navigation
-        // so /plans mounts and starts pricing API calls.
-        if (!needsStoreSetup) {
+        // Fallback: if router transition is blocked/stale, force a hard navigation to /plans only when that is the target.
+        if (nextPath === "/plans") {
           window.setTimeout(() => {
             if (window.location.pathname.toLowerCase() !== "/plans") {
               window.location.assign("/plans");

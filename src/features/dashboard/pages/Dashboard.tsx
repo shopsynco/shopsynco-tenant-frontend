@@ -42,7 +42,21 @@ export default function Dashboard() {
     features: [] as string[],
   });
 
+  const [showSetupBanner, setShowSetupBanner] = useState(false);
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const incomplete =
+        sessionStorage.getItem("tenant_store_setup_incomplete") === "1";
+      const onboardingDone =
+        localStorage.getItem("tenant_store_onboarding_complete") === "1";
+      setShowSetupBanner(Boolean(incomplete && !onboardingDone));
+    } catch {
+      setShowSetupBanner(false);
+    }
+  }, []);
 
   useEffect(() => {
     const getDashboardData = async () => {
@@ -85,6 +99,29 @@ export default function Dashboard() {
     <div className="min-h-screen bg-white text-gray-800 relative">
       <Header />
       <main className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-10 flex flex-col gap-8">
+        {showSetupBanner && (
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+            role="region"
+            aria-label="Store setup reminder"
+          >
+            <p className="text-sm text-amber-950 pr-2">
+              You&apos;ve already completed your sign-up and payment. Continue
+              where you left off to set up your store and get started.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const slug = localStorage.getItem("store_slug");
+                navigate(slug ? "/setup-store-contact" : "/setup-store");
+              }}
+              className="shrink-0 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 transition-colors"
+            >
+              Continue Setup
+            </button>
+          </div>
+        )}
+
         {/* WELCOME SECTION */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div>

@@ -89,6 +89,13 @@ const StoreSetupContactPage: React.FC = () => {
       const discoverEmail = loginEmail || email;
       await discoverTenantSlug(discoverEmail);
 
+      try {
+        localStorage.setItem("tenant_store_onboarding_complete", "1");
+        sessionStorage.removeItem("tenant_store_setup_incomplete");
+      } catch {
+        /* ignore */
+      }
+
       showSuccess(
         "Store Created",
         "Your store has been set up successfully.",

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils";
-import { clearPlanFlowFlags } from "../utils/planFlow";
+import { clearPlanFlowFlags, markTenantSubscriptionActive } from "../utils/planFlow";
 
 /** Returned from login thunk (also used by LoginPage for routing). */
 export type LoginSuccessPayload = {
@@ -9,6 +9,8 @@ export type LoginSuccessPayload = {
   requires_store_setup: boolean;
   action_required: string | null;
   loginMessage: string | null;
+  has_active_subscription: boolean;
+  store_setup_incomplete: boolean;
 };
 
 interface AuthState {
@@ -48,6 +50,22 @@ export const loginUser = createAsyncThunk<
       localStorage.removeItem("store_slug");
     }
 
+    const hasActiveSubscription = Boolean(res.data?.has_active_subscription);
+    if (hasActiveSubscription) {
+      markTenantSubscriptionActive();
+    }
+
+    const storeSetupIncomplete = Boolean(res.data?.store_setup_incomplete);
+    try {
+      if (storeSetupIncomplete) {
+        sessionStorage.setItem("tenant_store_setup_incomplete", "1");
+      } else {
+        sessionStorage.removeItem("tenant_store_setup_incomplete");
+      }
+    } catch {
+      /* ignore */
+    }
+
     return {
       access,
       refresh,
@@ -58,6 +76,8 @@ export const loginUser = createAsyncThunk<
           : null,
       loginMessage:
         typeof res.data?.message === "string" ? res.data.message : null,
+      has_active_subscription: hasActiveSubscription,
+      store_setup_incomplete: storeSetupIncomplete,
     };
   } catch (err: unknown) {
     const ax = err as { response?: { data?: { detail?: unknown } } };
