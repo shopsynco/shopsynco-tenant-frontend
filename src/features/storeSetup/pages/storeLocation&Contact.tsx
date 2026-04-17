@@ -101,12 +101,16 @@ const StoreSetupContactPage: React.FC = () => {
         "Your store has been set up successfully.",
         () => navigate("/store-success")
       );
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      showError(
-        "Submission Failed",
-        "Failed to submit contact details. Please try again."
-      );
+      const ax = err as { response?: { data?: { detail?: unknown; message?: unknown; error?: unknown } } };
+      const data = ax.response?.data;
+      const detail =
+        (typeof data?.detail === "string" && data.detail) ||
+        (typeof data?.message === "string" && data.message) ||
+        (typeof data?.error === "string" && data.error) ||
+        "Failed to submit contact details. Please try again.";
+      showError("Submission Failed", detail);
     } finally {
       setLoading(false);
     }
