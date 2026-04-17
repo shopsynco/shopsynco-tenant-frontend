@@ -50,8 +50,24 @@ export const forgotPassword = async (email: string) => {
     );
     return response.data;
   } catch (error: any) {
-    const detail =
-      error.response?.data?.detail || "Request failed. Please try again.";
+    const statusCode = error?.response?.status;
+    const detail = messageFromAxiosError(
+      error,
+      "Request failed. Please try again."
+    );
+    const normalized = detail.toLowerCase();
+
+    // Keep UX explicit for unknown emails in forgot-password flow.
+    if (
+      statusCode === 404 ||
+      normalized.includes("user not found") ||
+      normalized.includes("no user") ||
+      normalized.includes("email does not exist") ||
+      normalized.includes("not registered")
+    ) {
+      throw new Error("No account found with this email address. Please sign up.");
+    }
+
     throw new Error(detail);
   }
 };
