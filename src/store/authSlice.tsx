@@ -3,6 +3,9 @@ import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils
 import { clearPlanFlowFlags, markTenantSubscriptionActive } from "../utils/planFlow";
 import { readTenantSlugFromAccessToken } from "../utils/tenantStoreSlug";
 
+const SESSION_REQUIRES_STORE_SETUP = "tenant_requires_store_setup";
+const SESSION_STORE_SETUP_INCOMPLETE = "tenant_store_setup_incomplete";
+
 /** Returned from login thunk (also used by LoginPage for routing). */
 export type LoginSuccessPayload = {
   access: string;
@@ -52,21 +55,34 @@ export const loginUser = createAsyncThunk<
     }
 
     // Stale slug breaks onboarding: interceptor would call .../{slug}/store/setup/ → 404
-    if (Boolean(res.data?.requires_store_setup)) {
+    const requiresStoreSetup = Boolean(res.data?.requires_store_setup);
+    if (requiresStoreSetup) {
       localStorage.removeItem("store_slug");
+    }
+    try {
+      if (requiresStoreSetup) {
+        sessionStorage.setItem(SESSION_REQUIRES_STORE_SETUP, "1");
+      } else {
+        sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
+      }
+    } catch {
+      /* ignore */
     }
 
     const hasActiveSubscription = Boolean(res.data?.has_active_subscription);
     if (hasActiveSubscription) {
       markTenantSubscriptionActive();
+    } else {
+      // Prevent stale local flag from allowing dashboard access without payment.
+      localStorage.removeItem("tenant_subscription_active");
     }
 
     const storeSetupIncomplete = Boolean(res.data?.store_setup_incomplete);
     try {
       if (storeSetupIncomplete) {
-        sessionStorage.setItem("tenant_store_setup_incomplete", "1");
+        sessionStorage.setItem(SESSION_STORE_SETUP_INCOMPLETE, "1");
       } else {
-        sessionStorage.removeItem("tenant_store_setup_incomplete");
+        sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);
       }
     } catch {
       /* ignore */
@@ -128,6 +144,12 @@ const authSlice = createSlice({
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       clearPlanFlowFlags();
+      try {
+        sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
+        sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);
+      } catch {
+        /* ignore */
+      }
     },
   },
   extraReducers: (builder) => {
