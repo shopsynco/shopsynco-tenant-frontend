@@ -14,7 +14,7 @@ import ManageBillingPage from "../features/dashboard/components/ManageBilling";
 import RegisterPage from "../features/auth/pages/SignUpPage";
 import LoginPage from "../features/auth/pages/LoginPage";
 import VerificationPage from "../features/auth/pages/VerificationPage";
-import LegalPolicies from "../features/auth/pages/PrivacyandPolicies";
+import LegalPoliciesPage from "../features/legal/pages/LegalPoliciesPage";
 import ChoosePlanPage from "../features/dashboard/pages/ChoosePlanPage";
 import InvoicesPage from "../features/dashboard/pages/InvoicesPage";
 import AllRoutesPage from "../components/helproutes";
@@ -40,7 +40,9 @@ const AppRoutes = () => {
           path="/Resetpassword-Success"
           element={<PasswordResetSuccess />}
         />
-        <Route path="/terms&condition" element={<LegalPolicies />} />
+        <Route path="/legal" element={<Navigate to="/legal/terms" replace />} />
+        <Route path="/legal/:policySlug" element={<LegalPoliciesPage />} />
+        <Route path="/terms&condition" element={<Navigate to="/legal/terms" replace />} />
         {/* Explicit protected routes (robust fallback for nested Outlet matching) */}
         <Route
           path="/plans"

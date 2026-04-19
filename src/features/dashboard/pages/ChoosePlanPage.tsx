@@ -587,14 +587,18 @@ export default function ChoosePlanPage() {
                     By checking out, you agree with our
                     <br />
                     <a
-                      href="#"
+                      href="/legal/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-[#7658A0] font-semibold underline"
                     >
                       Terms of Service
                     </a>{" "}
                     and confirm that you have read our&nbsp;
                     <a
-                      href="#"
+                      href="/legal/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-[#7658A0] font-semibold underline"
                     >
                       Privacy Policy

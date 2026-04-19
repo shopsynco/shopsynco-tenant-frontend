@@ -316,11 +316,21 @@ export default function PaymentPage() {
           <div className="mt-4 space-y-4 shrink-0 px-6 pb-6">
             <p className="text-xs font-poppins text-[#4B4B4B] text-center px-1">
               By paying, you agree to our{" "}
-              <a href="#" className="text-[#7658A0] font-semibold underline">
+              <a
+                href="/legal/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#7658A0] font-semibold underline"
+              >
                 Terms
               </a>{" "}
               and{" "}
-              <a href="#" className="text-[#7658A0] font-semibold underline">
+              <a
+                href="/legal/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#7658A0] font-semibold underline"
+              >
                 Privacy Policy
               </a>
               .

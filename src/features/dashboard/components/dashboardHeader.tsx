@@ -147,7 +147,17 @@ export default function Header() {
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white shadow-md rounded-lg py-2 border border-gray-100 z-50">
+              <div className="absolute right-0 mt-2 w-52 bg-white shadow-md rounded-lg py-2 border border-gray-100 z-50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    navigate("/legal/terms");
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Terms &amp; policies
+                </button>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
