@@ -79,20 +79,18 @@ export default function LoginPage() {
             ? payload.loginMessage
             : "Login Successful";
 
-        // No tenant yet -> store creation flow.
-        // Paid but profile/location setup incomplete -> force setup completion.
-        // Paid + complete -> dashboard.
-        // Otherwise -> choose plan / checkout.
+        // Flow: payment (plans) → then store creation when subscribed → then contact if incomplete → dashboard.
+        // Do not send unpaid users to /setup-store (PrivateRoute will keep them on /plans anyway; avoids redirect loops / blank screens).
         let nextPath = "/plans";
-        if (needsStoreSetup) {
-          nextPath = "/setup-store";
-        } else if (hasPaidAccess && setupIncomplete) {
-          nextPath = "/setup-store-contact";
-        } else if (hasPaidAccess) {
-          nextPath = "/dashboard";
-        } else {
+        if (!hasPaidAccess) {
           nextPath = "/plans";
           setPlansEntryFromCheckout();
+        } else if (needsStoreSetup) {
+          nextPath = "/setup-store";
+        } else if (setupIncomplete) {
+          nextPath = "/setup-store-contact";
+        } else {
+          nextPath = "/dashboard";
         }
 
         showSuccess(successTitle, successText, () => {
@@ -100,14 +98,14 @@ export default function LoginPage() {
           navigate(nextPath);
         });
 
-        // Fallback: if router transition is blocked/stale, force a hard navigation to /plans only when that is the target.
-        if (nextPath === "/plans") {
-          window.setTimeout(() => {
-            if (window.location.pathname.toLowerCase() !== "/plans") {
-              window.location.assign("/plans");
-            }
-          }, 1200);
-        }
+        // Fallback: if Swal/navigation fails, force navigation to the intended route.
+        window.setTimeout(() => {
+          const current = window.location.pathname.toLowerCase();
+          const target = nextPath.toLowerCase();
+          if (current !== target && current.replace(/\/$/, "") !== target.replace(/\/$/, "")) {
+            window.location.assign(nextPath);
+          }
+        }, 1200);
       } else {
         // build readable error message
         let errMsg = "Login failed";

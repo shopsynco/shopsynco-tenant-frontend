@@ -15,6 +15,7 @@ const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
       path === "/plans" ||
       path === "/payment" ||
       path === "/payment-success";
+    const allowsPrePaymentFlow = allowsPaymentFlow;
     const allowsStoreSetupFlow =
       path === "/setup-store" ||
       path === "/setup-store-contact" ||
@@ -27,18 +28,23 @@ const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
     const hasActiveSubscription =
       localStorage.getItem("tenant_subscription_active") === "1";
 
-    // Enforce payment before dashboard access.
-    if (!hasActiveSubscription && !allowsPaymentFlow) {
-      return <Navigate to="/plans" replace />;
+    // No subscription yet: only plan checkout / payment / terms (not store setup — avoids /plans ↔ /setup-store loops).
+    if (!hasActiveSubscription) {
+      if (allowsStoreSetupFlow) {
+        return <Navigate to="/plans" replace />;
+      }
+      if (!allowsPrePaymentFlow) {
+        return <Navigate to="/plans" replace />;
+      }
+      return children ? <>{children}</> : <Outlet />;
     }
 
-    // Enforce store setup after payment when account has no tenant yet.
+    // After payment: guide tenant creation + location/contact when flags say so.
     if (needsStoreSetup && !allowsStoreSetupFlow) {
       return <Navigate to="/setup-store" replace />;
     }
 
-    // Tenant exists and payment is active, but onboarding/profile setup not finished.
-    if (hasActiveSubscription && storeSetupIncomplete && !allowsStoreSetupFlow) {
+    if (storeSetupIncomplete && !allowsStoreSetupFlow) {
       return <Navigate to="/setup-store-contact" replace />;
     }
 
