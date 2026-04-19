@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import shopLogo from "../../../assets/Name-Logo.png";
 import { showError, showSuccess } from "../../../components/swalHelper";
+import { markStoreOnboardingComplete } from "../../../utils/planFlow";
 
 const StoreSetupContactPage: React.FC = () => {
   const [countries, setCountries] = useState<any[]>([]);
@@ -92,6 +93,7 @@ const StoreSetupContactPage: React.FC = () => {
       try {
         localStorage.setItem("tenant_store_onboarding_complete", "1");
         sessionStorage.removeItem("tenant_store_setup_incomplete");
+        markStoreOnboardingComplete();
       } catch {
         /* ignore */
       }

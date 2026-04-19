@@ -51,3 +51,17 @@ export function clearPlanFlowFlags(): void {
     /* ignore */
   }
 }
+
+/** Mirrors authSlice session keys — clear when store + contact onboarding is finished. */
+const SESSION_REQUIRES_STORE_SETUP = "tenant_requires_store_setup";
+const SESSION_STORE_SETUP_INCOMPLETE = "tenant_store_setup_incomplete";
+
+/** Call when store setup is fully complete so PrivateRoute stops sending users back to /setup-store. */
+export function markStoreOnboardingComplete(): void {
+  try {
+    sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
+    sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);
+  } catch {
+    /* ignore */
+  }
+}

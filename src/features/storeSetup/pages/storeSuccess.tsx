@@ -1,14 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import bgImage from "../../../assets/backgroundsuccess.png";
 import { CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { resolvePostStoreSetupDashboard } from "../../../api/axios_config";
+import { markStoreOnboardingComplete } from "../../../utils/planFlow";
 
 const StoreSuccessPage: React.FC = () => {
   const [dashboardUrl, setDashboardUrl] = useState<string>("");
   const [sameOriginPath, setSameOriginPath] = useState<string | null>(null);
   const [leaveAppHref, setLeaveAppHref] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Clear before paint so "Go to Dashboard" never hits PrivateRoute with stale login flags.
+  useLayoutEffect(() => {
+    markStoreOnboardingComplete();
+  }, []);
 
   useEffect(() => {
     const storeSlug = localStorage.getItem("store_slug");
@@ -80,6 +86,7 @@ const StoreSuccessPage: React.FC = () => {
 
           <button
             onClick={() => {
+              markStoreOnboardingComplete();
               if (sameOriginPath) {
                 navigate(sameOriginPath);
               } else if (leaveAppHref) {
