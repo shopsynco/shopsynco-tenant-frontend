@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, Eye } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
   createCheckoutSubscription,
-  getPaymentMethods,
   createRazorpayOrder,
   verifyRazorpayPayment,
   getPaymentStatus,
@@ -16,88 +15,16 @@ import {
   setPlansEntryFromCheckout,
 } from "../../../../utils/planFlow";
 
-declare global {
-  interface Window {
-    Razorpay?: any;
-  }
-}
+type RazorpayCtor = new (options: Record<string, unknown>) => { open: () => void };
 
-// Define types
-interface PaymentMethod {
-  label: string;
-  value: string;
-}
-
-interface CardFormData {
-  cardHolder: string;
-  cardNumber: string;
-  expiryDate: string;
-  cvv: string;
-}
-
-interface BankFormData {
-  accountHolder: string;
-  accountNumber: string;
-  bankName: string;
-  branchName: string;
-  ifscCode: string;
-  confirmAccountNumber: string;
-}
-
-type PaymentInputFieldProps = {
-  label: string;
-  placeholder?: string;
-  type?: string;
-  value: string;
-  onChange: (value: string) => void;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
-
-function InputField({
-  label,
-  placeholder,
-  type = "text",
-  value,
-  onChange,
-  ...props
-}: PaymentInputFieldProps) {
-  return (
-    <div>
-      {label && (
-        <label className="text-sm text-gray-600 mb-1 block">{label}</label>
-      )}
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
-        {...props}
-      />
-    </div>
-  );
-}
-
+/**
+ * Checkout step after "Choose plan": order summary + one action to open Razorpay.
+ * Payment instruments (UPI, cards, netbanking, wallets) are chosen inside Razorpay only —
+ * a separate "choose payment method" screen would duplicate their hosted UI.
+ */
 export default function PaymentPage() {
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [selectedMethod, setSelectedMethod] = useState<string>("");
-  const [showCardNumber, setShowCardNumber] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [quoteData, setQuoteData] = useState<any>(null);
-  const [cardFormData, setCardFormData] = useState<CardFormData>({
-    cardHolder: "",
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-  });
-  const [bankFormData, setBankFormData] = useState<BankFormData>({
-    accountHolder: "",
-    accountNumber: "",
-    bankName: "",
-    branchName: "",
-    ifscCode: "",
-    confirmAccountNumber: "",
-  });
-
+  const [quoteData, setQuoteData] = useState<Record<string, unknown> | null>(null);
   const navigate = useNavigate();
   const goPaymentSuccess = () => {
     markTenantSubscriptionActive();
@@ -109,59 +36,23 @@ export default function PaymentPage() {
   const months = params.get("months");
   const country = params.get("country");
 
-  // Subscription ID can come from URL/localStorage or be created from checkout.
   const [subscriptionId, setSubscriptionId] = useState<string>(
-    params.get("subscription_id") ||
-      localStorage.getItem("subscription_id") ||
-      ""
+    params.get("subscription_id") || localStorage.getItem("subscription_id") || ""
   );
   const [creatingSubscription, setCreatingSubscription] = useState(false);
-  const allowedMethodValues = new Set([
-    "credit_card",
-    "debit_card",
-    "upi",
-  ]);
 
-  // Fetch payment methods on load
-  useEffect(() => {
-    const fetchMethods = async () => {
-      try {
-        const res = await getPaymentMethods();
-        const filteredMethods = (res.methods || []).filter((m) =>
-          allowedMethodValues.has(m.value)
-        );
-        setPaymentMethods(filteredMethods);
-        if (filteredMethods.length > 0) {
-          setSelectedMethod(filteredMethods[0].value);
-        }
-      } catch (err) {
-  console.error("Error fetching payment methods:", err);
-  showError("Load Failed", "Failed to load payment methods.");
-}
-    };
-    fetchMethods();
-  }, []);
-
-  // Fetch quote data
   useEffect(() => {
     if (planId && months && country) {
-      const fetchQuote = async () => {
-        setLoading(true);
-        try {
-          const quoteResponse = await getPricingQuote(planId, months, country);
-          setQuoteData(quoteResponse);
-       } catch (error) {
-  console.error("Error fetching pricing quote:", error);
-  showError("Load Failed", "Failed to load pricing information.");
-} finally {
-          setLoading(false);
-        }
-      };
-      fetchQuote();
+      setLoading(true);
+      getPricingQuote(planId, months, country)
+        .then(setQuoteData)
+        .catch(() => {
+          showError("Load Failed", "Failed to load pricing information.");
+        })
+        .finally(() => setLoading(false));
     }
   }, [planId, months, country]);
 
-  // Ensure we always have a subscription_id before payment submit.
   useEffect(() => {
     const ensureSubscription = async () => {
       if (subscriptionId || !planId || !months) return;
@@ -170,7 +61,7 @@ export default function PaymentPage() {
         const checkout = await createCheckoutSubscription({
           plan_id: planId,
           months: Number(months),
-          payment_method: selectedMethod || "credit_card",
+          payment_method: "credit_card",
         });
         const createdId = checkout?.subscription_id;
         if (createdId) {
@@ -183,128 +74,11 @@ export default function PaymentPage() {
         setCreatingSubscription(false);
       }
     };
-    ensureSubscription();
-  }, [subscriptionId, planId, months, selectedMethod]);
-
-  // Handle method selection
-  const handleMethodSelect = (methodValue: string) => {
-    setSelectedMethod(methodValue);
-  };
-
-  // Handle card input changes
-  const handleCardInputChange = (field: keyof CardFormData, value: string) => {
-    setCardFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // Handle bank input changes
-  const handleBankInputChange = (field: keyof BankFormData, value: string) => {
-    setBankFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // Format card number with spaces
-  const formatCardNumber = (value: string): string => {
-    const cleaned = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    const matches = cleaned.match(/\d{4,16}/g);
-    const match = matches ? matches[0] : "";
-    const parts = [];
-
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-
-    return parts.length ? parts.join(" ") : cleaned;
-  };
-
-  // Validate forms
-  const isValidLuhn = (digitsOnly: string): boolean => {
-    let sum = 0;
-    let shouldDouble = false;
-    for (let i = digitsOnly.length - 1; i >= 0; i--) {
-      let digit = Number(digitsOnly[i]);
-      if (shouldDouble) {
-        digit *= 2;
-        if (digit > 9) digit -= 9;
-      }
-      sum += digit;
-      shouldDouble = !shouldDouble;
-    }
-    return sum % 10 === 0;
-  };
-
-  const validateCardForm = (): boolean => {
-    const holder = cardFormData.cardHolder.trim();
-    if (!holder) {
-      Swal.fire("Validation Error", "Please enter card holder name", "warning");
-      return false;
-    }
-    // Basic real-name check (avoid emails/random symbols)
-    if (holder.includes("@") || !/^[A-Za-z][A-Za-z\s.'-]{1,}$/.test(holder)) {
-      Swal.fire(
-        "Validation Error",
-        "Enter a valid card holder name (letters only).",
-        "warning"
-      );
-      return false;
-    }
-
-    const cardDigits = cardFormData.cardNumber.replace(/\s/g, "");
-    if (!/^\d{13,19}$/.test(cardDigits)) {
-      Swal.fire(
-        "Validation Error",
-        "Please enter a valid card number",
-        "warning"
-      );
-      return false;
-    }
-    if (!isValidLuhn(cardDigits)) {
-      Swal.fire(
-        "Validation Error",
-        "Invalid card number. Please check and try again.",
-        "warning"
-      );
-      return false;
-    }
-
-    if (!cardFormData.expiryDate) {
-      Swal.fire("Validation Error", "Please select expiry date", "warning");
-      return false;
-    }
-
-    const [yearStr, monthStr] = cardFormData.expiryDate.split("-");
-    const expYear = Number(yearStr);
-    const expMonth = Number(monthStr);
-    if (
-      !Number.isInteger(expYear) ||
-      !Number.isInteger(expMonth) ||
-      expMonth < 1 ||
-      expMonth > 12
-    ) {
-      Swal.fire("Validation Error", "Please select a valid expiry date", "warning");
-      return false;
-    }
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
-      Swal.fire("Validation Error", "Card expiry date cannot be in the past", "warning");
-      return false;
-    }
-
-    if (!/^\d{3,4}$/.test(cardFormData.cvv)) {
-      Swal.fire("Validation Error", "Please enter valid CVV", "warning");
-      return false;
-    }
-    return true;
-  };
+    void ensureSubscription();
+  }, [subscriptionId, planId, months]);
 
   const loadRazorpayScript = async (): Promise<boolean> => {
-    if (window.Razorpay) return true;
+    if ((window as unknown as { Razorpay?: RazorpayCtor }).Razorpay) return true;
     return new Promise((resolve) => {
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -315,9 +89,7 @@ export default function PaymentPage() {
     });
   };
 
-  const startRazorpayCheckout = async (
-    method: "credit_card" | "debit_card" | "upi"
-  ) => {
+  const openRazorpayCheckout = async () => {
     const waitForPaymentConfirmation = async (subId: string) => {
       const maxAttempts = 15;
       const delayMs = 2500;
@@ -329,12 +101,13 @@ export default function PaymentPage() {
       }
       return false;
     };
+
     const ensureFreshSubscriptionId = async () => {
       if (!planId || !months) return "";
       const checkout = await createCheckoutSubscription({
         plan_id: planId,
         months: Number(months),
-        payment_method: method,
+        payment_method: "credit_card",
       });
       const createdId = checkout?.subscription_id || "";
       if (createdId) {
@@ -358,23 +131,28 @@ export default function PaymentPage() {
       return;
     }
     const scriptLoaded = await loadRazorpayScript();
-    if (!scriptLoaded || !window.Razorpay) {
+    const Razorpay = (window as unknown as { Razorpay?: RazorpayCtor }).Razorpay;
+    if (!scriptLoaded || !Razorpay) {
       Swal.fire("Error", "Failed to load Razorpay checkout.", "error");
       return;
     }
 
-    let order;
+    let order: Awaited<ReturnType<typeof createRazorpayOrder>>;
     try {
       order = await createRazorpayOrder({
         subscription_id: activeSubscriptionId,
         amount: total,
         currency: "INR",
-        method,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const ax = err as {
+        response?: { status?: number; data?: { error?: string } };
+      };
       const isSubscriptionMissing =
-        err?.response?.status === 404 &&
-        String(err?.response?.data?.error || "").toLowerCase().includes("subscription not found");
+        ax?.response?.status === 404 &&
+        String(ax?.response?.data?.error || "")
+          .toLowerCase()
+          .includes("subscription not found");
       if (!isSubscriptionMissing) throw err;
       activeSubscriptionId = await ensureFreshSubscriptionId();
       if (!activeSubscriptionId) throw err;
@@ -382,31 +160,29 @@ export default function PaymentPage() {
         subscription_id: activeSubscriptionId,
         amount: total,
         currency: "INR",
-        method,
       });
     }
 
-    const methodOptions =
-      method === "upi"
-        ? { upi: true }
-        : { card: true };
-
-    const razorpay = new window.Razorpay({
+    // Omit `method` so Razorpay shows every enabled instrument (UPI, cards, NB, wallets).
+    const razorpay = new Razorpay({
       key: order.key_id,
       amount: order.amount,
       currency: order.currency,
       order_id: order.order_id,
       name: "Shopsynco",
       description: "Subscription payment",
-      method: methodOptions,
-      handler: async (response: any) => {
+      handler: async (response: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) => {
         try {
           const verification = await verifyRazorpayPayment({
             subscription_id: activeSubscriptionId,
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
-            method,
+            method: "upi",
           });
           if (verification.success === true) {
             if (verification.status === "success") {
@@ -428,11 +204,12 @@ export default function PaymentPage() {
             return;
           }
           throw new Error("Payment verification failed");
-        } catch (verifyErr: any) {
+        } catch (verifyErr: unknown) {
+          const ve = verifyErr as { response?: { data?: { error?: string; message?: string } } };
           Swal.fire(
             "Error",
-            verifyErr?.response?.data?.error ||
-              verifyErr?.response?.data?.message ||
+            ve?.response?.data?.error ||
+              ve?.response?.data?.message ||
               "Payment verification failed.",
             "error"
           );
@@ -447,18 +224,18 @@ export default function PaymentPage() {
     razorpay.open();
   };
 
-  // Handle UPI payment (Razorpay Checkout only — no separate /upi/verify/ step)
-  const handleUpiSubmit = async () => {
+  const handlePayClick = async () => {
     try {
       setLoading(true);
-      await startRazorpayCheckout("upi");
-    } catch (err: any) {
-      console.error("❌ UPI Payment Error:", err);
+      await openRazorpayCheckout();
+    } catch (err: unknown) {
+      console.error("Payment checkout error:", err);
+      const ax = err as { response?: { data?: { error?: string; message?: string } } };
       Swal.fire(
         "Error",
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "UPI Payment failed. Please try again.",
+        ax?.response?.data?.error ||
+          ax?.response?.data?.message ||
+          "Payment could not be started. Please try again.",
         "error"
       );
     } finally {
@@ -466,64 +243,22 @@ export default function PaymentPage() {
     }
   };
 
-  // Handle card payment
-  const handleCardSubmit = async () => {
-    if (!validateCardForm()) return;
-
-    try {
-      setLoading(true);
-      if (selectedMethod === "credit_card" || selectedMethod === "debit_card") {
-        await startRazorpayCheckout(selectedMethod);
-      } else {
-        throw new Error("Invalid payment method");
-      }
-    } catch (err: any) {
-      console.error("❌ Card Payment Error:", err);
-      Swal.fire(
-        "Error",
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Card payment failed. Please try again.",
-        "error"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Main payment handler
-  const handlePaymentSubmit = () => {
-    if (!selectedMethod) {
-      Swal.fire(
-        "Validation Error",
-        "Please select a payment method",
-        "warning"
-      );
-      return;
-    }
-
-    switch (selectedMethod) {
-      case "upi":
-        handleUpiSubmit();
-        break;
-      case "credit_card":
-      case "debit_card":
-        handleCardSubmit();
-        break;
-      default:
-        Swal.fire("Error", "This payment method is not yet supported", "error");
-    }
-  };
-
-  // Get current method label for display
-  // const getCurrentMethodLabel = (): string => {
-  //   const method = paymentMethods.find(m => m.value === selectedMethod);
-  //   return method?.label || "";
-  // };
+  const totalDisplay =
+    quoteData?.total != null && quoteData.total !== ""
+      ? String(quoteData.total as string | number)
+      : "—";
+  const basePriceDisplay =
+    quoteData?.base_price != null && quoteData.base_price !== ""
+      ? String(quoteData.base_price as string | number)
+      : "—";
+  const taxesDisplay = (() => {
+    const t = quoteData?.taxes ?? quoteData?.taxes_and_fees ?? quoteData?.tax;
+    if (t == null || t === "") return "—";
+    return String(t as string | number);
+  })();
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10">
-      {/* Header */}
       <div className="w-full max-w-6xl mb-6 flex items-center gap-2 text-gray-500">
         <ChevronLeft className="w-4 h-4" />
         <Link
@@ -535,317 +270,77 @@ export default function PaymentPage() {
         </Link>
       </div>
 
-      {/* Main Content */}
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
-        {/* Left Section - Payment Methods */}
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-            Choose A Payment Method
-          </h2>
-
-          {paymentMethods.length === 0 ? (
-            <p className="text-gray-500">Loading payment methods...</p>
-          ) : (
-            paymentMethods.map((method) => (
-                <div
-                  key={method.value}
-                  className={`border rounded-xl mb-5 transition-all ${
-                    selectedMethod === method.value
-                      ? "border-[#6A3CB1] bg-white shadow-sm ring-2 ring-[#6A3CB1] ring-opacity-20"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}
-                >
-                  {/* header + forms stay identical */}
-
-                  <button
-                    type="button"
-                    onClick={() => handleMethodSelect(method.value)}
-                    className="w-full flex justify-between items-center p-5 text-left font-medium text-gray-800"
-                  >
-                    <span>{method.label}</span>
-                    <span className="text-gray-400">
-                      {selectedMethod === method.value ? "▲" : "▼"}
-                    </span>
-                  </button>
-
-                  {/* UPI: Razorpay Checkout handles VPA / app intent — no stub verify API */}
-                  {selectedMethod === method.value &&
-                    method.value === "upi" && (
-                      <div
-                        className="border-t border-gray-200 p-5 text-sm text-gray-600"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <p className="font-medium text-gray-800">Pay with UPI</p>
-                        <p className="mt-2">
-                          Click <span className="font-medium">Submit Payment</span> below. Razorpay
-                          Checkout will open — choose UPI, pick your app (PhonePe, Google Pay, etc.),
-                          or enter your UPI ID there. Payment is not started from a separate verify
-                          step on this page.
-                        </p>
-                      </div>
-                    )}
-
-                  {/* Credit/Debit Card Form */}
-                  {selectedMethod === method.value &&
-                    (method.value === "credit_card" ||
-                      method.value === "debit_card") && (
-                      <div
-                        className="border-t border-gray-200 p-5 space-y-4"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <InputField
-                          label="Card Holder Name"
-                          placeholder="Enter card holder name"
-                          value={cardFormData.cardHolder}
-                          onChange={(value: string) =>
-                            handleCardInputChange("cardHolder", value)
-                          }
-                        />
-
-                        <div>
-                          <label className="text-sm text-gray-600 mb-1 block">
-                            Card Number
-                          </label>
-                          <div className="relative">
-                            <input
-                              type={showCardNumber ? "text" : "password"}
-                              placeholder="1234 5678 9012 3456"
-                              value={cardFormData.cardNumber}
-                              onChange={(e) =>
-                                handleCardInputChange(
-                                  "cardNumber",
-                                  formatCardNumber(e.target.value)
-                                )
-                              }
-                              maxLength={19}
-                              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
-                            />
-                            <Eye
-                              size={18}
-                              className="absolute right-3 top-2.5 text-gray-500 cursor-pointer"
-                              onClick={() => setShowCardNumber(!showCardNumber)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <InputField
-                            label="Expiry Date"
-                            type="month"
-                            value={cardFormData.expiryDate}
-                            onChange={(value: string) =>
-                              handleCardInputChange("expiryDate", value)
-                            }
-                          />
-                          <InputField
-                            label="CVV"
-                            type="password"
-                            placeholder="123"
-                            maxLength={3}
-                            value={cardFormData.cvv}
-                            onChange={(value: string) =>
-                              handleCardInputChange(
-                                "cvv",
-                                value.replace(/[^0-9]/g, "")
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Bank Transfer Form */}
-                  {selectedMethod === method.value &&
-                    method.value === "bank_transfer" && (
-                      <div
-                        className="border-t border-gray-200 p-5 space-y-4"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <InputField
-                          label="Account Holder Name"
-                          placeholder="Enter account holder name"
-                          value={bankFormData.accountHolder}
-                          onChange={(value: string) =>
-                            handleBankInputChange("accountHolder", value)
-                          }
-                        />
-
-                        <div>
-                          <label className="text-sm text-gray-600 mb-1 block">
-                            Bank Name
-                          </label>
-                          <select
-                            value={bankFormData.bankName}
-                            onChange={(e) =>
-                              handleBankInputChange("bankName", e.target.value)
-                            }
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
-                          >
-                            <option value="">Select Bank</option>
-                            <option value="SBI">
-                              State Bank of India (SBI)
-                            </option>
-                            <option value="HDFC">HDFC Bank</option>
-                            <option value="ICICI">ICICI Bank</option>
-                            <option value="AXIS">Axis Bank</option>
-                            <option value="KOTAK">Kotak Mahindra Bank</option>
-                          </select>
-                        </div>
-
-                        <InputField
-                          label="Account Number"
-                          placeholder="Enter account number"
-                          value={bankFormData.accountNumber}
-                          onChange={(value: string) =>
-                            handleBankInputChange(
-                              "accountNumber",
-                              value.replace(/[^0-9]/g, "")
-                            )
-                          }
-                          maxLength={18}
-                        />
-
-                        <InputField
-                          label="Re-enter Account Number"
-                          placeholder="Re-enter account number"
-                          value={bankFormData.confirmAccountNumber}
-                          onChange={(value: string) =>
-                            handleBankInputChange(
-                              "confirmAccountNumber",
-                              value.replace(/[^0-9]/g, "")
-                            )
-                          }
-                          maxLength={18}
-                        />
-
-                        <InputField
-                          label="Branch Name"
-                          placeholder="Enter branch name"
-                          value={bankFormData.branchName}
-                          onChange={(value: string) =>
-                            handleBankInputChange("branchName", value)
-                          }
-                        />
-
-                        <InputField
-                          label="IFSC Code"
-                          placeholder="Enter IFSC code"
-                          value={bankFormData.ifscCode}
-                          onChange={(value: string) =>
-                            handleBankInputChange(
-                              "ifscCode",
-                              value.toUpperCase()
-                            )
-                          }
-                        />
-                      </div>
-                    )}
-
-                </div>
-              ))
-          )}
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Complete payment</h2>
+          <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+            You&apos;ll complete card, UPI, netbanking, or wallet payment in the secure Razorpay
+            window. We don&apos;t collect card or UPI details on this page.
+          </p>
+          <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-5 text-sm text-gray-700">
+            <p className="font-medium text-gray-900 mb-2">What happens next</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Click the button below to open Razorpay Checkout.</li>
+              <li>Pick any payment method Razorpay offers (same options as in their modal).</li>
+              <li>After payment, we&apos;ll verify and activate your subscription.</li>
+            </ul>
+          </div>
         </div>
 
         <div
           className="w-full lg:w-96 flex flex-col h-full rounded-[20px]"
           style={{ background: "#AE84EB0D" }}
         >
-          {/* scrollable summary */}
           <div className="flex-1 flex flex-col gap-4 p-6">
-            <h3 className="font-poppins font-semibold text-[32px] leading-[30px] text-black my-6 mx-6">
+            <h3 className="font-poppins font-semibold text-[28px] leading-tight text-black my-4">
               Order Summary
             </h3>
             <div className="space-y-3 text-sm text-[#4B4B4B]">
               <div className="flex justify-between">
-                <span className="font-poppins text-[20px] leading-[30px] text-black">
-                  Base Price
-                </span>
-                <span className="font-poppins text-[20px] leading-[30px] text-black">
-                  ₹{quoteData?.base_price ?? "—"}
-                </span>
+                <span className="font-poppins text-[18px] text-black">Base Price</span>
+                <span className="font-poppins text-[18px] text-black">₹{basePriceDisplay}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-poppins text-[20px] leading-[30px] text-black">
-                  GST 18%
-                </span>
-                <span className="font-poppins text-[20px] leading-[30px] text-black">
-                  ₹
-                  {quoteData?.taxes ??
-                    quoteData?.taxes_and_fees ??
-                    quoteData?.tax ??
-                    "—"}
+                <span className="font-poppins text-[18px] text-black">Taxes &amp; fees</span>
+                <span className="font-poppins text-[18px] text-black">₹{taxesDisplay}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-[#E2D9F0]">
+                <span className="font-poppins text-[20px] font-semibold text-black">Total</span>
+                <span className="font-poppins text-[20px] font-semibold text-black">
+                  ₹{totalDisplay}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="font-poppins text-[20px] leading-[30px] text-black">
-                  Credits
-                </span>
-                <span className="font-poppins text-[20px] leading-[30px] text-black">
-                  ₹0.0
-                </span>
-              </div>
-
-              {/* coupon */}
             </div>
           </div>
 
-          {/* fixed footer – exact Figma sizes, no inner white gaps */}
-          <div className="mt-8 space-y-4 shrink-0 px-6 pb-6">
-            <div className="rounded-[20px] p-3 bg-transparent text-center">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <div className="text-sm font-poppins text-[#4B4B4B]">
-                  By checking out, you agree with our
-                  <br />
-                  <a
-                    href="#"
-                    className="text-[#7658A0] font-semibold underline"
-                  >
-                    Terms of Service
-                  </a>{" "}
-                  and confirm that you have read our&nbsp;
-                  <a
-                    href="#"
-                    className="text-[#7658A0] font-semibold underline"
-                  >
-                    Privacy Policy
-                  </a>
-                  .<br />
-                  You can cancel recurring payments at any time.
-                </div>
-              </label>
-            </div>
-
-            {/* buttons – 162 × 56 & 246 × 56, never overflow */}
-            <div className="flex justify-center">
-              <div className="flex gap-3 w-full max-w-[420px]">
-                <button
-                  onClick={() => navigate(-1)}
-                  className="flex items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold shrink-0"
-                  style={{
-                    width: 162,
-                    height: 56,
-                    padding: "18px 52px",
-                    gap: 10,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handlePaymentSubmit}
-                  disabled={loading || creatingSubscription || !selectedMethod}
-                  className="flex items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold disabled:opacity-60 shrink-0"
-                  style={{
-                    width: 175,
-                    height: 56,
-                    padding: "18px 20px",
-                    gap: 10,
-                  }}
-                >
-                  {loading || creatingSubscription
-                    ? "Processing..."
-                    : "Submit Payment"}
-                </button>
-              </div>
+          <div className="mt-4 space-y-4 shrink-0 px-6 pb-6">
+            <p className="text-xs font-poppins text-[#4B4B4B] text-center px-1">
+              By paying, you agree to our{" "}
+              <a href="#" className="text-[#7658A0] font-semibold underline">
+                Terms
+              </a>{" "}
+              and{" "}
+              <a href="#" className="text-[#7658A0] font-semibold underline">
+                Privacy Policy
+              </a>
+              .
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="flex items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold px-6 py-3"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handlePayClick()}
+                disabled={loading || creatingSubscription || !quoteData}
+                className="flex items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold px-8 py-3 disabled:opacity-60"
+              >
+                {loading || creatingSubscription ? "Please wait…" : "Pay with Razorpay"}
+              </button>
             </div>
           </div>
         </div>

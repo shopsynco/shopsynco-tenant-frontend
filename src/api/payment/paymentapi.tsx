@@ -89,6 +89,7 @@ interface RazorpayOrderPayload {
   subscription_id: string;
   amount: number;
   currency?: string;
+  /** Optional note for backend; omit to let Razorpay Checkout show all methods */
   method?: "credit_card" | "debit_card" | "upi";
 }
 
