@@ -7,6 +7,7 @@ import AuthLayout from "../components/AuthLayout";
 import { showSuccess } from "../../../components/swalHelper";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
+import { redirectToTenantAppPath } from "../../../api/axios_config";
 
 type TenantSlugResponse = {
   slug?: string;
@@ -252,12 +253,13 @@ export default function LoginPage() {
           <p className="text-center text-sm text-[#42739A] font-raleway">
             Don’t have an account?
             <span
-              onClick={() => navigate("/email-verify")}
+              onClick={() => redirectToTenantAppPath("/email-verify")}
               className="text-[#6A9ECF] font-medium ml-1 hover:underline cursor-pointer"
               role="link"
               tabIndex={0}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") navigate("/email-verify");
+                if (e.key === "Enter" || e.key === " ")
+                  redirectToTenantAppPath("/email-verify");
               }}
             >
               Sign Up

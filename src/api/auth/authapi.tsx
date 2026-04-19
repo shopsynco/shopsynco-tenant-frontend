@@ -2,6 +2,10 @@ import axios from "axios";
 import { BASE_URL } from "../axios_config";
 import axiosInstance from "../../store/refreshToken/tokenUtils";
 
+/** Shown when forgot-password is submitted for an email with no user account. */
+export const FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE =
+  "No account is registered with this email address.";
+
 /** First human-readable string from DRF / standardized error payloads. */
 function messageFromResponseData(data: unknown, fallback: string): string {
   if (!data || typeof data !== "object") return fallback;
@@ -51,13 +55,33 @@ export const forgotPassword = async (email: string) => {
     return response.data;
   } catch (error: any) {
     const statusCode = error?.response?.status;
+    const data = error?.response?.data;
+
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      const raw = (data as Record<string, unknown>).email;
+      const first =
+        Array.isArray(raw) && raw.length > 0
+          ? String(raw[0])
+          : typeof raw === "string"
+            ? raw
+            : "";
+      const low = first.toLowerCase();
+      if (
+        low.includes("no user found") ||
+        low.includes("does not exist") ||
+        low.includes("not registered") ||
+        low.includes("no account")
+      ) {
+        throw new Error(FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE);
+      }
+    }
+
     const detail = messageFromAxiosError(
       error,
       "Request failed. Please try again."
     );
     const normalized = detail.toLowerCase();
 
-    // Keep UX explicit for unknown emails in forgot-password flow.
     if (
       statusCode === 404 ||
       normalized.includes("user not found") ||
@@ -65,7 +89,7 @@ export const forgotPassword = async (email: string) => {
       normalized.includes("email does not exist") ||
       normalized.includes("not registered")
     ) {
-      throw new Error("No account found with this email address. Please sign up.");
+      throw new Error(FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE);
     }
 
     throw new Error(detail);

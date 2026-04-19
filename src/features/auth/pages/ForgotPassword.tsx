@@ -2,8 +2,15 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
-import { authApi } from "../../../api/auth/authapi";
-import { showError, showSuccess } from "../../../components/swalHelper";
+import {
+  authApi,
+  FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE,
+} from "../../../api/auth/authapi";
+import {
+  showError,
+  showForgotPasswordNoAccount,
+  showSuccess,
+} from "../../../components/swalHelper";
 
 type ApiErrors = Record<string, string[]>;
 
@@ -40,8 +47,7 @@ export default function ForgotPasswordPage() {
       setLoading(true);
       const response = await authApi.forgotPassword(email);
       const serverMsg =
-        response?.data?.detail ||
-        response?.data?.message ||
+        (response as { message?: string })?.message ||
         "If this email is registered, a reset code has been sent.";
 
       showSuccess("Verification Sent", serverMsg, () =>
@@ -63,11 +69,26 @@ export default function ForgotPasswordPage() {
             if (Array.isArray(v)) fieldErrors[k] = v.map(String);
             else fieldErrors[k] = [String(v)];
           });
+          const emailMsg = fieldErrors.email?.join(" ").toLowerCase() ?? "";
+          if (
+            emailMsg.includes("no user found") ||
+            emailMsg.includes("not registered") ||
+            emailMsg.includes("does not exist")
+          ) {
+            setErrors({ email: [FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE] });
+            showForgotPasswordNoAccount(email);
+            return;
+          }
           setErrors(fieldErrors);
           showApiErrorsWithSwal(fieldErrors);
         }
       } else {
-        showError("Error", err?.message || "Request failed.");
+        if (err?.message === FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE) {
+          setErrors({ email: [FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE] });
+          showForgotPasswordNoAccount(email);
+        } else {
+          showError("Forgot Password", err?.message || "Request failed.");
+        }
       }
     } finally {
       setLoading(false);

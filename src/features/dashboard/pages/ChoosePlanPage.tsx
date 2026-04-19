@@ -56,6 +56,31 @@ function resolveCardVariant(
   return index % 3 === 0 ? "green" : index % 3 === 1 ? "blue" : "yellow";
 }
 
+/** Left-to-right order on Choose Plan: Starter → Professional → Enterprise. */
+function planTierSortIndex(name: string | undefined): number {
+  const n = String(name ?? "")
+    .trim()
+    .toLowerCase();
+  if (n.includes("starter")) return 0;
+  if (n.includes("professional")) return 1;
+  if (n.includes("enterprise")) return 2;
+  return 50;
+}
+
+/** Card accent per tier (matches design: green / blue / gold). */
+function variantForPlanName(
+  name: string | undefined,
+  fallbackIndex: number
+): CardVariant {
+  const n = String(name ?? "")
+    .trim()
+    .toLowerCase();
+  if (n.includes("starter")) return "green";
+  if (n.includes("professional")) return "blue";
+  if (n.includes("enterprise")) return "yellow";
+  return resolveCardVariant(undefined, fallbackIndex);
+}
+
 /* ----------  tiny card component – keeps useState inside  ---------- */
 const PlanCard = ({
   plan,
@@ -222,12 +247,14 @@ export default function ChoosePlanPage() {
         }
 
         const deduped = Array.from(byName.values());
+        deduped.sort((a, b) => {
+          const diff = planTierSortIndex(a.name) - planTierSortIndex(b.name);
+          if (diff !== 0) return diff;
+          return String(a.name).localeCompare(String(b.name));
+        });
         const withVariants = deduped.map((p, i) => ({
           ...p,
-          variant: resolveCardVariant(
-            typeof p.variant === "string" ? p.variant : undefined,
-            i
-          ),
+          variant: variantForPlanName(p.name, i),
         }));
         setPlans(withVariants);
         if (withVariants.length) {
@@ -284,14 +311,13 @@ export default function ChoosePlanPage() {
     );
   };
 
-  const sorted = [...plans].sort((a, b) => {
-    const rank = (v: Plan["variant"]): number => {
-      if (v === "green") return 0;
-      if (v === "blue") return 1;
-      return 2;
-    };
-    return rank(a.variant) - rank(b.variant);
-  });
+  const sortedPlans = useMemo(() => {
+    return [...plans].sort((a, b) => {
+      const diff = planTierSortIndex(a.name) - planTierSortIndex(b.name);
+      if (diff !== 0) return diff;
+      return String(a.name).localeCompare(String(b.name));
+    });
+  }, [plans]);
 
   const billingChoices = useMemo(() => {
     if (selectedPlan?.billing_periods?.length) {
@@ -362,8 +388,8 @@ export default function ChoosePlanPage() {
 
             {/* Cards – parent stays hook-safe */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start auto-rows-min">
-              {sorted.length > 0 ? (
-                sorted.map((plan) => (
+              {sortedPlans.length > 0 ? (
+                sortedPlans.map((plan) => (
                   <PlanCard
                     key={String(plan.id ?? plan.name)}
                     plan={plan}

@@ -98,3 +98,34 @@ export function resolveTenantManagerBaseUrl(): string {
   }
   return "";
 }
+
+/**
+ * Canonical origin for this tenant SaaS web app (login, email-verify, signup).
+ * Use for full-page redirects so signup always lands on the correct Vite host.
+ * Set VITE_TENANT_APP_ORIGIN (no trailing slash). With staging API, defaults to
+ * https://stagingtenant.shopsynco.com; otherwise current window origin.
+ */
+export function resolveTenantAppOrigin(): string {
+  const fromEnv = (
+    import.meta.env.VITE_TENANT_APP_ORIGIN as string | undefined
+  )?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+
+  const api = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+  if (api.includes("stagingbackend.shopsynco.com")) {
+    return "https://stagingtenant.shopsynco.com";
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return "";
+}
+
+/** Full-page navigation to a path on the tenant app (e.g. /email-verify). */
+export function redirectToTenantAppPath(path: string): void {
+  if (typeof window === "undefined") return;
+  const origin = resolveTenantAppOrigin();
+  const p = path.startsWith("/") ? path : `/${path}`;
+  window.location.assign(`${origin}${p}`);
+}

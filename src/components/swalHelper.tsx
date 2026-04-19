@@ -1,5 +1,7 @@
 // src/utils/swal.ts
 import Swal from "sweetalert2";
+import { FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE } from "../api/auth/authapi";
+import { redirectToTenantAppPath } from "../api/axios_config";
 
 type Callback = () => void;
 
@@ -81,6 +83,67 @@ export function showSuccess(title: string, message: string, onClose?: Callback) 
           container.style.removeProperty("backdrop-filter");
           container.style.removeProperty("-webkit-backdrop-filter");
         }
+        Swal.close();
+        if (onClose) onClose();
+      });
+    },
+  });
+}
+
+/**
+ * No matching account for forgot-password: explain and offer sign-up on the tenant app (full URL via Vite host when configured).
+ */
+export function showForgotPasswordNoAccount(email: string, onClose?: Callback) {
+  ensureGlobalStyles();
+  const q = (email || "").trim();
+  const signupPath = q
+    ? `/email-verify?email=${encodeURIComponent(q)}`
+    : "/email-verify";
+
+  Swal.fire({
+    html: `
+      <div class="swal-card" role="dialog" aria-labelledby="swal-title" aria-describedby="swal-sub">
+        <div style="width:84px;height:84px;margin:8px auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,193,7,0.15)">
+          <div style="font-size:36px;color:#ffa000">?</div>
+        </div>
+        <h2 id="swal-title" style="margin:6px 0 4px;font-size:20px;font-weight:600;color:#27445a">Forgot Password</h2>
+        <p id="swal-sub" style="margin:0 0 8px;font-size:14px;color:#5f7385">${FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE}</p>
+        <p style="margin:0 0 12px;font-size:13px;color:#5f7385">You can create an account on the sign-up page.</p>
+        <button id="swal-signup-btn" type="button" style="display:inline-block;margin-top:6px;width:85%;padding:12px;border-radius:12px;background:#719CBF;color:#fff;font-weight:600;border:none;cursor:pointer;box-shadow:0 6px 14px rgba(87,129,163,0.18)">Sign up</button>
+        <button id="swal-ok-btn" type="button" style="display:inline-block;margin-top:10px;width:85%;padding:12px;border-radius:12px;background:#eef2f6;color:#27445a;font-weight:600;border:none;cursor:pointer">Close</button>
+      </div>
+    `,
+    showConfirmButton: false,
+    allowOutsideClick: true,
+    padding: 0,
+    background: "transparent",
+    customClass: { popup: "swal2-custom-popup" },
+    didOpen: () => {
+      const container = document.querySelector(".swal2-container") as HTMLElement | null;
+      if (container) {
+        container.classList.add("custom-swal-backdrop");
+        container.style.background = PAGE_GRADIENT;
+        container.style.setProperty("backdrop-filter", "blur(14px)");
+        container.style.setProperty("-webkit-backdrop-filter", "blur(14px)");
+      }
+
+      const cleanup = () => {
+        if (container) {
+          container.classList.remove("custom-swal-backdrop");
+          container.style.background = "";
+          container.style.removeProperty("backdrop-filter");
+          container.style.removeProperty("-webkit-backdrop-filter");
+        }
+      };
+
+      document.getElementById("swal-signup-btn")?.addEventListener("click", () => {
+        cleanup();
+        Swal.close();
+        redirectToTenantAppPath(signupPath);
+      });
+
+      document.getElementById("swal-ok-btn")?.addEventListener("click", () => {
+        cleanup();
         Swal.close();
         if (onClose) onClose();
       });
