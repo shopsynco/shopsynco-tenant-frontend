@@ -234,6 +234,26 @@ export const registerUser = async (data: RegisterPayload) => {
     throw new Error(errorMessage);
   }
 };
+
+export const tenantGoogleAuth = async (idToken: string) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}api/tenants/auth/google/`,
+      { id_token: idToken },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw new Error(
+      messageFromAxiosError(error, "Google authentication failed.")
+    );
+  }
+};
 // ------------------------------------------------------
 // ✅ SEND EMAIL VERIFICATION CODE (after signup)
 // ------------------------------------------------------

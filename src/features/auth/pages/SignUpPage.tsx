@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import bgImage from "../../../assets/authbackground.png";
 import { registerUser } from "../../../api/auth/authapi";
 import { showSuccess, showError } from "../../../components/swalHelper";
+import { BASE_URL } from "../../../api/axios_config";
 
 interface RegisterFormData {
   first_name: string;
@@ -27,6 +28,7 @@ export default function RegisterPage() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -35,6 +37,16 @@ export default function RegisterPage() {
       setFormData((prev) => ({ ...prev, email: emailParam }));
     }
   }, [location.search]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const access = params.get("auth_access_token");
+    const refresh = params.get("auth_refresh_token");
+    if (!access || !refresh) return;
+    localStorage.setItem("accessToken", access);
+    localStorage.setItem("refreshToken", refresh);
+    window.location.assign("/dashboard");
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
@@ -79,6 +91,15 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSignup = async () => {
+    setGoogleLoading(true);
+    const callbackReturn = `${window.location.origin}/signup`;
+    const redirectUrl =
+      `${BASE_URL}api/user/auth/google/login/?flow=tenant`
+      + `&return_to=${encodeURIComponent(callbackReturn)}`;
+    window.location.assign(redirectUrl);
   };
 
   return (
@@ -237,6 +258,18 @@ export default function RegisterPage() {
               disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? "Creating Account..." : "Create Account"}
+          </button>
+
+          <button
+            type="button"
+            disabled={googleLoading}
+            onClick={handleGoogleSignup}
+            className="mt-1 w-full py-4 rounded-[10px] shadow-lg border border-gray-300
+              bg-white hover:bg-gray-100 transition
+              font-poppins font-semibold text-[24px] leading-[33px] text-[#1f2937]
+              disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {googleLoading ? "Connecting..." : "Sign Up with Google"}
           </button>
 
           <p className="text-center text-sm mt-2">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import { loginUser } from "../../../store/authSlice";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { showSuccess } from "../../../components/swalHelper";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
+import { BASE_URL } from "../../../api/axios_config";
 
 type TenantSlugResponse = {
   slug?: string;
@@ -27,6 +28,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const access = params.get("auth_access_token");
+    const refresh = params.get("auth_refresh_token");
+    if (!access || !refresh) return;
+    localStorage.setItem("accessToken", access);
+    localStorage.setItem("refreshToken", refresh);
+    window.location.assign("/dashboard");
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +151,16 @@ export default function LoginPage() {
     if (errorMessage) setErrorMessage("");
   };
 
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setErrorMessage("");
+    const callbackReturn = `${window.location.origin}/login`;
+    const redirectUrl =
+      `${BASE_URL}api/user/auth/google/login/?flow=tenant`
+      + `&return_to=${encodeURIComponent(callbackReturn)}`;
+    window.location.assign(redirectUrl);
+  };
+
   return (
     <AuthLayout>
       <div
@@ -248,6 +270,17 @@ export default function LoginPage() {
             aria-busy={loading}
           >
             {loading ? "Logging in..." : "Login"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading}
+            className="w-full py-4 rounded-xl font-bold text-[#1f2937]
+              bg-white hover:bg-gray-100 border border-gray-300
+              shadow-md transition font-raleway disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {googleLoading ? "Connecting..." : "Sign In with Google"}
           </button>
 
           <p className="text-center text-sm text-[#42739A] font-raleway">
