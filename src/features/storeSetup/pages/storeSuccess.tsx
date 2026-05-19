@@ -1,17 +1,20 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import bgImage from "../../../assets/backgroundsuccess.png";
-import { CheckCircle } from "lucide-react";
+import shopLogo from "../../../assets/Name-Logo.png";
+import { Check, CheckCircle, Copy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { resolvePostStoreSetupDashboard } from "../../../api/axios_config";
 import { markStoreOnboardingComplete } from "../../../utils/planFlow";
+import { copyTextToClipboard } from "../../../utils/copyToClipboard";
 
 const StoreSuccessPage: React.FC = () => {
   const [dashboardUrl, setDashboardUrl] = useState<string>("");
   const [sameOriginPath, setSameOriginPath] = useState<string | null>(null);
   const [leaveAppHref, setLeaveAppHref] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const navigate = useNavigate();
 
-  // Clear before paint so "Go to Dashboard" never hits PrivateRoute with stale login flags.
   useLayoutEffect(() => {
     markStoreOnboardingComplete();
   }, []);
@@ -24,8 +27,16 @@ const StoreSuccessPage: React.FC = () => {
     setLeaveAppHref(resolved.leaveAppHref);
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(dashboardUrl);
+  const handleCopy = async () => {
+    if (!dashboardUrl.trim()) return;
+    setCopyError(false);
+    const ok = await copyTextToClipboard(dashboardUrl);
+    if (ok) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } else {
+      setCopyError(true);
+    }
   };
 
   return (
@@ -37,18 +48,14 @@ const StoreSuccessPage: React.FC = () => {
         backgroundPosition: "center",
       }}
     >
-      {/* Floating confetti / shapes */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-          <img
-            src="/confetti.svg"
-            alt="confetti"
-            className="w-full h-full object-cover opacity-70"
-          />
-        </div>
+      <div className="absolute top-6 left-6 z-20">
+        <img
+          src={shopLogo}
+          alt="ShopSynco"
+          className="h-10 w-auto object-contain"
+        />
       </div>
 
-      {/* Center Card */}
       <div className="relative z-10 w-[90%] max-w-md bg-gradient-to-r from-[#719CBF]/10 via-[#719CBF]/10 to-[#719CBF]/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl p-8 text-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-16 h-16 flex items-center justify-center rounded-full bg-green-100">
@@ -61,30 +68,37 @@ const StoreSuccessPage: React.FC = () => {
 
           <p className="text-gray-600">Your dashboard is ready at</p>
 
-          <div className="flex items-center justify-between bg-gray-100 rounded-lg px-3 py-2 w-full text-gray-700 font-mono">
-            <span className="truncate">{dashboardUrl}</span>
-            <button
-              onClick={handleCopy}
-              className="text-blue-600 hover:text-blue-800 transition"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-5 h-5"
+          <div className="w-full">
+            <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2 w-full text-gray-700 font-mono text-sm">
+              <span className="truncate flex-1 text-left" title={dashboardUrl}>
+                {dashboardUrl || "…"}
+              </span>
+              <button
+                type="button"
+                onClick={() => void handleCopy()}
+                disabled={!dashboardUrl.trim()}
+                aria-label={copied ? "Copied to clipboard" : "Copy dashboard URL"}
+                className="shrink-0 p-1.5 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 16.5v1.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0020 18v-7.5A2.25 2.25 0 0017.75 8h-1.5M8 16.5H6.75A2.25 2.25 0 014.5 14.25v-7.5A2.25 2.25 0 016.75 4.5h7.5A2.25 2.25 0 0116.5 6.75V8M8 16.5h8.25"
-                />
-              </svg>
-            </button>
+                {copied ? (
+                  <Check className="w-5 h-5 text-green-600" aria-hidden />
+                ) : (
+                  <Copy className="w-5 h-5" aria-hidden />
+                )}
+              </button>
+            </div>
+            {copied && (
+              <p className="text-xs text-green-600 mt-1 text-left">Copied to clipboard</p>
+            )}
+            {copyError && (
+              <p className="text-xs text-red-600 mt-1 text-left">
+                Could not copy. Select the URL and copy manually.
+              </p>
+            )}
           </div>
 
           <button
+            type="button"
             onClick={() => {
               markStoreOnboardingComplete();
               if (sameOriginPath) {
@@ -105,11 +119,6 @@ const StoreSuccessPage: React.FC = () => {
             by signing in to our website.
           </p>
         </div>
-      </div>
-
-      {/* Logo */}
-      <div className="absolute top-6 left-6">
-        <img src="/logo.svg" alt="ShopSynco" className="w-28" />
       </div>
     </div>
   );
