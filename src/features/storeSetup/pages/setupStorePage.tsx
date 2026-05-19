@@ -399,15 +399,26 @@ export default function StoreSetupPage() {
             ) : null}
           </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#719CBF] text-white py-4 px-6 rounded-xl text-lg font-semibold 
-            hover:bg-[#5c91c4] transition duration-300 mt-6 disabled:opacity-50"
-          >
-            {loading ? "Saving..." : "Save"}
-          </button>
+          {/* Previous + Next */}
+          <div className="flex flex-col-reverse sm:flex-row gap-3 w-full mt-6">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => navigate(-1)}
+              className="sm:flex-1 py-4 px-6 rounded-xl text-lg font-semibold border-2 border-[#719CBF] text-[#719CBF] bg-white/40
+                hover:bg-white/70 transition duration-300 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="sm:flex-1 bg-[#719CBF] text-white py-4 px-6 rounded-xl text-lg font-semibold 
+                hover:bg-[#5c91c4] transition duration-300 disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Next"}
+            </button>
+          </div>
         </form>
       </div>
     </div>

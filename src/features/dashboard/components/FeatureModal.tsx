@@ -50,10 +50,16 @@ export default function FeatureStorePage({
   const navigate = useNavigate();
   const getFeatureId = (id: string | number) => String(id);
 
+  const priceNum = (p: unknown) => {
+    const n = Number(p);
+    return Number.isFinite(n) ? n : 0;
+  };
+
   const selectedFeatures = features.filter((f) =>
     selected.includes(getFeatureId(f.id))
   );
-  const subtotal = selectedFeatures.reduce((sum, f) => sum + f.price, 0);
+  /** API may return `price` as string — avoid `number + string` concat in reduce. */
+  const subtotal = selectedFeatures.reduce((sum, f) => sum + priceNum(f.price), 0);
   const gst = subtotal * 0.18;
   const total = subtotal + gst;
 
@@ -371,7 +377,7 @@ export default function FeatureStorePage({
 
                       <div className="flex items-center justify-between">
                         <p className="font-semibold text-gray-800 text-sm">
-                          ₹ {f.price}/mo
+                          ₹ {priceNum(f.price)}/mo
                         </p>
 
                         <button
@@ -420,7 +426,7 @@ export default function FeatureStorePage({
                       <p className="text-xs text-gray-500">{f.description}</p>
                     </div>
                     <p className="text-sm font-semibold text-gray-800">
-                      ₹ {f.price}/mo
+                      ₹ {priceNum(f.price)}/mo
                     </p>
                   </div>
                 ))}
