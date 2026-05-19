@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import bgImage from "../../../assets/backgroundstore.png";
 import {
@@ -13,6 +13,12 @@ import { showError, showSuccess } from "../../../components/swalHelper";
 import { markStoreOnboardingComplete } from "../../../utils/planFlow";
 
 const StoreSetupContactPage: React.FC = () => {
+  /** Same email as ShopSynco tenant login / signup — shown read-only; backend ignores any other value. */
+  const signupEmail = useMemo(
+    () => (typeof window !== "undefined" ? localStorage.getItem("user_email")?.trim() ?? "" : ""),
+    [],
+  );
+
   const [countries, setCountries] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
   const [selectedCountryId, setSelectedCountryId] = useState<number | null>(
@@ -22,11 +28,16 @@ const StoreSetupContactPage: React.FC = () => {
     business_address: "",
     country: "",
     state: "",
-    contact_email: "",
+    contact_email: signupEmail,
     contact_number: "",
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!signupEmail) return;
+    setFormData((prev) => ({ ...prev, contact_email: signupEmail }));
+  }, [signupEmail]);
 
   // ✅ Fetch countries on mount
   useEffect(() => {
@@ -78,14 +89,17 @@ const StoreSetupContactPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const email = formData.contact_email?.trim();
+      const email = signupEmail || formData.contact_email?.trim();
       if (!email) {
-        showError("Validation Error", "Please enter a valid contact email.");
+        showError(
+          "Missing email",
+          "We could not find your signup email. Go back to login and sign in again, then continue store setup.",
+        );
         setLoading(false);
         return;
       }
 
-      await storeContactSetup(formData);
+      await storeContactSetup({ ...formData, contact_email: email });
       const loginEmail = localStorage.getItem("user_email")?.trim();
       const discoverEmail = loginEmail || email;
       await discoverTenantSlug(discoverEmail);
@@ -215,24 +229,28 @@ const StoreSetupContactPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ---------- Contact Email ---------- */}
+          {/* ---------- Contact Email (signup — read-only) ---------- */}
           <div>
             <label
               htmlFor="contact-email"
               className="block text-lg font-medium text-[#719CBF]"
             >
-              Contact Email
+              Contact email
             </label>
             <input
               type="email"
               id="contact-email"
               value={formData.contact_email}
-              onChange={handleChange}
-              placeholder="Enter your contact email"
-              required
-              className="w-full p-4 mt-2 text-sm text-gray-700 bg-transparent border border-gray-300 rounded-lg
-                 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1]"
+              readOnly
+              autoComplete="email"
+              aria-readonly="true"
+              placeholder={signupEmail ? undefined : "Sign in to load your email"}
+              className="w-full p-4 mt-2 text-sm text-gray-700 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed"
             />
+            <p className="mt-2 text-xs text-gray-500">
+              This is the email you used to sign up for ShopSynco. It is used as your store contact email and cannot
+              be changed here.
+            </p>
           </div>
 
           {/* ---------- Contact Number ---------- */}
