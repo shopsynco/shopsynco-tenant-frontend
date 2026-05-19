@@ -4,6 +4,7 @@ import bgImage from "../../../assets/authbackground.png";
 import { registerUser } from "../../../api/auth/authapi";
 import { showSuccess, showError } from "../../../components/swalHelper";
 import { BASE_URL } from "../../../api/axios_config";
+import { isValidSignupPhone, SIGNUP_PHONE_HINT } from "../../../utils/signupPhoneValidation";
 
 interface RegisterFormData {
   first_name: string;
@@ -63,12 +64,19 @@ export default function RegisterPage() {
       return;
     }
 
+    const phoneTrimmed = formData.phone.trim();
+    if (!isValidSignupPhone(phoneTrimmed)) {
+      showError("Invalid phone number", SIGNUP_PHONE_HINT);
+      setLoading(false);
+      return;
+    }
+
     try {
       const payload = {
         first_name: formData.first_name,
         company_name: formData.company_name,
         email: formData.email.toLowerCase().trim(),
-        phone: formData.phone,
+        phone: phoneTrimmed,
         password: formData.password,
         confirm_password: formData.confirmPassword,
       };
@@ -199,7 +207,10 @@ export default function RegisterPage() {
                 type="tel"
                 name="phone"
                 id="phone"
-                placeholder="Your Phone Number"
+                placeholder="+1 555 123 4567"
+                autoComplete="tel"
+                inputMode="tel"
+                maxLength={22}
                 value={formData.phone}
                 onChange={handleChange}
                 className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"

@@ -12,6 +12,7 @@ import {
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
 import { setPlansEntryFromDashboard } from "../../../../utils/planFlow";
+import { paymentErrorMessage } from "../../../../utils/paymentErrorMessage";
 
 declare global {
   interface Window {
@@ -445,7 +446,7 @@ export default function UpgradePaymentPage() {
       console.error("❌ UPI Payment Error:", err);
       Swal.fire(
         "Error",
-        err.response?.data?.error ||
+        paymentErrorMessage(err.response?.data) ||
           err.response?.data?.message ||
           "UPI Payment failed. Please try again.",
         "error"
@@ -470,7 +471,7 @@ export default function UpgradePaymentPage() {
       console.error("❌ Card Payment Error:", err);
       Swal.fire(
         "Error",
-        err.response?.data?.error ||
+        paymentErrorMessage(err.response?.data) ||
           err.response?.data?.message ||
           "Card payment failed. Please try again.",
         "error"

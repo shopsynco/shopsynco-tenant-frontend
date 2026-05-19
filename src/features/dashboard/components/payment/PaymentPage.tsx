@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { paymentErrorMessage } from "../../../../utils/paymentErrorMessage";
 import {
   createCheckoutSubscription,
   createRazorpayOrder,
@@ -230,14 +231,14 @@ export default function PaymentPage() {
       await openRazorpayCheckout();
     } catch (err: unknown) {
       console.error("Payment checkout error:", err);
-      const ax = err as { response?: { data?: { error?: string; message?: string } } };
-      Swal.fire(
-        "Error",
-        ax?.response?.data?.error ||
-          ax?.response?.data?.message ||
-          "Payment could not be started. Please try again.",
-        "error"
-      );
+      const ax = err as { response?: { data?: unknown } };
+      const msg =
+        paymentErrorMessage(ax?.response?.data) ||
+        (typeof (ax?.response?.data as { message?: string })?.message === "string"
+          ? (ax?.response?.data as { message?: string }).message
+          : "") ||
+        "Payment could not be started. Please try again.";
+      Swal.fire("Error", msg, "error");
     } finally {
       setLoading(false);
     }
