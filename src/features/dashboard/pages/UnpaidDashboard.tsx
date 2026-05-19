@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Header from "../components/dashboardHeader";
 import { AlertTriangle } from "lucide-react";
 import { fetchUserProfile } from "../../../api/auth/authapi";
+import { openContactSupport } from "../../../utils/supportContact";
 
 export default function UnpaidDashboard() {
   const [domain, setDomain] = useState<string>("");
@@ -145,7 +146,11 @@ export default function UnpaidDashboard() {
                   Our support team is ready to assist you with any questions
                   about your subscription.
                 </p>
-                <button className="text-sm font-medium text-[#6A3CB1] hover:underline">
+                <button
+                  type="button"
+                  onClick={() => openContactSupport("Payment & subscription")}
+                  className="text-sm font-medium text-[#6A3CB1] hover:underline"
+                >
                   Contact Support →
                 </button>
               </div>

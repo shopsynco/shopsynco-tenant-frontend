@@ -27,6 +27,7 @@ import {
 } from "./payment/PaymentModal";
 import { useNavigate } from "react-router-dom";
 import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
+import { openContactSupport } from "../../../utils/supportContact";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -360,7 +361,11 @@ export default function ManageBillingPage() {
                 your subscription.
               </p>
               <div className="flex justify-end">
-                <button className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => openContactSupport("Manage billing")}
+                  className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1"
+                >
                   Contact Support <ArrowRight size={14} />
                 </button>
               </div>

@@ -6,6 +6,7 @@ import InvoiceDetailModal from "../components/invoiceDetailModal";
 import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
 import { useNavigate } from "react-router-dom";
 import { showError } from "../../../components/swalHelper";
+import { openContactSupport } from "../../../utils/supportContact";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -149,7 +150,11 @@ export default function InvoicesPage() {
             your subscription.
           </p>
           <div className="flex justify-end">
-            <button className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => openContactSupport("Invoices")}
+              className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1"
+            >
               Contact Support <ArrowRight size={14} />
             </button>
           </div>
