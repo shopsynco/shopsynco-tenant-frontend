@@ -27,7 +27,7 @@ import {
 } from "./payment/PaymentModal";
 import { useNavigate } from "react-router-dom";
 import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
-import { openContactSupport } from "../../../utils/supportContact";
+import PlatformSupportChatModal from "./PlatformSupportChatModal";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -86,6 +86,7 @@ export default function ManageBillingPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [supportTopic, setSupportTopic] = useState<string | null>(null);
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -363,7 +364,7 @@ export default function ManageBillingPage() {
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => openContactSupport("Manage billing")}
+                  onClick={() => setSupportTopic("Manage billing")}
                   className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1"
                 >
                   Contact Support <ArrowRight size={14} />
@@ -400,6 +401,11 @@ export default function ManageBillingPage() {
       {activeModal === "deleteCard" && (
         <DeleteModal type="card" onClose={closeModal} />
       )}
+      <PlatformSupportChatModal
+        open={supportTopic !== null}
+        onClose={() => setSupportTopic(null)}
+        topicLabel={supportTopic ?? ""}
+      />
     </div>
   );
 }

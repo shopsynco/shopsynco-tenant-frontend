@@ -6,13 +6,14 @@ import InvoiceDetailModal from "../components/invoiceDetailModal";
 import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
 import { useNavigate } from "react-router-dom";
 import { showError } from "../../../components/swalHelper";
-import { openContactSupport } from "../../../utils/supportContact";
+import PlatformSupportChatModal from "../components/PlatformSupportChatModal";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null); // Track selected invoice
   const [isModalOpen, setIsModalOpen] = useState(false); // Track modal visibility
+  const [supportTopic, setSupportTopic] = useState<string | null>(null);
   const navigate = useNavigate();
   // Fetch invoices from the API
   useEffect(() => {
@@ -152,7 +153,7 @@ export default function InvoicesPage() {
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => openContactSupport("Invoices")}
+              onClick={() => setSupportTopic("Invoices")}
               className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1"
             >
               Contact Support <ArrowRight size={14} />
@@ -165,6 +166,11 @@ export default function InvoicesPage() {
       {isModalOpen && selectedInvoice && (
         <InvoiceDetailModal invoice={selectedInvoice} closeModal={closeModal} />
       )}
+      <PlatformSupportChatModal
+        open={supportTopic !== null}
+        onClose={() => setSupportTopic(null)}
+        topicLabel={supportTopic ?? ""}
+      />
     </div>
   );
 }

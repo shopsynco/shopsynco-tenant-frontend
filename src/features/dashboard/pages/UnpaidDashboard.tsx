@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import Header from "../components/dashboardHeader";
 import { AlertTriangle } from "lucide-react";
 import { fetchUserProfile } from "../../../api/auth/authapi";
-import { openContactSupport } from "../../../utils/supportContact";
+import PlatformSupportChatModal from "../components/PlatformSupportChatModal";
 
 export default function UnpaidDashboard() {
   const [domain, setDomain] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+  const [supportTopic, setSupportTopic] = useState<string | null>(null);
 
   useEffect(() => {
     // Get domain from localStorage or API
@@ -148,7 +149,7 @@ export default function UnpaidDashboard() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => openContactSupport("Payment & subscription")}
+                  onClick={() => setSupportTopic("Payment & subscription")}
                   className="text-sm font-medium text-[#6A3CB1] hover:underline"
                 >
                   Contact Support →
@@ -158,6 +159,11 @@ export default function UnpaidDashboard() {
           </div>
         </div>
       </main>
+      <PlatformSupportChatModal
+        open={supportTopic !== null}
+        onClose={() => setSupportTopic(null)}
+        topicLabel={supportTopic ?? ""}
+      />
     </div>
   );
 }

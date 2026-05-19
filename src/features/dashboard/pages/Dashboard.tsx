@@ -17,12 +17,13 @@ import {
 } from "../../../api/axios_config";
 import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
 import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
-import { openGiveFeedback } from "../../../utils/supportContact";
 import FeatureStorePage from "../components/FeatureModal";
+import FeedbackModal from "../components/FeedbackModal";
 import Header from "../components/dashboardHeader";
 
 export default function Dashboard() {
   const [isFeatureStoreOpen, setIsFeatureStoreOpen] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
 
@@ -574,7 +575,7 @@ export default function Dashboard() {
 
                 <button
                   type="button"
-                  onClick={() => openGiveFeedback()}
+                  onClick={() => setFeedbackModalOpen(true)}
                   className="flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50 transition font-medium text-black"
                   style={{ borderColor: "#8B6BB6" }}
                 >
@@ -593,6 +594,7 @@ export default function Dashboard() {
       {isFeatureStoreOpen && (
         <FeatureStorePage onClose={() => setIsFeatureStoreOpen(false)} />
       )}
+      <FeedbackModal open={feedbackModalOpen} onClose={() => setFeedbackModalOpen(false)} />
     </div>
   );
 }
