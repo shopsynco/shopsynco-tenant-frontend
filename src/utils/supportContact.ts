@@ -23,3 +23,8 @@ export function openContactSupport(context: string): void {
       : "ShopSynco — Billing & subscription support";
   window.location.assign(getSupportMailtoUrl(subject));
 }
+
+/** Opens mail client for tenant dashboard / product feedback (same inbox as support). */
+export function openGiveFeedback(): void {
+  openContactSupport("Tenant dashboard feedback");
+}

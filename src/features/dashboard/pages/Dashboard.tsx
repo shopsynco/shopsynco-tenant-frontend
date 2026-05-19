@@ -17,6 +17,7 @@ import {
 } from "../../../api/axios_config";
 import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
 import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
+import { openGiveFeedback } from "../../../utils/supportContact";
 import FeatureStorePage from "../components/FeatureModal";
 import Header from "../components/dashboardHeader";
 
@@ -572,6 +573,8 @@ export default function Dashboard() {
                 </button>
 
                 <button
+                  type="button"
+                  onClick={() => openGiveFeedback()}
                   className="flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50 transition font-medium text-black"
                   style={{ borderColor: "#8B6BB6" }}
                 >
