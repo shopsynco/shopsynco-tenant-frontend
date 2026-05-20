@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import bgImage from "../../../assets/authbackground.png";
 import { registerUser } from "../../../api/auth/authapi";
 import { showSuccess, showError } from "../../../components/swalHelper";
@@ -30,6 +31,8 @@ export default function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -227,16 +230,26 @@ export default function RegisterPage() {
             >
               Create Password
             </label>
-            <input
-              type="password"
-              name="password"
-              id="password"
-              placeholder="Create a strong password (min 8 characters)"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                id="password"
+                placeholder="Create a strong password (min 8 characters)"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-5 py-3 pr-12 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-3 flex items-center text-[#5f7f9c] hover:text-[#42739A]"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {/* Confirm Password */}
@@ -247,16 +260,26 @@ export default function RegisterPage() {
             >
               Confirm Password
             </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              id="confirmPassword"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                id="confirmPassword"
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="w-full px-5 py-3 pr-12 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-3 flex items-center text-[#5f7f9c] hover:text-[#42739A]"
+                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {/* Submit button */}
