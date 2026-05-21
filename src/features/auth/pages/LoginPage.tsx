@@ -8,7 +8,6 @@ import { showSuccess } from "../../../components/swalHelper";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
-import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import {
   decodeJwtPayload,
   oauthErrorMessage,
