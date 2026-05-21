@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import bgImage from "../../../assets/authbackground.png";
 import { registerUser } from "../../../api/auth/authapi";
 import { showSuccess, showError } from "../../../components/swalHelper";
-import { BASE_URL } from "../../../api/axios_config";
+import { startTenantGoogleOAuth } from "../utils/googleOAuth";
 import { isValidSignupPhone, SIGNUP_PHONE_HINT } from "../../../utils/signupPhoneValidation";
 
 interface RegisterFormData {
@@ -106,11 +106,16 @@ export default function RegisterPage() {
 
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
-    const callbackReturn = `${window.location.origin}/signup`;
-    const redirectUrl =
-      `${BASE_URL}api/user/auth/google/login/?flow=tenant`
-      + `&return_to=${encodeURIComponent(callbackReturn)}`;
-    window.location.assign(redirectUrl);
+    try {
+      await startTenantGoogleOAuth("/signup");
+    } catch (error: unknown) {
+      setGoogleLoading(false);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to continue with Google sign-in.";
+      showError("Google Sign Up", message);
+    }
   };
 
   return (

@@ -8,7 +8,12 @@ import { showSuccess } from "../../../components/swalHelper";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
-import { BASE_URL } from "../../../api/axios_config";
+import { discoverTenantSlug } from "../../../api/auth/slugapi";
+import {
+  decodeJwtPayload,
+  oauthErrorMessage,
+  startTenantGoogleOAuth,
+} from "../utils/googleOAuth";
 
 type TenantSlugResponse = {
   slug?: string;
@@ -32,11 +37,73 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const oauthError = (params.get("error") || "").trim();
     const access = params.get("auth_access_token");
     const refresh = params.get("auth_refresh_token");
+
+    if (oauthError) {
+      const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+      window.history.replaceState({}, document.title, cleanUrl);
+      setErrorMessage(oauthErrorMessage(oauthError));
+      return;
+    }
+
     if (!access || !refresh) return;
+
+    const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    const payload = decodeJwtPayload(access) || {};
+    const emailFromToken =
+      typeof payload.email === "string" ? payload.email.trim() : "";
+    const roleFromToken =
+      typeof payload.role === "string"
+        ? payload.role.trim().toLowerCase()
+        : "";
+    if (roleFromToken === "customer") {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      setErrorMessage(oauthErrorMessage("google_customer_account_conflict"));
+      return;
+    }
+
     localStorage.setItem("accessToken", access);
     localStorage.setItem("refreshToken", refresh);
+
+    const slugFromToken =
+      typeof payload.tenant_slug === "string"
+        ? payload.tenant_slug.trim()
+        : "";
+
+    if (!slugFromToken && emailFromToken) {
+      discoverTenantSlug(emailFromToken)
+        .then((discovered) => {
+          const role = (discovered as { user_role?: string })?.user_role
+            ?.toString()
+            .trim()
+            .toLowerCase();
+          if (role === "customer") {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            setErrorMessage(
+              oauthErrorMessage("google_customer_account_conflict")
+            );
+            return;
+          }
+          const slug =
+            discovered?.tenant_slug ?? discovered?.slug ?? slugFromToken;
+          if (slug) localStorage.setItem("store_slug", slug);
+          window.location.assign("/dashboard");
+        })
+        .catch(() => {
+          window.location.assign("/dashboard");
+        });
+      return;
+    }
+
+    if (slugFromToken) {
+      localStorage.setItem("store_slug", slugFromToken);
+    }
     window.location.assign("/dashboard");
   }, []);
 
@@ -154,11 +221,16 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     setErrorMessage("");
-    const callbackReturn = `${window.location.origin}/login`;
-    const redirectUrl =
-      `${BASE_URL}api/user/auth/google/login/?flow=tenant`
-      + `&return_to=${encodeURIComponent(callbackReturn)}`;
-    window.location.assign(redirectUrl);
+    try {
+      await startTenantGoogleOAuth("/login");
+    } catch (err: unknown) {
+      setGoogleLoading(false);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Unable to continue with Google sign-in.";
+      setErrorMessage(message);
+    }
   };
 
   return (
