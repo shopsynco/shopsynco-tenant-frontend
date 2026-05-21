@@ -27,11 +27,26 @@ export default function EnterEmail() {
 
 try {
   setLoading(true);
-  await sendEmailVerificationCode(email.toLowerCase().trim());
+  const trimmed = email.toLowerCase().trim();
+  const result = await sendEmailVerificationCode(trimmed);
+  const payload = (result as { data?: Record<string, unknown> })?.data ?? result;
+  const skipVerification =
+    payload?.skip_verification === true ||
+    payload?.can_proceed_to_signup === true;
+
+  if (skipVerification) {
+    showSuccess(
+      "Email verified",
+      "This email is already verified. Continue to create your store.",
+      () => navigate(`/signup?email=${encodeURIComponent(trimmed)}`)
+    );
+    return;
+  }
+
   showSuccess(
     "Verification Sent",
     "We’ve sent a 6-digit verification code to your email.",
-    () => navigate(`/verify-email?email=${encodeURIComponent(email)}`)
+    () => navigate(`/verify-email?email=${encodeURIComponent(trimmed)}`)
   );
 } catch (err: any) {
   showError(

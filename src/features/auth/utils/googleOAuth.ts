@@ -55,10 +55,11 @@ export async function startTenantGoogleOAuth(
 
 export function oauthErrorMessage(errorCode: string): string {
   switch (errorCode) {
+    case "tenant_signup_required":
     case "google_customer_account_conflict":
       return (
-        "This email is a storefront (shopper) account and cannot sign in here. " +
-        "Use your store's website to sign in, or sign up below to create your own store."
+        "This email is linked to a shopper account on another store. " +
+        "Use Sign up below to create your own store — you can keep using this email when shopping elsewhere."
       );
     case "google_tenant_not_found":
       return (

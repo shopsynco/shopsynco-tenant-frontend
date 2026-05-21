@@ -102,12 +102,18 @@ export const loginUser = createAsyncThunk<
       store_setup_incomplete: storeSetupIncomplete,
     };
   } catch (err: unknown) {
-    const ax = err as { response?: { data?: { detail?: unknown } } };
-    const detail = ax.response?.data?.detail;
+    const ax = err as {
+      response?: {
+        data?: { detail?: unknown; message?: unknown; code?: unknown };
+      };
+    };
+    const data = ax.response?.data;
     const msg =
-      typeof detail === "string"
-        ? detail
-        : "Login failed, please try again.";
+      typeof data?.message === "string"
+        ? data.message
+        : typeof data?.detail === "string"
+          ? data.detail
+          : "Login failed, please try again.";
     return rejectWithValue(msg);
   }
 });

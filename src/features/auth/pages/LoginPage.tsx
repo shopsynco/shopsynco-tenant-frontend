@@ -33,6 +33,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showSignupHint, setShowSignupHint] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -44,6 +45,10 @@ export default function LoginPage() {
       const cleanUrl = `${window.location.origin}${window.location.pathname}`;
       window.history.replaceState({}, document.title, cleanUrl);
       setErrorMessage(oauthErrorMessage(oauthError));
+      setShowSignupHint(
+        oauthError === "tenant_signup_required" ||
+          oauthError === "google_customer_account_conflict"
+      );
       return;
     }
 
@@ -109,6 +114,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
+    setShowSignupHint(false);
 
     if (!email.trim() || !password) {
       setErrorMessage("Please enter both email and password.");
@@ -201,6 +207,9 @@ export default function LoginPage() {
           }
         }
         setErrorMessage(errMsg);
+        setShowSignupHint(
+          /sign up|shopper account|store is no longer active/i.test(errMsg)
+        );
       }
     } catch (err: any) {
       setErrorMessage(err?.message || "Something went wrong");
@@ -211,10 +220,12 @@ export default function LoginPage() {
   const onEmailChange = (v: string) => {
     setEmail(v);
     if (errorMessage) setErrorMessage("");
+    if (showSignupHint) setShowSignupHint(false);
   };
   const onPasswordChange = (v: string) => {
     setPassword(v);
     if (errorMessage) setErrorMessage("");
+    if (showSignupHint) setShowSignupHint(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -317,6 +328,21 @@ export default function LoginPage() {
             <p role="alert" className="text-red-500 text-sm font-raleway -mt-2">
               {errorMessage}
             </p>
+          )}
+
+          {showSignupHint && (
+            <button
+              type="button"
+              onClick={() =>
+                redirectToTenantAppPath(
+                  `/email-verify${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`
+                )
+              }
+              className="w-full py-3 rounded-xl font-semibold text-white
+                bg-[#6A9ECF] hover:bg-[#5c91c4] shadow-md transition font-raleway -mt-2"
+            >
+              Sign up to create your store
+            </button>
           )}
 
           <div className="text-right">
