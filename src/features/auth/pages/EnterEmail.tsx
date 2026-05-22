@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
-import { sendEmailVerificationCode } from "../../../api/auth/authapi";
+import {
+  preSignupVerificationPayload,
+  sendEmailVerificationCode,
+} from "../../../api/auth/authapi";
 import { showError, showSuccess } from "../../../components/swalHelper";
 
 export default function EnterEmail() {
@@ -29,10 +32,10 @@ try {
   setLoading(true);
   const trimmed = email.toLowerCase().trim();
   const result = await sendEmailVerificationCode(trimmed);
-  const payload = (result as { data?: Record<string, unknown> })?.data ?? result;
+  const payload = preSignupVerificationPayload(result);
   const skipVerification =
-    payload?.skip_verification === true ||
-    payload?.can_proceed_to_signup === true;
+    payload.skip_verification === true ||
+    payload.can_proceed_to_signup === true;
 
   if (skipVerification) {
     showSuccess(

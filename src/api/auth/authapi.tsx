@@ -33,6 +33,19 @@ function messageFromResponseData(data: unknown, fallback: string): string {
   return fallback;
 }
 
+/** Payload from POST /api/user/pre-signup/verify-email/send/ (nested under `verification`). */
+export function preSignupVerificationPayload(
+  data: unknown
+): Record<string, unknown> {
+  if (!data || typeof data !== "object") return {};
+  const root = data as Record<string, unknown>;
+  const nested = root.verification;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>;
+  }
+  return root;
+}
+
 function messageFromAxiosError(error: unknown, fallback: string): string {
   const err = error as { response?: { data?: unknown } };
   const data = err.response?.data;
