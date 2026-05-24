@@ -9,6 +9,7 @@ import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
 import { unpaidTenantEntryPath } from "../../../utils/termsAcceptance";
 import { persistTenantUserEmail } from "../../../utils/tenantUserEmail";
+import { readTenantSlugFromAccessToken } from "../../../utils/tenantStoreSlug";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
 import {
   decodeJwtPayload,
@@ -19,6 +20,7 @@ import {
 type TenantSlugResponse = {
   slug?: string;
   tenant_slug?: string;
+  user_role?: string;
   data?: {
     slug?: string;
     tenant_slug?: string;
@@ -142,21 +144,28 @@ export default function LoginPage() {
         const hasPaidAccess = payload.has_active_subscription === true;
         const setupIncomplete = payload.store_setup_incomplete === true;
 
-        // Discover tenant slug only when a store may already exist
-        if (!needsStoreSetup) {
+        // Prefer JWT tenant_slug; discover only when the token has no store context.
+        const jwtSlug = readTenantSlugFromAccessToken();
+        if (jwtSlug) {
+          localStorage.setItem("store_slug", jwtSlug);
+        } else if (!needsStoreSetup) {
           try {
             const slugResponse = (await discoverTenantSlug(
               trimmedEmail
             )) as TenantSlugResponse;
 
-            const slug =
-              slugResponse?.slug ??
-              slugResponse?.tenant_slug ??
-              slugResponse?.data?.slug ??
-              slugResponse?.data?.tenant_slug;
-
-            if (slug) {
-              localStorage.setItem("store_slug", slug);
+            const role = slugResponse?.user_role?.toString().trim().toLowerCase();
+            if (role === "customer") {
+              localStorage.removeItem("store_slug");
+            } else {
+              const slug =
+                slugResponse?.slug ??
+                slugResponse?.tenant_slug ??
+                slugResponse?.data?.slug ??
+                slugResponse?.data?.tenant_slug;
+              if (slug) {
+                localStorage.setItem("store_slug", slug);
+              }
             }
           } catch (slugErr) {
             console.error("Failed to discover tenant slug:", slugErr);

@@ -176,8 +176,38 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
         if (!cancelled) {
+          const errData =
+            err &&
+            typeof err === "object" &&
+            "response" in err &&
+            (err as { response?: { data?: { your_tenant_slug?: string; message?: string } } })
+              .response?.data;
+          const correctSlug = errData?.your_tenant_slug?.trim();
+          if (correctSlug) {
+            localStorage.setItem("store_slug", correctSlug);
+            setDashboardError(null);
+            setDashboardLoading(true);
+            try {
+              const tenant = await fetchTenantDashboard();
+              if (cancelled) return;
+              const data = tenant?.dashboard || {};
+              const summary = data?.account_summary || {};
+              const apiDomain = String(summary?.domain?.name || "").trim();
+              setTenantData({
+                domain: apiDomain || defaultTenantHostFromSlug(correctSlug),
+                features:
+                  data?.plan_features?.included_features?.map((f: { name?: string }) => f.name) ||
+                  [],
+              });
+              setDashboardLoading(false);
+              return;
+            } catch (retryErr) {
+              console.error("Dashboard retry after slug correction failed:", retryErr);
+            }
+          }
           setDashboardError(
-            "Could not load your dashboard. Check your connection and try refreshing the page.",
+            errData?.message ||
+              "Could not load your dashboard. Check your connection and try refreshing the page.",
           );
         }
       } finally {

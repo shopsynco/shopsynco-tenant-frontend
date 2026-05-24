@@ -25,18 +25,28 @@ export function readTenantSlugFromAccessToken(): string | null {
 }
 
 /**
- * Ensure localStorage has store_slug so axios injects /api/tenants/<slug>/...
- * Order: existing slug → JWT claim → discover by email.
+ * Resolve store slug for API URL injection.
+ * JWT tenant_slug wins over stale localStorage (e.g. after shopping on another store).
  */
-export async function ensureTenantStoreSlugForApi(): Promise<string | null> {
-  const existing = localStorage.getItem("store_slug")?.trim();
-  if (existing) return existing;
-
+export function resolveTenantStoreSlugForApi(): string | null {
   const fromJwt = readTenantSlugFromAccessToken();
+  const existing = localStorage.getItem("store_slug")?.trim() || "";
   if (fromJwt) {
-    localStorage.setItem("store_slug", fromJwt);
+    if (fromJwt !== existing) {
+      localStorage.setItem("store_slug", fromJwt);
+    }
     return fromJwt;
   }
+  return existing || null;
+}
+
+/**
+ * Ensure localStorage has store_slug so axios injects /api/tenants/<slug>/...
+ * Order: JWT claim → existing slug → discover by email.
+ */
+export async function ensureTenantStoreSlugForApi(): Promise<string | null> {
+  const fromJwt = resolveTenantStoreSlugForApi();
+  if (fromJwt) return fromJwt;
 
   const email = localStorage.getItem("user_email")?.trim();
   if (!email) return null;

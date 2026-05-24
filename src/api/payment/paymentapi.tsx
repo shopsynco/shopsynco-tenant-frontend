@@ -100,6 +100,11 @@ interface RazorpayOrderResponse {
   currency: string;
   subscription_id: string;
   status: "pending";
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
 }
 
 interface RazorpayVerifyPayload {

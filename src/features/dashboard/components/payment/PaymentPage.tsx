@@ -172,6 +172,7 @@ export default function PaymentPage() {
       order_id: order.order_id,
       name: "Shopsynco",
       description: "Subscription payment",
+      prefill: order.prefill || {},
       handler: async (response: {
         razorpay_order_id: string;
         razorpay_payment_id: string;

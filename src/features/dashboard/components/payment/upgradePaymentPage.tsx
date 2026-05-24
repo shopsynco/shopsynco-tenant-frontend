@@ -388,6 +388,7 @@ export default function UpgradePaymentPage() {
       order_id: order.order_id,
       name: "Shopsynco",
       description: "Subscription payment",
+      prefill: order.prefill || {},
       method: methodOptions,
       handler: async (response: any) => {
         try {

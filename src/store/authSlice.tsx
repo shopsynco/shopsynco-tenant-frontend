@@ -161,6 +161,7 @@ const authSlice = createSlice({
       state.refreshToken = null;
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
+      localStorage.removeItem("store_slug");
       clearPlanFlowFlags();
       clearOnboardingTermsAcceptance();
       try {

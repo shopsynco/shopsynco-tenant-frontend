@@ -1,5 +1,6 @@
 import axios from "axios";
 import { BASE_URL } from "../../api/axios_config";
+import { resolveTenantStoreSlugForApi } from "../../utils/tenantStoreSlug";
 
 // ✅ API Endpoints
 const LOGIN_URL = `${BASE_URL}api/tenants/auth/login/`;
@@ -14,8 +15,8 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("accessToken");
-    // 🏷️ Get store slug from localStorage for multi-tenant routing
-    const storeSlug = localStorage.getItem("store_slug");
+    // JWT tenant_slug wins over stale localStorage (another store's shopper session).
+    const storeSlug = resolveTenantStoreSlugForApi();
 
     // Log request for debugging (development only)
     if (import.meta.env.DEV) {
@@ -215,6 +216,7 @@ axiosInstance.interceptors.response.use(
         // 🚪 Force logout
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        localStorage.removeItem("store_slug");
         console.warn(
           "%c[Auth] 🚪 Logged out due to expired token",
           "color:#ef4444"
