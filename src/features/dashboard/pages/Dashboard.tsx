@@ -176,12 +176,17 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
         if (!cancelled) {
-          const errData =
-            err &&
-            typeof err === "object" &&
-            "response" in err &&
-            (err as { response?: { data?: { your_tenant_slug?: string; message?: string } } })
-              .response?.data;
+          const errData = (
+            err as {
+              response?: {
+                data?: {
+                  your_tenant_slug?: string;
+                  message?: string;
+                  error?: string;
+                };
+              };
+            }
+          ).response?.data;
           const correctSlug = errData?.your_tenant_slug?.trim();
           if (correctSlug) {
             localStorage.setItem("store_slug", correctSlug);
@@ -207,6 +212,7 @@ export default function Dashboard() {
           }
           setDashboardError(
             errData?.message ||
+              errData?.error ||
               "Could not load your dashboard. Check your connection and try refreshing the page.",
           );
         }
