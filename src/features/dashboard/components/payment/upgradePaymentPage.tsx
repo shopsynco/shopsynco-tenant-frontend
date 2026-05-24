@@ -335,7 +335,9 @@ export default function UpgradePaymentPage() {
     };
 
     let activeSubscriptionId = subscriptionId;
-    if (!activeSubscriptionId) {
+    if (planId && months) {
+      activeSubscriptionId = await ensureFreshSubscriptionId();
+    } else if (!activeSubscriptionId) {
       activeSubscriptionId = await ensureFreshSubscriptionId();
     }
     if (!activeSubscriptionId) {

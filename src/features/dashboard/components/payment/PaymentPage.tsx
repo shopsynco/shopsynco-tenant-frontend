@@ -118,8 +118,12 @@ export default function PaymentPage() {
       return createdId;
     };
 
+    // Always bind checkout to the current plan session so a stale localStorage
+    // subscription_id from another tenant cannot break verify after Razorpay pays.
     let activeSubscriptionId = subscriptionId;
-    if (!activeSubscriptionId) {
+    if (planId && months) {
+      activeSubscriptionId = await ensureFreshSubscriptionId();
+    } else if (!activeSubscriptionId) {
       activeSubscriptionId = await ensureFreshSubscriptionId();
     }
     if (!activeSubscriptionId) {
