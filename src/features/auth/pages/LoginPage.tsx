@@ -7,6 +7,7 @@ import AuthLayout from "../components/AuthLayout";
 import { showSuccess } from "../../../components/swalHelper";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
+import { unpaidTenantEntryPath } from "../../../utils/termsAcceptance";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
 import {
   decodeJwtPayload,
@@ -166,9 +167,9 @@ export default function LoginPage() {
 
         // Flow: payment (plans) → then store creation when subscribed → then contact if incomplete → dashboard.
         // Do not send unpaid users to /setup-store (PrivateRoute will keep them on /plans anyway; avoids redirect loops / blank screens).
-        let nextPath = "/plans";
+        let nextPath = "/dashboard";
         if (!hasPaidAccess) {
-          nextPath = "/plans";
+          nextPath = unpaidTenantEntryPath();
           setPlansEntryFromCheckout();
         } else if (needsStoreSetup) {
           nextPath = "/setup-store";

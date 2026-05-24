@@ -17,6 +17,8 @@ const AllRoutesPage = () => {
     { path: "/terms&condition", label: "Terms (redirect)" },
     { path: "/dashboard", label: "Dashboard" },
     { path: "/plans", label: "Choose Plan" },
+    { path: "/onboarding/terms", label: "Onboarding — Terms" },
+    { path: "/terms-acceptance", label: "Terms (redirect)" },
     { path: "/payment", label: "Payment" },
     { path: "/upgrade-payment", label: "Payment Upgrade" },
     { path: "/payment-success", label: "Payment Success" },

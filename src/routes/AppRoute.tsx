@@ -15,6 +15,7 @@ import RegisterPage from "../features/auth/pages/SignUpPage";
 import LoginPage from "../features/auth/pages/LoginPage";
 import VerificationPage from "../features/auth/pages/VerificationPage";
 import LegalPoliciesPage from "../features/legal/pages/LegalPoliciesPage";
+import TermsAcceptancePage from "../features/legal/pages/TermsAcceptancePage";
 import ChoosePlanPage from "../features/dashboard/pages/ChoosePlanPage";
 import InvoicesPage from "../features/dashboard/pages/InvoicesPage";
 import AllRoutesPage from "../components/helproutes";
@@ -59,6 +60,18 @@ const AppRoutes = () => {
               <ChoosePlanPage />
             </PrivateRoute>
           }
+        />
+        <Route
+          path="/onboarding/terms"
+          element={
+            <PrivateRoute>
+              <TermsAcceptancePage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/terms-acceptance"
+          element={<Navigate to="/onboarding/terms" replace />}
         />
         {/* Protected Routes */}
         <Route element={<PrivateRoute />}>

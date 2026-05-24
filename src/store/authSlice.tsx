@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils";
 import { clearPlanFlowFlags, markTenantSubscriptionActive } from "../utils/planFlow";
+import { clearOnboardingTermsAcceptance } from "../utils/termsAcceptance";
 import { readTenantSlugFromAccessToken } from "../utils/tenantStoreSlug";
 
 const SESSION_REQUIRES_STORE_SETUP = "tenant_requires_store_setup";
@@ -150,6 +151,7 @@ const authSlice = createSlice({
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       clearPlanFlowFlags();
+      clearOnboardingTermsAcceptance();
       try {
         sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
         sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);

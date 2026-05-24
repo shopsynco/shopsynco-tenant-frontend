@@ -1,21 +1,24 @@
 import React from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
+import { hasAcceptedOnboardingTerms } from "../utils/termsAcceptance";
+
+const ONBOARDING_TERMS_PATH = "/onboarding/terms";
 
 const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  // Get token from Redux or localStorage
   const accessToken =
     useAppSelector((state) => state.auth.accessToken) ||
     localStorage.getItem("accessToken");
 
   if (accessToken) {
-    const path = location.pathname.toLowerCase();
+    const path = location.pathname.toLowerCase().replace(/\/$/, "") || "/";
+    const termsPath = ONBOARDING_TERMS_PATH;
+    const onboardingTermsAccepted = hasAcceptedOnboardingTerms();
+    const isOnTermsPage = path === termsPath;
+
     const allowsPaymentFlow =
-      path === "/plans" ||
-      path === "/payment" ||
-      path === "/payment-success";
-    const allowsPrePaymentFlow = allowsPaymentFlow;
+      path === "/plans" || path === "/payment" || path === "/payment-success";
     const allowsStoreSetupFlow =
       path === "/setup-store" ||
       path === "/setup-store-contact" ||
@@ -28,18 +31,34 @@ const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
     const hasActiveSubscription =
       localStorage.getItem("tenant_subscription_active") === "1";
 
-    // No subscription yet: only plan checkout / payment / terms (not store setup — avoids /plans ↔ /setup-store loops).
     if (!hasActiveSubscription) {
       if (allowsStoreSetupFlow) {
+        return (
+          <Navigate
+            to={onboardingTermsAccepted ? "/plans" : termsPath}
+            replace
+          />
+        );
+      }
+
+      if (!onboardingTermsAccepted) {
+        if (!isOnTermsPage) {
+          return <Navigate to={termsPath} replace />;
+        }
+        return children ? <>{children}</> : <Outlet />;
+      }
+
+      if (isOnTermsPage) {
         return <Navigate to="/plans" replace />;
       }
-      if (!allowsPrePaymentFlow) {
+
+      if (!allowsPaymentFlow) {
         return <Navigate to="/plans" replace />;
       }
+
       return children ? <>{children}</> : <Outlet />;
     }
 
-    // After payment: guide tenant creation + location/contact when flags say so.
     if (needsStoreSetup && !allowsStoreSetupFlow) {
       return <Navigate to="/setup-store" replace />;
     }
@@ -51,7 +70,6 @@ const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
     return children ? <>{children}</> : <Outlet />;
   }
 
-  // Else redirect to login
   return <Navigate to="/login" replace />;
 };
 

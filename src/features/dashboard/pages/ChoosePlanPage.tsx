@@ -205,7 +205,6 @@ export default function ChoosePlanPage() {
   const [couponCode, setCouponCode] = useState("");
   const [isCouponFieldVisible, setIsCouponFieldVisible] = useState(false);
   const [error, setError] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [plansError, setPlansError] = useState<string | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
 
@@ -301,10 +300,6 @@ export default function ChoosePlanPage() {
 
   const goPayment = () => {
     if (!selectedPlan?.id) return;
-    if (!acceptedTerms) {
-      setError("Please accept Terms of Service and Privacy Policy to continue.");
-      return;
-    }
     setError("");
     navigate(
       `/payment?plan_id=${encodeURIComponent(String(selectedPlan.id))}&months=${encodeURIComponent(billingPeriod)}&country=${encodeURIComponent("India")}`
@@ -572,48 +567,6 @@ export default function ChoosePlanPage() {
 
             {/* fixed footer – no inner white gaps, exact Figma sizes */}
             <div className="mt-8 space-y-4 shrink-0 px-6 pb-6">
-              <div className="rounded-[20px] p-3 bg-transparent text-center">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={acceptedTerms}
-                    onChange={(e) => {
-                      setAcceptedTerms(e.target.checked);
-                      if (e.target.checked) setError("");
-                    }}
-                    className="mt-1 h-4 w-4 accent-[#7658A0]"
-                  />
-                  <div className="text-sm font-poppins text-[#4B4B4B]">
-                    By checking out, you agree with our
-                    <br />
-                    <a
-                      href="/legal/terms"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#7658A0] font-semibold underline"
-                    >
-                      Terms of Service
-                    </a>{" "}
-                    and confirm that you have read our&nbsp;
-                    <a
-                      href="/legal/privacy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#7658A0] font-semibold underline"
-                    >
-                      Privacy Policy
-                    </a>
-                    .<br />
-                    You can cancel recurring payments at any time.
-                  </div>
-                </label>
-                {!acceptedTerms && error && (
-                  <p className="text-red-500 text-xs mt-2 text-left">
-                    {error}
-                  </p>
-                )}
-              </div>
-
               {/* buttons – transparent, parent tint continues underneath */}
               <div
                 className="w-full max-w-[408px] lg:w-96 flex flex-col h-full rounded-[20px]"
@@ -640,8 +593,8 @@ export default function ChoosePlanPage() {
                     <button
                       type="button"
                       onClick={goPayment}
-                      disabled={loading || !selectedPlan?.id || !acceptedTerms}
-                      className="flex items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold"
+                      disabled={loading || !selectedPlan?.id}
+                      className="flex items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold disabled:opacity-50"
                       style={{
                         width: 162,
                         height: 56,
