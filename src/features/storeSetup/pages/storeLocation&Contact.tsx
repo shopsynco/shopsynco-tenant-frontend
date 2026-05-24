@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import bgImage from "../../../assets/backgroundstore.png";
 import {
@@ -11,12 +11,14 @@ import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import shopLogo from "../../../assets/Name-Logo.png";
 import { showError, showSuccess } from "../../../components/swalHelper";
 import { markStoreOnboardingComplete } from "../../../utils/planFlow";
+import {
+  ensureTenantUserEmail,
+  readStoredTenantUserEmail,
+} from "../../../utils/tenantUserEmail";
 
 const StoreSetupContactPage: React.FC = () => {
-  /** Same email as ShopSynco tenant login / signup — shown read-only; backend ignores any other value. */
-  const signupEmail = useMemo(
-    () => (typeof window !== "undefined" ? localStorage.getItem("user_email")?.trim() ?? "" : ""),
-    [],
+  const [resolvedEmail, setResolvedEmail] = useState(
+    () => readStoredTenantUserEmail()
   );
 
   const [countries, setCountries] = useState<any[]>([]);
@@ -28,16 +30,25 @@ const StoreSetupContactPage: React.FC = () => {
     business_address: "",
     country: "",
     state: "",
-    contact_email: signupEmail,
+    contact_email: resolvedEmail,
     contact_number: "",
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!signupEmail) return;
-    setFormData((prev) => ({ ...prev, contact_email: signupEmail }));
-  }, [signupEmail]);
+    let cancelled = false;
+    (async () => {
+      const email = await ensureTenantUserEmail();
+      if (!cancelled && email) {
+        setResolvedEmail(email);
+        setFormData((prev) => ({ ...prev, contact_email: email }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ✅ Fetch countries on mount
   useEffect(() => {
@@ -89,7 +100,7 @@ const StoreSetupContactPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const email = signupEmail || formData.contact_email?.trim();
+      const email = resolvedEmail || formData.contact_email?.trim();
       if (!email) {
         showError(
           "Missing email",
@@ -100,7 +111,7 @@ const StoreSetupContactPage: React.FC = () => {
       }
 
       await storeContactSetup({ ...formData, contact_email: email });
-      const loginEmail = localStorage.getItem("user_email")?.trim();
+      const loginEmail = resolvedEmail || readStoredTenantUserEmail();
       const discoverEmail = loginEmail || email;
       await discoverTenantSlug(discoverEmail);
 
@@ -244,7 +255,7 @@ const StoreSetupContactPage: React.FC = () => {
               readOnly
               autoComplete="email"
               aria-readonly="true"
-              placeholder={signupEmail ? undefined : "Sign in to load your email"}
+              placeholder={resolvedEmail ? undefined : "Loading your email…"}
               className="w-full p-4 mt-2 text-sm text-gray-700 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed"
             />
             <p className="mt-2 text-xs text-gray-500">

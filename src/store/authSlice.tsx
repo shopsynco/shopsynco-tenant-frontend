@@ -3,6 +3,11 @@ import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils
 import { clearPlanFlowFlags, markTenantSubscriptionActive } from "../utils/planFlow";
 import { clearOnboardingTermsAcceptance } from "../utils/termsAcceptance";
 import { readTenantSlugFromAccessToken } from "../utils/tenantStoreSlug";
+import {
+  persistTenantUserEmail,
+  readStoredTenantUserEmail,
+} from "../utils/tenantUserEmail";
+import { decodeJwtPayload } from "../features/auth/utils/googleOAuth";
 
 const SESSION_REQUIRES_STORE_SETUP = "tenant_requires_store_setup";
 const SESSION_STORE_SETUP_INCOMPLETE = "tenant_store_setup_incomplete";
@@ -50,9 +55,15 @@ export const loginUser = createAsyncThunk<
       localStorage.setItem("store_slug", jwtSlug);
     }
 
-    const userEmail = res.data?.user?.email;
-    if (typeof userEmail === "string" && userEmail.trim()) {
-      localStorage.setItem("user_email", userEmail.trim());
+    const userEmail =
+      (typeof res.data?.user?.email === "string" && res.data.user.email.trim()) ||
+      readStoredTenantUserEmail() ||
+      (() => {
+        const payload = decodeJwtPayload(access);
+        return typeof payload?.email === "string" ? payload.email.trim() : "";
+      })();
+    if (userEmail) {
+      persistTenantUserEmail(userEmail);
     }
 
     // Stale slug breaks onboarding: interceptor would call .../{slug}/store/setup/ → 404

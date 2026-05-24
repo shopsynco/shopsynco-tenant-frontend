@@ -8,6 +8,7 @@ import { showSuccess } from "../../../components/swalHelper";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
 import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
 import { unpaidTenantEntryPath } from "../../../utils/termsAcceptance";
+import { persistTenantUserEmail } from "../../../utils/tenantUserEmail";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
 import {
   decodeJwtPayload,
@@ -74,6 +75,9 @@ export default function LoginPage() {
 
     localStorage.setItem("accessToken", access);
     localStorage.setItem("refreshToken", refresh);
+    if (emailFromToken) {
+      persistTenantUserEmail(emailFromToken);
+    }
 
     const slugFromToken =
       typeof payload.tenant_slug === "string"
