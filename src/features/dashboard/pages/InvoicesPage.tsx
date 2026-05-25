@@ -36,10 +36,26 @@ export default function InvoicesPage() {
   }, []);
 
   // Open invoice detail modal
-  const openInvoiceDetail = (invoiceId: string) => {
-    const invoice = invoices.find((inv: any) => inv.id === invoiceId);
+  const openInvoiceDetail = (transactionId: string) => {
+    const invoice = invoices.find(
+      (inv: any) => inv.transaction_id === transactionId,
+    );
     setSelectedInvoice(invoice);
     setIsModalOpen(true);
+  };
+
+  const formatAmount = (inv: any) => {
+    const amount = Number(inv.amount ?? 0);
+    const currency = String(inv.currency || "INR").toUpperCase();
+    try {
+      return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency,
+        minimumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${currency} ${amount.toFixed(2)}`;
+    }
   };
 
   // Close modal
@@ -90,24 +106,33 @@ export default function InvoicesPage() {
                   </td>
                 </tr>
               ) : (
-                invoices.map((inv: any) => (
+                invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-gray-500">
+                      No invoices yet.
+                    </td>
+                  </tr>
+                ) : (
+                  invoices.map((inv: any) => (
                   <tr
-                    key={inv.id}
+                    key={inv.transaction_id || inv.invoice_no}
                     className="border-t border-[#E9E4FB] hover:bg-[#FAF8FF] transition"
                   >
-                    <td className="py-4 px-6 font-medium">{inv.id}</td>
+                    <td className="py-4 px-6 font-medium">{inv.invoice_no}</td>
                     <td className="py-4 px-6">{inv.date}</td>
                     <td className="py-4 px-6 truncate max-w-[180px]">
                       {inv.description}
                     </td>
-                    <td className="py-4 px-6">{inv.paymentMethod}</td>
+                    <td className="py-4 px-6 capitalize">
+                      {String(inv.payment_method || "—").replace(/_/g, " ")}
+                    </td>
                     <td className="py-4 px-6 text-right font-semibold text-gray-900">
-                      {inv.amount}
+                      {formatAmount(inv)}
                     </td>
                     <td className="py-4 px-6 text-right flex items-center justify-end gap-3">
                       <button
                         className="text-gray-500 hover:text-[#6A3CB1]"
-                        onClick={() => openInvoiceDetail(inv.id)}
+                        onClick={() => openInvoiceDetail(inv.transaction_id)}
                       >
                         <Eye size={18} />
                       </button>
@@ -125,6 +150,7 @@ export default function InvoicesPage() {
                     </td>
                   </tr>
                 ))
+              )
               )}
             </tbody>
           </table>

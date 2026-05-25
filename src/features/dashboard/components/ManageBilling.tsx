@@ -210,91 +210,11 @@ export default function ManageBillingPage() {
               </div>
             </div>
 
-            {/* Payment method */}
-            <div className="bg-white rounded-2xl border border-[#8B6BB6] shadow-sm p-6 space-y-5">
-              <h3 className="text-base font-semibold text-[#6A3CB1]">
-                Payment Method
-              </h3>
-
-              {loading ? (
-                <div>Loading card details...</div>
-              ) : cardDetails ? (
-                <>
-                  <div className="flex items-center justify-between bg-[#F9F8FF] border border-[#8B6BB6] rounded-xl p-4">
-                    <div className="flex items-center gap-3">
-                      <CreditCard size={28} className="text-green-600" />
-                      <p className="font-semibold text-gray-800">
-                        {cardDetails.card_brand} **** {cardDetails.card_last4}
-                      </p>
-                    </div>
-                    <div className="text-gray-800 font-semibold">
-                      {cardDetails.card_holder_name}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        className="text-gray-500 hover:text-gray-700"
-                        onClick={() => setActiveModal("viewCard")}
-                      >
-                        <Eye size={20} />
-                      </button>
-                      <button
-                        className="text-gray-500 hover:text-gray-700"
-                        onClick={() => setActiveModal("editCard")}
-                      >
-                        <Edit size={20} />
-                      </button>
-                      <button
-                        className="text-gray-500 hover:text-gray-700"
-                        onClick={() => setActiveModal("deleteCard")}
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* -------- billing address -------- */}
-                  <div className="pt-2 text-sm text-gray-700 border-t border-gray-200">
-                    <p className="font-medium mt-3">
-                      {cardDetails.card_holder_name}
-                    </p>
-                    {cardDetails.billing_address ? (
-                      <div className="text-xs mt-1 text-gray-500 leading-relaxed">
-                        <p>{cardDetails.billing_address.line1}</p>
-                        {cardDetails.billing_address.line2 && (
-                          <p>{cardDetails.billing_address.line2}</p>
-                        )}
-                        <p>
-                          {cardDetails.billing_address.city},{" "}
-                          {cardDetails.billing_address.state}{" "}
-                          {cardDetails.billing_address.postal_code}
-                        </p>
-                        <p>{cardDetails.billing_address.country}</p>
-                      </div>
-                    ) : (
-                      <button className="text-[#6A3CB1] text-xs font-medium mt-2 hover:underline">
-                        + Add Billing Address
-                      </button>
-                    )}
-                    {cardDetails.billing_address && (
-                      <button className="text-[#6A3CB1] text-xs font-medium mt-2 hover:underline">
-                        Edit Billing Address
-                      </button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div>No card details available</div>
-              )}
-
-              <div className="pt-4 flex justify-end">
-                <button
-                  onClick={() => setActiveModal("add")}
-                  className="flex items-center gap-2 bg-[#6A3CB1] text-white text-sm px-5 py-2.5 rounded-lg hover:bg-[#5b32a2] transition"
-                >
-                  <Plus size={16} /> Add Payment Method
-                </button>
-              </div>
-            </div>
+            {/*
+              Payment Method block intentionally hidden — payments run through the
+              checkout gateway (Razorpay) per subscription, so a saved card list
+              isn't shown on the Manage Billing page.
+            */}
           </div>
 
           {/* ------------  Right  ------------ */}
