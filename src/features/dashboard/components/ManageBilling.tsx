@@ -1,14 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Plus,
-  CreditCard,
-  Eye,
-  Edit,
-  Trash2,
-  Clock,
-  HelpCircle,
-  ArrowRight,
-} from "lucide-react";
+import { Clock, HelpCircle, ArrowRight } from "lucide-react";
 import Swal from "sweetalert2";
 import Header from "./dashboardHeader";
 import { getCardDetails } from "../../../api/payment/paymentapi";
@@ -83,7 +74,6 @@ type PaymentModalType =
 export default function ManageBillingPage() {
   const [activeModal, setActiveModal] = useState<PaymentModalType>(null);
   const [cardDetails, setCardDetails] = useState<CardDetails | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [supportTopic, setSupportTopic] = useState<string | null>(null);
@@ -109,7 +99,6 @@ export default function ManageBillingPage() {
   useEffect(() => {
     const fetchCardDetails = async () => {
       try {
-        setLoading(true);
         const response = await getCardDetails();
         if (response.card_details?.length) {
           setCardDetails(response.card_details[0]);
@@ -119,8 +108,6 @@ export default function ManageBillingPage() {
       } catch (err) {
         console.error("Error fetching card details:", err);
         setCardDetails(null);
-      } finally {
-        setLoading(false);
       }
     };
     fetchCardDetails();
