@@ -15,9 +15,24 @@ export interface StoreSetupPayload {
 
 // 🏪 Store creation response
 export interface StoreSetupResponse {
-  slug: string;
+  task_id?: string;
+  status?: "pending" | "running" | "completed" | "failed";
+  slug?: string;
   message?: string;
   success?: boolean;
+  error?: string;
+  tenant?: {
+    id?: string;
+    name?: string;
+    schema_name?: string;
+    domain?: string;
+    localhost_domain?: string;
+    trial_days?: number;
+  };
+}
+
+export interface StoreCategoriesResponse {
+  categories: string[];
 }
 
 // 🌍 Country
@@ -66,8 +81,23 @@ export interface DiscoverResponse {
 
 // 1️⃣ Create Store — No slug required yet
 export const storeSetup = async (data: StoreSetupPayload): Promise<StoreSetupResponse> => {
-  const response = await axiosInstance.post(`api/tenants/store/setup/`, data);
+  const response = await axiosInstance.post(`api/tenants/store/setup/`, data, {
+    // Tenant/schema bootstrap can take longer on cold infra.
+    timeout: 120000,
+  });
   return response.data;
+};
+
+export const getStoreSetupStatus = async (taskId: string): Promise<StoreSetupResponse> => {
+  const response = await axiosInstance.get(`api/tenants/store/setup/status/${taskId}/`);
+  return response.data;
+};
+
+// 1.1️⃣ Get backend-driven store setup categories
+export const getStoreCategories = async (): Promise<string[]> => {
+  const response = await axiosInstance.get(`api/tenants/store/categories/`);
+  const list = (response.data as StoreCategoriesResponse | undefined)?.categories;
+  return Array.isArray(list) ? list : [];
 };
 
 // 2️⃣ Get all countries

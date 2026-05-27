@@ -3,13 +3,22 @@ import { ChevronLeft, Eye, Plus, CreditCard } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
+  createCheckoutSubscription,
   getPaymentMethods,
-  submitPayment,
-  verifyUpi,
-  payWithUpi,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+  getPaymentStatus,
   getCardDetails,
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
+import { setPlansEntryFromDashboard } from "../../../../utils/planFlow";
+import { paymentErrorMessage } from "../../../../utils/paymentErrorMessage";
+
+declare global {
+  interface Window {
+    Razorpay?: any;
+  }
+}
 
 // Define types
 interface PaymentMethod {
@@ -45,10 +54,42 @@ interface ExistingCard {
   is_default?: boolean;
 }
 
+type PaymentInputFieldProps = {
+  label: string;
+  placeholder?: string;
+  type?: string;
+  value: string;
+  onChange: (value: string) => void;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
+
+function InputField({
+  label,
+  placeholder,
+  type = "text",
+  value,
+  onChange,
+  ...props
+}: PaymentInputFieldProps) {
+  return (
+    <div>
+      {label && (
+        <label className="text-sm text-gray-600 mb-1 block">{label}</label>
+      )}
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
+        {...props}
+      />
+    </div>
+  );
+}
+
 export default function UpgradePaymentPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string>("");
-  const [upiID, setUpiID] = useState("");
   const [showCardNumber, setShowCardNumber] = useState(false);
   const [loading, setLoading] = useState(false);
   const [quoteData, setQuoteData] = useState<any>(null);
@@ -69,6 +110,11 @@ export default function UpgradePaymentPage() {
   const [existingCards, setExistingCards] = useState<ExistingCard[]>([]);
   const [showAddCardForm, setShowAddCardForm] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const allowedMethodValues = new Set([
+    "credit_card",
+    "debit_card",
+    "upi",
+  ]);
 
   const navigate = useNavigate();
   const { search } = useLocation();
@@ -78,7 +124,9 @@ export default function UpgradePaymentPage() {
   const country = params.get("country");
 
   // Get subscription ID from localStorage or URL params
-  const subscriptionId = params.get("subscription_id") || localStorage.getItem("subscription_id") || "";
+  const [subscriptionId, setSubscriptionId] = useState<string>(
+    params.get("subscription_id") || localStorage.getItem("subscription_id") || ""
+  );
 
   // Fetch existing cards on page load
   useEffect(() => {
@@ -86,13 +134,13 @@ export default function UpgradePaymentPage() {
       try {
         const res = await getCardDetails();
         const cards = (res.card_details || []).map(card => ({
-          id: card.id,
+          // id: card.id,
           card_last4: card.card_last4,
           brand: card.card_brand,
           exp_month: card.exp_month,
           exp_year: card.exp_year,
           card_holder: card.card_holder_name,
-          is_default: card.is_default,
+          // is_default: card.is_default,
         })) as ExistingCard[];
         setExistingCards(cards);
         // If there are existing cards, select the first one by default
@@ -112,9 +160,12 @@ export default function UpgradePaymentPage() {
     const fetchMethods = async () => {
       try {
         const res = await getPaymentMethods();
-        setPaymentMethods(res.methods || []);
-        if (res.methods?.length > 0) {
-          setSelectedMethod(res.methods[0].value);
+        const filteredMethods = (res.methods || []).filter((m) =>
+          allowedMethodValues.has(m.value)
+        );
+        setPaymentMethods(filteredMethods);
+        if (filteredMethods.length > 0) {
+          setSelectedMethod(filteredMethods[0].value);
         }
       } catch (err) {
         console.error("Error fetching payment methods:", err);
@@ -242,78 +293,167 @@ export default function UpgradePaymentPage() {
     return true;
   };
 
-  const validateBankForm = (): boolean => {
-    if (!bankFormData.accountHolder.trim()) {
-      Swal.fire("Validation Error", "Please enter account holder name", "warning");
-      return false;
-    }
-    if (!bankFormData.accountNumber) {
-      Swal.fire("Validation Error", "Please enter account number", "warning");
-      return false;
-    }
-    if (bankFormData.accountNumber !== bankFormData.confirmAccountNumber) {
-      Swal.fire("Validation Error", "Account numbers don't match", "warning");
-      return false;
-    }
-    if (!bankFormData.bankName) {
-      Swal.fire("Validation Error", "Please select bank", "warning");
-      return false;
-    }
-    if (!bankFormData.ifscCode) {
-      Swal.fire("Validation Error", "Please enter IFSC code", "warning");
-      return false;
-    }
-    return true;
+  const loadRazorpayScript = async (): Promise<boolean> => {
+    if (window.Razorpay) return true;
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
   };
 
-  const validateUpiForm = (): boolean => {
-    if (!upiID.trim()) {
-      Swal.fire("Validation Error", "Please enter UPI ID", "warning");
+  const startRazorpayCheckout = async (
+    method: "credit_card" | "debit_card" | "upi"
+  ) => {
+    const waitForPaymentConfirmation = async (subId: string) => {
+      const maxAttempts = 15;
+      const delayMs = 2500;
+      for (let i = 0; i < maxAttempts; i += 1) {
+        const statusRes = await getPaymentStatus(subId);
+        if (statusRes.status === "success") return true;
+        if (statusRes.status === "failed") return false;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
       return false;
-    }
-    if (!upiID.includes("@")) {
-      Swal.fire("Validation Error", "Please enter valid UPI ID (e.g., example@okaxis)", "warning");
-      return false;
-    }
-    return true;
-  };
+    };
+    const ensureFreshSubscriptionId = async () => {
+      if (!planId || !months) return "";
+      const checkout = await createCheckoutSubscription({
+        plan_id: planId,
+        months: Number(months),
+        payment_method: method,
+      });
+      const createdId = checkout?.subscription_id || "";
+      if (createdId) {
+        setSubscriptionId(createdId);
+        localStorage.setItem("subscription_id", createdId);
+      }
+      return createdId;
+    };
 
-  // Handle UPI payment
-  const handleUpiSubmit = async () => {
-    if (!validateUpiForm()) return;
-
-    if (!subscriptionId) {
+    let activeSubscriptionId = subscriptionId;
+    if (planId && months) {
+      activeSubscriptionId = await ensureFreshSubscriptionId();
+    } else if (!activeSubscriptionId) {
+      activeSubscriptionId = await ensureFreshSubscriptionId();
+    }
+    if (!activeSubscriptionId) {
       Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
       return;
     }
+    const total = Number(quoteData?.total ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      Swal.fire("Error", "Invalid payable amount. Please refresh and try again.", "error");
+      return;
+    }
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded || !window.Razorpay) {
+      Swal.fire("Error", "Failed to load Razorpay checkout.", "error");
+      return;
+    }
 
+    let order;
+    try {
+      order = await createRazorpayOrder({
+        subscription_id: activeSubscriptionId,
+        amount: total,
+        currency: "INR",
+        method,
+      });
+    } catch (err: any) {
+      const isSubscriptionMissing =
+        err?.response?.status === 404 &&
+        String(err?.response?.data?.error || "").toLowerCase().includes("subscription not found");
+      if (!isSubscriptionMissing) throw err;
+      activeSubscriptionId = await ensureFreshSubscriptionId();
+      if (!activeSubscriptionId) throw err;
+      order = await createRazorpayOrder({
+        subscription_id: activeSubscriptionId,
+        amount: total,
+        currency: "INR",
+        method,
+      });
+    }
+
+    const methodOptions =
+      method === "upi"
+        ? { upi: true }
+        : { card: true };
+
+    const razorpay = new window.Razorpay({
+      key: order.key_id,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.order_id,
+      name: "Shopsynco",
+      description: "Subscription payment",
+      prefill: order.prefill || {},
+      method: methodOptions,
+      handler: async (response: any) => {
+        try {
+          const verification = await verifyRazorpayPayment({
+            subscription_id: activeSubscriptionId,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            method,
+          });
+          if (verification.success === true) {
+            if (verification.status === "success") {
+              await Swal.fire("Success", "Payment successful!", "success");
+              navigate("/payment-success");
+              return;
+            }
+            const confirmed = await waitForPaymentConfirmation(activeSubscriptionId);
+            if (confirmed) {
+              await Swal.fire("Success", "Payment successful!", "success");
+              navigate("/payment-success");
+              return;
+            }
+            await Swal.fire(
+              "Payment pending",
+              "Signature verified. Waiting for gateway capture confirmation. Please check payment status shortly.",
+              "info"
+            );
+            return;
+          }
+          throw new Error("Payment verification failed");
+        } catch (verifyErr: any) {
+          Swal.fire(
+            "Error",
+            verifyErr?.response?.data?.error ||
+              verifyErr?.response?.data?.message ||
+              "Payment verification failed.",
+            "error"
+          );
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          Swal.fire("Cancelled", "Payment was cancelled.", "info");
+        },
+      },
+    });
+    razorpay.open();
+  };
+
+  // Handle UPI payment (Razorpay Checkout only — no separate /upi/verify/ step)
+  const handleUpiSubmit = async () => {
     try {
       setLoading(true);
-
-      // Verify UPI ID first
-      const verifyResponse = await verifyUpi(upiID);
-      if (!verifyResponse.success) {
-        Swal.fire("Validation Error", "Invalid UPI ID. Please check and try again.", "error");
-        return;
-      }
-
-      // Process UPI payment
-      const upiPayload = {
-        subscription_id: subscriptionId,
-        method: "upi" as const,
-        upi_id: upiID,
-      };
-
-      const paymentResponse = await payWithUpi(upiPayload);
-      if (paymentResponse.success) {
-        await Swal.fire("Success", "UPI Payment Successful!", "success");
-        navigate("/payment-success");
-      } else {
-        throw new Error("UPI payment failed");
-      }
+      await startRazorpayCheckout("upi");
     } catch (err: any) {
       console.error("❌ UPI Payment Error:", err);
-      Swal.fire("Error", err.response?.data?.message || "UPI Payment failed. Please try again.", "error");
+      Swal.fire(
+        "Error",
+        paymentErrorMessage(err.response?.data) ||
+          err.response?.data?.message ||
+          "UPI Payment failed. Please try again.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -323,95 +463,22 @@ export default function UpgradePaymentPage() {
  const handleCardSubmit = async () => {
     if (!validateCardForm()) return;
 
-    if (!subscriptionId) {
-      Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
-      return;
-    }
-
     try {
       setLoading(true);
-
-      // Extract last 4 digits of card number
-      const cardLast4 = cardFormData.cardNumber.replace(/\s/g, '').slice(-4);
-      
-      // Extract expiry month and year
-      const [expYear, expMonth] = cardFormData.expiryDate.split('-');
-
-      // Create properly typed payload based on selected method
-      let paymentPayload;
-      
-      if (selectedMethod === "credit_card") {
-        paymentPayload = {
-          subscription_id: subscriptionId,
-          method: "credit_card" as const,
-          card_holder: cardFormData.cardHolder,
-          card_last4: cardLast4,
-          brand: "VISA",
-          exp_month: parseInt(expMonth),
-          exp_year: parseInt(expYear),
-          cvv_present: true,
-        };
+      if (selectedMethod === "credit_card" || selectedMethod === "debit_card") {
+        await startRazorpayCheckout(selectedMethod);
       } else {
-        paymentPayload = {
-          subscription_id: subscriptionId,
-          method: "debit_card" as const,
-          card_holder: cardFormData.cardHolder,
-          card_last4: cardLast4,
-          brand: "VISA",
-          exp_month: parseInt(expMonth),
-          exp_year: parseInt(expYear),
-          cvv_present: true,
-        };
-      }
-
-      const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success) {
-        await Swal.fire("Success", "Card Payment Successful!", "success");
-        navigate("/payment-success");
-      } else {
-        throw new Error("Card payment failed");
+        throw new Error("Invalid payment method");
       }
     } catch (err: any) {
       console.error("❌ Card Payment Error:", err);
-      Swal.fire("Error", err.response?.data?.message || "Card payment failed. Please try again.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle bank transfer
-  const handleBankSubmit = async () => {
-    if (!validateBankForm()) return;
-
-    if (!subscriptionId) {
-      Swal.fire("Error", "Subscription ID is required. Please try again.", "error");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Create properly typed payload
-      const paymentPayload = {
-        subscription_id: subscriptionId,
-        method: "bank_transfer" as const,
-        account_holder: bankFormData.accountHolder,
-        account_number: bankFormData.accountNumber,
-        bank_name: bankFormData.bankName,
-        branch_name: bankFormData.branchName,
-        ifsc: bankFormData.ifscCode,
-      };
-
-      const paymentResponse = await submitPayment(paymentPayload);
-      if (paymentResponse.success) {
-        await Swal.fire("Success", "Bank Transfer Initiated Successfully!", "success");
-        navigate("/payment-success");
-      } else {
-        throw new Error("Bank transfer failed");
-      }
-    } catch (err: any) {
-      console.error("❌ Bank Transfer Error:", err);
-      Swal.fire("Error", err.response?.data?.message || "Bank transfer failed. Please try again.", "error");
+      Swal.fire(
+        "Error",
+        paymentErrorMessage(err.response?.data) ||
+          err.response?.data?.message ||
+          "Card payment failed. Please try again.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -432,9 +499,6 @@ export default function UpgradePaymentPage() {
       case "debit_card":
         handleCardSubmit();
         break;
-      case "bank_transfer":
-        handleBankSubmit();
-        break;
       default:
         Swal.fire("Error", "This payment method is not yet supported", "error");
     }
@@ -446,43 +510,16 @@ export default function UpgradePaymentPage() {
 //     return method?.label || "";
 //   };
 
-  // Input Field Component
-  const InputField = ({
-    label,
-    placeholder,
-    type = "text",
-    value,
-    onChange,
-    ...props
-  }: {
-    label: string;
-    placeholder?: string;
-    type?: string;
-    value: string;
-    onChange: (value: string) => void;
-    [key: string]: any;
-  }) => (
-    <div>
-      {label && (
-        <label className="text-sm text-gray-600 mb-1 block">{label}</label>
-      )}
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
-        {...props}
-      />
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-white flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10">
       {/* Header */}
       <div className="w-full max-w-6xl mb-6 flex items-center gap-2 text-gray-500">
         <ChevronLeft className="w-4 h-4" />
-        <Link to="/plans" className="text-sm text-gray-700 hover:underline">
+        <Link
+          to="/plans"
+          onClick={() => setPlansEntryFromDashboard()}
+          className="text-sm text-gray-700 hover:underline"
+        >
           Back to Choose Plan
         </Link>
       </div>
@@ -515,15 +552,15 @@ export default function UpgradePaymentPage() {
                   </span>
                 </div>
 
-                {/* UPI Form */}
+                {/* UPI: Razorpay Checkout handles VPA / app intent */}
                 {selectedMethod === method.value && method.value === "upi" && (
-                  <div className="border-t border-gray-200 p-5">
-                    <InputField
-                      label="UPI ID"
-                      placeholder="example@okaxis"
-                      value={upiID}
-                      onChange={setUpiID}
-                    />
+                  <div className="border-t border-gray-200 p-5 text-sm text-gray-600">
+                    <p className="font-medium text-gray-800">Pay with UPI</p>
+                    <p className="mt-2">
+                      Click <span className="font-medium">Submit Payment</span> below. Razorpay
+                      Checkout will open — choose UPI and your app, or enter your UPI ID inside
+                      Razorpay. No separate verify step on this page.
+                    </p>
                   </div>
                 )}
 

@@ -1,42 +1,61 @@
 import { useState, useEffect } from "react";
-import Swal from "sweetalert2";
-import { Eye, Download } from "lucide-react";
+import { Eye, Download, ArrowRight, HelpCircle } from "lucide-react";
 import Header from "../components/dashboardHeader";
 
 import InvoiceDetailModal from "../components/invoiceDetailModal";
 import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
+import { useNavigate } from "react-router-dom";
+import { showError } from "../../../components/swalHelper";
+import PlatformSupportChatModal from "../components/PlatformSupportChatModal";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null); // Track selected invoice
   const [isModalOpen, setIsModalOpen] = useState(false); // Track modal visibility
-
+  const [supportTopic, setSupportTopic] = useState<string | null>(null);
+  const navigate = useNavigate();
   // Fetch invoices from the API
   useEffect(() => {
     const getInvoices = async () => {
       try {
-        const data = await fetchInvoices(); // Using the imported function to fetch invoices
-        setInvoices(data);
+        const data = await fetchInvoices();
+        // If the array is wrapped in an object, extract it:
+        const list = Array.isArray(data)
+          ? data
+          : data.results || data.invoices || [];
+        setInvoices(list);
       } catch (error) {
-        Swal.fire(
-          "Error",
-          "Failed to load invoices. Please try again.",
-          "error"
-        );
+        console.error(error);
+        showError("Load Failed", "Failed to load invoices. Please try again.");
       } finally {
         setLoading(false);
       }
     };
-
     getInvoices();
   }, []);
 
   // Open invoice detail modal
-  const openInvoiceDetail = (invoiceId: string) => {
-    const invoice = invoices.find((inv: any) => inv.id === invoiceId);
+  const openInvoiceDetail = (transactionId: string) => {
+    const invoice = invoices.find(
+      (inv: any) => inv.transaction_id === transactionId,
+    );
     setSelectedInvoice(invoice);
     setIsModalOpen(true);
+  };
+
+  const formatAmount = (inv: any) => {
+    const amount = Number(inv.amount ?? 0);
+    const currency = String(inv.currency || "INR").toUpperCase();
+    try {
+      return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency,
+        minimumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${currency} ${amount.toFixed(2)}`;
+    }
   };
 
   // Close modal
@@ -50,7 +69,13 @@ export default function InvoicesPage() {
       <Header />
       <div className="max-w-6xl mx-auto px-6 py-10">
         <p className="text-sm text-gray-500 mb-2">
-          Dashboard <span className="mx-1">›</span> View Invoices
+          <span
+            className="cursor-pointer hover:underline"
+            onClick={() => navigate("/dashboard")}
+          >
+            Dashboard
+          </span>{" "}
+          <span className="mx-1">›</span> View Invoices
         </p>
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-gray-900">Invoices</h1>
@@ -60,9 +85,9 @@ export default function InvoicesPage() {
         </div>
 
         {/* Invoices Table */}
-        <div className="bg-white border border-[#D8CFFC] rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-[#6A3CB1] rounded-2xl overflow-hidden shadow-sm">
           <table className="w-full text-left text-sm text-gray-700">
-            <thead className="bg-[#F8F6FF] text-[#6A3CB1] text-sm font-semibold">
+            <thead className=" text-[#6A3CB1]  border-[#D8CFFC] text-sm font-semibold">
               <tr>
                 <th className="py-4 px-6">Invoice No.</th>
                 <th className="py-4 px-6">Date</th>
@@ -81,24 +106,33 @@ export default function InvoicesPage() {
                   </td>
                 </tr>
               ) : (
-                invoices.map((inv: any) => (
+                invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-gray-500">
+                      No invoices yet.
+                    </td>
+                  </tr>
+                ) : (
+                  invoices.map((inv: any) => (
                   <tr
-                    key={inv.id}
+                    key={inv.transaction_id || inv.invoice_no}
                     className="border-t border-[#E9E4FB] hover:bg-[#FAF8FF] transition"
                   >
-                    <td className="py-4 px-6 font-medium">{inv.id}</td>
+                    <td className="py-4 px-6 font-medium">{inv.invoice_no}</td>
                     <td className="py-4 px-6">{inv.date}</td>
                     <td className="py-4 px-6 truncate max-w-[180px]">
                       {inv.description}
                     </td>
-                    <td className="py-4 px-6">{inv.paymentMethod}</td>
+                    <td className="py-4 px-6 capitalize">
+                      {String(inv.payment_method || "—").replace(/_/g, " ")}
+                    </td>
                     <td className="py-4 px-6 text-right font-semibold text-gray-900">
-                      {inv.amount}
+                      {formatAmount(inv)}
                     </td>
                     <td className="py-4 px-6 text-right flex items-center justify-end gap-3">
                       <button
                         className="text-gray-500 hover:text-[#6A3CB1]"
-                        onClick={() => openInvoiceDetail(inv.id)}
+                        onClick={() => openInvoiceDetail(inv.transaction_id)}
                       >
                         <Eye size={18} />
                       </button>
@@ -116,27 +150,40 @@ export default function InvoicesPage() {
                     </td>
                   </tr>
                 ))
+              )
               )}
             </tbody>
           </table>
         </div>
 
         {/* Help Box */}
-        <div className="border border-[#D8CFFC] bg-white rounded-2xl p-6 mt-10 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="text-[#6A3CB1] text-xl">😊</div>
-            <div>
-              <h4 className="text-gray-900 font-semibold mb-1">
-                Need help with invoices?
-              </h4>
-              <p className="text-sm text-gray-500 mb-3 leading-relaxed">
-                Our support team is ready to assist you with any questions about
-                your subscription.
-              </p>
-              <button className="text-sm font-medium text-[#6A3CB1] hover:underline">
-                Contact Support →
-              </button>
-            </div>
+        <div
+          className="rounded-2xl border border-[#8B6BB6] bg-white p-6 text-gray-700 w-full max-w-[445px]"
+          style={{
+            height: 184,
+            marginTop: 79, // pushes it to 790 px from top
+            marginLeft: 45,
+            opacity: 1,
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <HelpCircle size={24} className="text-[#6A3CB1]" />
+            <h4 className="font-semibold text-gray-800">
+              Need help with billing?
+            </h4>
+          </div>
+          <p className="text-sm text-gray-500 mb-3 leading-relaxed">
+            Our support team is ready to assist you with any questions about
+            your subscription.
+          </p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setSupportTopic("Invoices")}
+              className="text-sm font-bold text-[#6A3CB1] hover:underline inline-flex items-center gap-1"
+            >
+              Contact Support <ArrowRight size={14} />
+            </button>
           </div>
         </div>
       </div>
@@ -145,6 +192,11 @@ export default function InvoicesPage() {
       {isModalOpen && selectedInvoice && (
         <InvoiceDetailModal invoice={selectedInvoice} closeModal={closeModal} />
       )}
+      <PlatformSupportChatModal
+        open={supportTopic !== null}
+        onClose={() => setSupportTopic(null)}
+        topicLabel={supportTopic ?? ""}
+      />
     </div>
   );
 }

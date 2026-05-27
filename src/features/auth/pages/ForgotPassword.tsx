@@ -1,16 +1,24 @@
+// src/features/auth/pages/ForgotPassword.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import Swal from "sweetalert2";
 import AuthLayout from "../components/AuthLayout";
-import { authApi } from "../../../api/auth/authapi";
+import {
+  authApi,
+  FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE,
+} from "../../../api/auth/authapi";
+import {
+  showError,
+  showForgotPasswordNoAccount,
+  showSuccess,
+} from "../../../components/swalHelper";
 
 type ApiErrors = Record<string, string[]>;
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<ApiErrors>({});
 
   // Prefill email if passed in query params
@@ -21,13 +29,11 @@ export default function ForgotPasswordPage() {
   }, [location.search]);
 
   const showApiErrorsWithSwal = (apiErrors: ApiErrors) => {
-    // Flatten to a single message for Swal
     const flat = Object.entries(apiErrors)
       .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
       .join("\n");
-    Swal.fire({ icon: "error", title: "Validation error", text: flat });
+    showError("Validation Error", flat);
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -39,39 +45,50 @@ export default function ForgotPasswordPage() {
 
     try {
       setLoading(true);
-      // expected to be authApi.forgotPassword(email)
-      const res = await authApi.forgotPassword(email);
+      const response = await authApi.forgotPassword(email);
+      const serverMsg =
+        (response as { message?: string })?.message ||
+        "If this email is registered, a reset code has been sent.";
 
-      // On success, navigate to a "verification sent" screen that matches your design.
-      // we pass email so verification page can prefill or show context
-      navigate(`/verification-sent?email=${encodeURIComponent(email)}`);
+      showSuccess("Verification Sent", serverMsg, () =>
+        navigate(
+          `/verify-email?email=${encodeURIComponent(
+            email
+          )}&flow=reset-password`
+        )
+      );
     } catch (err: any) {
-      // Typical DRF-style error body: { "email": ["Enter a valid email address."] }
       const data = err?.response?.data;
 
       if (data && typeof data === "object") {
-        // field errors
-        // store as state for inline display
-        const fieldErrors: ApiErrors = {};
-        // If API returns list at top-level (e.g. ["error msg"]) show directly
         if (Array.isArray(data)) {
-          Swal.fire("Error", data.join("\n"), "error");
+          showError("Error", data.join("\n"));
         } else {
-          // copy strings arrays
+          const fieldErrors: ApiErrors = {};
           Object.entries(data).forEach(([k, v]) => {
             if (Array.isArray(v)) fieldErrors[k] = v.map(String);
             else fieldErrors[k] = [String(v)];
           });
-
-          // set local state to show inline
+          const emailMsg = fieldErrors.email?.join(" ").toLowerCase() ?? "";
+          if (
+            emailMsg.includes("no user found") ||
+            emailMsg.includes("not registered") ||
+            emailMsg.includes("does not exist")
+          ) {
+            setErrors({ email: [FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE] });
+            showForgotPasswordNoAccount(email);
+            return;
+          }
           setErrors(fieldErrors);
-
-          // also show a combined toast for quick notification
           showApiErrorsWithSwal(fieldErrors);
         }
       } else {
-        // fallback message
-        Swal.fire("Error", err?.message || "Request failed", "error");
+        if (err?.message === FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE) {
+          setErrors({ email: [FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE] });
+          showForgotPasswordNoAccount(email);
+        } else {
+          showError("Forgot Password", err?.message || "Request failed.");
+        }
       }
     } finally {
       setLoading(false);
@@ -92,12 +109,13 @@ export default function ForgotPasswordPage() {
         }}
         noValidate
       >
-        <h2 className="text-3xl font-bold text-center text-[#4A5C74] mb-2">
+        <h2 className="text-3xl font-bold text-center text-[#719CBF] mb-2">
           Forgot Password
         </h2>
 
         <p className="text-center text-gray-600 text-sm mb-4">
-          Enter your email for verification. We’ll send a 6-digit code to your inbox.
+          Enter your email for verification. We’ll send a 6-digit code to your
+          inbox.
         </p>
 
         <div>
@@ -137,7 +155,7 @@ export default function ForgotPasswordPage() {
         <button
           type="button"
           onClick={() => navigate("/login")}
-          className="text-[#4A5C74] hover:text-[#6A9ECF] hover:underline text-sm font-medium transition text-center mt-2"
+          className="text-[#719CBF] hover:text-[#6A9ECF] hover:underline text-sm font-medium transition text-center mt-2"
         >
           Back to Login
         </button>

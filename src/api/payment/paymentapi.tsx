@@ -46,6 +46,12 @@ interface UpiPaymentPayload {
   subscription_id: string;
   method: "upi";
   upi_id: string;
+  amount?: number;
+}
+
+interface GenericPaymentPayload {
+  subscription_id: string;
+  method: "paypal" | "stripe" | "cash" | "check";
 }
 
 // Union type for all payment methods (INCLUDE debit_card)
@@ -53,16 +59,76 @@ type SubmitPaymentPayload =
   | CreditCardPaymentPayload 
   | DebitCardPaymentPayload 
   | BankTransferPaymentPayload 
-  | UpiPaymentPayload;
+  | UpiPaymentPayload
+  | GenericPaymentPayload;
 
 // Type for the response of UPI verification
 interface UpiVerificationResponse {
-  success: boolean;
+  success?: boolean;
+  valid?: boolean;
+  verified?: boolean;
+  message?: string;
 }
 
 // Type for the response of a successful payment
 interface PaymentResponse {
-  success: boolean;
+  success?: boolean;
+  status?: string;
+  message?: string;
+  subscription_id?: string;
+  receipt?: unknown;
+  payment?: {
+    action?: string;
+    payment_url?: string | null;
+    requires_redirect?: boolean;
+    note?: string;
+  };
+}
+
+interface RazorpayOrderPayload {
+  subscription_id: string;
+  amount: number;
+  currency?: string;
+  /** Optional note for backend; omit to let Razorpay Checkout show all methods */
+  method?: "credit_card" | "debit_card" | "upi";
+}
+
+interface RazorpayOrderResponse {
+  key_id: string;
+  order_id: string;
+  amount: number;
+  currency: string;
+  subscription_id: string;
+  status: "pending";
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+}
+
+interface RazorpayVerifyPayload {
+  subscription_id: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+  method?: "credit_card" | "debit_card" | "upi";
+}
+
+interface CheckoutPayload {
+  plan_id: string;
+  months: number;
+  payment_method?: string;
+}
+
+interface CheckoutResponse {
+  message?: string;
+  subscription_id?: string;
+  payment?: {
+    method?: string;
+    action?: string;
+    payment_url?: string | null;
+  };
 }
 
 // Type for adding a new payment method
@@ -72,16 +138,21 @@ interface AddPaymentMethodPayload {
 }
 
 // Type for card detail item
-export interface CardDetailItem {
-  id?: string;
+interface CardDetailItem {
   card_brand: string;
   card_last4: string;
   exp_month: number;
   exp_year: number;
   card_holder_name: string;
-  is_default?: boolean;
+  billing_address?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  };
 }
-
 // Type for the response when fetching card details
 interface CardDetailsResponse {
   card_details: CardDetailItem[];
@@ -118,7 +189,7 @@ export const getPaymentMethods = async (): Promise<{ methods: PaymentMethod[] }>
 /* ---------------------- 💳 SUBMIT PAYMENT ---------------------- */
 export const submitPayment = async (payload: SubmitPaymentPayload): Promise<PaymentResponse> => {
   try {
-    const res = await axiosInstance.post("/api/tenant/payment/submit/", payload);
+    const res = await axiosInstance.post("/api/tenants/payment/submit/", payload);
     return res.data;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -128,10 +199,28 @@ export const submitPayment = async (payload: SubmitPaymentPayload): Promise<Paym
   }
 };
 
-/* ---------------------- 📱 VERIFY UPI ---------------------- */
+/* ---------------------- 🧾 CREATE CHECKOUT SUBSCRIPTION ---------------------- */
+export const createCheckoutSubscription = async (
+  payload: CheckoutPayload
+): Promise<CheckoutResponse> => {
+  try {
+    const res = await axiosInstance.post("/api/tenants/pricing/checkout/", payload);
+    return res.data;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Error creating checkout subscription:", errorData || errorMessage);
+    throw error;
+  }
+};
+
+/* ---------------------- 📱 VERIFY UPI (legacy / non-production) ----------------------
+ * Not used by the Razorpay Checkout flow. UPI is completed inside Razorpay Checkout only.
+ * Kept for optional tooling or old integrations.
+ */
 export const verifyUpi = async (upi_id: string): Promise<UpiVerificationResponse> => {
   try {
-    const res = await axiosInstance.post("/api/tenant/payment/upi/verify/", { upi_id });
+    const res = await axiosInstance.post("/api/tenants/payment/upi/verify/", { upi_id });
     return res.data;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -144,12 +233,42 @@ export const verifyUpi = async (upi_id: string): Promise<UpiVerificationResponse
 /* ---------------------- 📱 UPI PAYMENT FINALIZATION ---------------------- */
 export const payWithUpi = async (payload: UpiPaymentPayload): Promise<PaymentResponse> => {
   try {
-    const res = await axiosInstance.post("/api/tenant/payment/upi/pay/", payload);
+    const res = await axiosInstance.post("/api/tenants/payment/submit/", payload);
     return res.data;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorData = (error as { response?: { data?: unknown } })?.response?.data;
     console.error("❌ UPI payment submission error:", errorData || errorMessage);
+    throw error;
+  }
+};
+
+/* ---------------------- 🧾 CREATE RAZORPAY ORDER ---------------------- */
+export const createRazorpayOrder = async (
+  payload: RazorpayOrderPayload
+): Promise<RazorpayOrderResponse> => {
+  try {
+    const res = await axiosInstance.post("/api/tenants/payment/create-order/", payload);
+    return res.data;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Razorpay order create error:", errorData || errorMessage);
+    throw error;
+  }
+};
+
+/* ---------------------- ✅ VERIFY RAZORPAY PAYMENT ---------------------- */
+export const verifyRazorpayPayment = async (
+  payload: RazorpayVerifyPayload
+): Promise<PaymentResponse> => {
+  try {
+    const res = await axiosInstance.post("/api/tenants/payment/verify/", payload);
+    return res.data;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorData = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("❌ Razorpay payment verification error:", errorData || errorMessage);
     throw error;
   }
 };

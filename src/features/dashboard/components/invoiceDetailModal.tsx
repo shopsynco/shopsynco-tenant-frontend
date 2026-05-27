@@ -1,12 +1,14 @@
-import Swal from "sweetalert2";
-import { BASE_URL } from "../../../api/axios_config";
+import { downloadInvoiceFile } from "../../../api/mainapi/invoiceapi";
+import { showError } from "../../../components/swalHelper";
 
 interface Invoice {
-  id: string | number;
+  invoice_no?: string;
+  transaction_id?: string | number;
   date: string;
   description: string;
-  paymentMethod: string;
+  payment_method?: string;
   amount: string | number;
+  currency?: string;
 }
 
 interface InvoiceDetailModalProps {
@@ -14,17 +16,36 @@ interface InvoiceDetailModalProps {
   closeModal: () => void;
 }
 
-const InvoiceDetailModal = ({ invoice, closeModal }: InvoiceDetailModalProps) => {
+const InvoiceDetailModal = ({
+  invoice,
+  closeModal,
+}: InvoiceDetailModalProps) => {
   const downloadInvoice = async () => {
     try {
-      window.open(
-        `${BASE_URL}/api/tenant/pqrs_company/billing/invoices/${invoice.id}/download`,
-        "_blank"
-      );
-    } catch (error) {
-      Swal.fire("Error", "Failed to download the invoice.", "error");
+      const ref = invoice.transaction_id ?? invoice.invoice_no ?? "";
+      if (!ref) throw new Error("Missing invoice identifier.");
+      await downloadInvoiceFile(ref);
+    } catch (err: any) {
+      showError("Error", err.message || "Failed to download invoice.");
     }
   };
+
+  const amount = Number(invoice.amount ?? 0);
+  const currency = String(invoice.currency || "INR").toUpperCase();
+  let formattedAmount = `${currency} ${amount.toFixed(2)}`;
+  try {
+    formattedAmount = new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    /* fall back to plain string */
+  }
+  const paymentMethodLabel = String(invoice.payment_method || "—").replace(
+    /_/g,
+    " ",
+  );
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
@@ -35,16 +56,30 @@ const InvoiceDetailModal = ({ invoice, closeModal }: InvoiceDetailModalProps) =>
         >
           X
         </button>
+
         <h2 className="text-xl font-semibold mb-4 text-[#4A5C74]">
           Invoice Details
         </h2>
+
         <div className="space-y-3">
-          <p><strong>Invoice No:</strong> {invoice.id}</p>
-          <p><strong>Date:</strong> {invoice.date}</p>
-          <p><strong>Description:</strong> {invoice.description}</p>
-          <p><strong>Payment Method:</strong> {invoice.paymentMethod}</p>
-          <p><strong>Amount:</strong> {invoice.amount}</p>
+          <p>
+            <strong>Invoice No:</strong> {invoice.invoice_no}
+          </p>
+          <p>
+            <strong>Date:</strong> {invoice.date}
+          </p>
+          <p>
+            <strong>Description:</strong> {invoice.description}
+          </p>
+          <p className="capitalize">
+            <strong className="not-italic">Payment Method:</strong>{" "}
+            {paymentMethodLabel}
+          </p>
+          <p>
+            <strong>Amount:</strong> {formattedAmount}
+          </p>
         </div>
+
         <button
           onClick={downloadInvoice}
           className="mt-4 w-full bg-[#6A3CB1] text-white py-3 rounded-lg"

@@ -1,20 +1,34 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, X, ShoppingCart } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import {
+  ArrowLeft,
+  X,
+  ShoppingCart,
+  Search,
+  Funnel,
+  Check,
+  Plus,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
+
 import {
   getFeatureStore,
   addFeature,
   removeFeature,
   getMyFeatures,
 } from "../../../api/mainapi/featureapi";
+import { showError } from "../../../components/swalHelper";
+import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
+import axios from "axios";
 
 interface Feature {
-  id: string;
+  id: string | number;
   name: string;
   description: string;
   price: number;
   tag?: string;
+  category?: string;
+  billing_cycle?: string;
+  created_at?: string;
 }
 
 export default function FeatureStorePage({
@@ -27,12 +41,74 @@ export default function FeatureStorePage({
   const [stage, setStage] = useState<"list" | "checkout">("list");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null); // State to handle errors
-  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sortBy, setSortBy] = useState<
+    "default" | "name_asc" | "name_desc" | "price_low_high" | "price_high_low"
+  >("default");
 
-  const selectedFeatures = features.filter((f) => selected.includes(f.id));
-  const subtotal = selectedFeatures.reduce((sum, f) => sum + f.price, 0);
+  const navigate = useNavigate();
+  const getFeatureId = (id: string | number) => String(id);
+
+  const priceNum = (p: unknown) => {
+    const n = Number(p);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const selectedFeatures = features.filter((f) =>
+    selected.includes(getFeatureId(f.id))
+  );
+  /** API may return `price` as string — avoid `number + string` concat in reduce. */
+  const subtotal = selectedFeatures.reduce((sum, f) => sum + priceNum(f.price), 0);
   const gst = subtotal * 0.18;
   const total = subtotal + gst;
+
+  const categoryOptions = useMemo(() => {
+    const categories = Array.from(
+      new Set(
+        features
+          .map((f) => (f.category || "").trim())
+          .filter((c): c is string => Boolean(c))
+      )
+    ).sort((a, b) => a.localeCompare(b));
+    return ["all", ...categories];
+  }, [features]);
+
+  const filteredFeatures = useMemo(() => {
+    let next = [...features];
+
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      next = next.filter(
+        (f) =>
+          f.name.toLowerCase().includes(q) ||
+          (f.description || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (selectedCategory !== "all") {
+      next = next.filter((f) => (f.category || "").trim() === selectedCategory);
+    }
+
+    switch (sortBy) {
+      case "name_asc":
+        next.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "name_desc":
+        next.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "price_low_high":
+        next.sort((a, b) => Number(a.price) - Number(b.price));
+        break;
+      case "price_high_low":
+        next.sort((a, b) => Number(b.price) - Number(a.price));
+        break;
+      default:
+        break;
+    }
+
+    return next;
+  }, [features, searchTerm, selectedCategory, sortBy]);
 
   const handleClose = () => {
     if (onClose) onClose();
@@ -40,77 +116,116 @@ export default function FeatureStorePage({
   };
 
   // ✅ Fetch features and user's existing selections
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null); // Reset any previous errors
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null); // Reset any previous errors
 
-      const [allFeatures, myFeaturesResp] = await Promise.all([
-        getFeatureStore(),
-        getMyFeatures(),
-      ]);
+        const [allFeatures, myFeaturesResp] = await Promise.all([
+          getFeatureStore(),
+          getMyFeatures(),
+        ]);
 
-      // --- normalize allFeatures into an array ---
-      if (Array.isArray(allFeatures)) {
-        setFeatures(allFeatures);
-      } else if (allFeatures?.features && Array.isArray(allFeatures.features)) {
-        setFeatures(allFeatures.features);
-      } else if (allFeatures?.data && Array.isArray(allFeatures.data)) {
-        setFeatures(allFeatures.data);
-      } else {
-        setFeatures([]);
-        console.warn("Unexpected allFeatures shape:", allFeatures);
-      }
-
-      // --- normalize myFeatures into an array of ids ---
-      let selectedIds: string[] = [];
-
-      if (Array.isArray(myFeaturesResp)) {
-        // direct array of feature objects
-        selectedIds = myFeaturesResp.map((f: any) => String(f.id));
-      } else if (myFeaturesResp?.features && Array.isArray(myFeaturesResp.features)) {
-        selectedIds = myFeaturesResp.features.map((f: any) => String(f.id));
-      } else if (myFeaturesResp?.data && Array.isArray(myFeaturesResp.data)) {
-        selectedIds = myFeaturesResp.data.map((f: any) => String(f.id));
-      } else if (myFeaturesResp?.ids && Array.isArray(myFeaturesResp.ids)) {
-        // sometimes API returns just ids
-        selectedIds = myFeaturesResp.ids.map((id: any) => String(id));
-      } else {
-        // last fallback: if API returned a single object (maybe a feature)
-        if (myFeaturesResp && typeof myFeaturesResp === "object" && myFeaturesResp.id) {
-          selectedIds = [String((myFeaturesResp as any).id)];
+        // --- normalize allFeatures into an array ---
+        if (Array.isArray(allFeatures)) {
+          setFeatures(allFeatures);
+        } else if (
+          allFeatures?.features &&
+          Array.isArray(allFeatures.features)
+        ) {
+          setFeatures(allFeatures.features);
+        } else if (allFeatures?.data && Array.isArray(allFeatures.data)) {
+          setFeatures(allFeatures.data);
         } else {
-          console.warn("Unexpected myFeatures shape:", myFeaturesResp);
+          setFeatures([]);
+          console.warn("Unexpected allFeatures shape:", allFeatures);
         }
+
+        // --- normalize myFeatures into an array of ids ---
+        let selectedIds: string[] = [];
+
+        if (Array.isArray(myFeaturesResp)) {
+          // direct array of feature objects
+          selectedIds = myFeaturesResp.map((f: any) => String(f.id));
+        } else if (
+          myFeaturesResp?.features &&
+          Array.isArray(myFeaturesResp.features)
+        ) {
+          selectedIds = myFeaturesResp.features.map((f: any) => String(f.id));
+        } else if (myFeaturesResp?.data && Array.isArray(myFeaturesResp.data)) {
+          selectedIds = myFeaturesResp.data.map((f: any) => String(f.id));
+        } else if (myFeaturesResp?.ids && Array.isArray(myFeaturesResp.ids)) {
+          // sometimes API returns just ids
+          selectedIds = myFeaturesResp.ids.map((id: any) => String(id));
+        } else {
+          // last fallback: if API returned a single object (maybe a feature)
+          if (
+            myFeaturesResp &&
+            typeof myFeaturesResp === "object" &&
+            myFeaturesResp.id
+          ) {
+            selectedIds = [String((myFeaturesResp as any).id)];
+          } else {
+            console.warn("Unexpected myFeatures shape:", myFeaturesResp);
+          }
+        }
+
+        setSelected(selectedIds);
+      } catch (err) {
+        console.error("Error loading feature store:", err);
+        setError("Failed to load feature store data.");
+      } finally {
+        setLoading(false);
       }
-
-      setSelected(selectedIds);
-    } catch (err) {
-      console.error("Error loading feature store:", err);
-      setError("Failed to load feature store data.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchData();
-}, []);
-
+    };
+    fetchData();
+  }, []);
 
   // ✅ Toggle Add/Remove Feature (API integrated)
-  const toggleSelect = async (id: string) => {
+  const toggleSelect = async (id: string | number) => {
+    const normalizedId = getFeatureId(id);
     try {
       setLoading(true);
-      if (selected.includes(id)) {
-        await removeFeature(id);
-        setSelected((prev) => prev.filter((x) => x !== id));
+      if (selected.includes(normalizedId)) {
+        await removeFeature(normalizedId);
+        setSelected((prev) => prev.filter((x) => x !== normalizedId));
       } else {
-        await addFeature(id);
-        setSelected((prev) => [...prev, id]);
+        await addFeature(normalizedId);
+        setSelected((prev) => [...prev, normalizedId]);
       }
-    } catch (err) {
+
+      // ...
+    } catch (err: unknown) {
       console.error("Feature update error:", err);
-      Swal.fire("Error", "Unable to update feature selection. Please try again.", "error");
+
+      const data = axios.isAxiosError(err)
+        ? (err.response?.data as Record<string, unknown> | undefined)
+        : undefined;
+      const errLower =
+        typeof data?.error === "string" ? data.error.toLowerCase() : "";
+      const requiresSubscription =
+        data?.requires_subscription === true ||
+        errLower.includes("no active subscription") ||
+        errLower.includes("select a plan first");
+
+      const msg =
+        (typeof data?.error === "string" && data.error) ||
+        (typeof data?.detail === "string" && data.detail) ||
+        (err as Error)?.message ||
+        "Unable to update feature selection. Please try again.";
+
+      showError(
+        "Update failed",
+        msg,
+        requiresSubscription
+          ? () => {
+              onClose?.();
+              setPlansEntryFromDashboard();
+              navigate("/plans");
+            }
+          : undefined
+      );
     } finally {
       setLoading(false);
     }
@@ -118,9 +233,9 @@ useEffect(() => {
 
   return (
     <div className="lg:fixed lg:inset-0 lg:bg-black/40 lg:flex lg:items-center lg:justify-center p-0 lg:p-4 z-50">
-      <div className="bg-white rounded-none lg:rounded-2xl shadow-xl w-full lg:max-w-5xl lg:max-h-[90vh] overflow-hidden flex flex-col h-screen lg:h-auto">
+      <div className="bg-white rounded-none lg:rounded-2xl shadow-xl w-full lg:max-w-5xl lg:max-h-[90vh] overflow-hidden flex flex-col h-screen lg:h-auto flex-1">
         {/* HEADER */}
-        <div className="bg-gradient-to-r from-[#8C7BFF] to-[#6A3CB1] text-white flex items-center justify-between px-5 py-4">
+        <div className="bg-gradient-to-r from-[#6A3CB1] to-[#8C7BFF] text-white flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
             {stage === "checkout" ? (
               <button
@@ -137,7 +252,7 @@ useEffect(() => {
                 <ArrowLeft size={22} />
               </button>
             )}
-            <h2 className="text-lg font-semibold">Feature Store</h2>
+            <h2 className="text-lg font-semibold text-white">Feature Store</h2>
           </div>
           <button
             onClick={handleClose}
@@ -157,31 +272,87 @@ useEffect(() => {
             <p className="text-center text-red-500 mt-10">{error}</p> // Error message
           ) : stage === "list" ? (
             <>
-              {/* Search + Filters */}
               <div className="flex flex-col sm:flex-row gap-3 mb-5">
-                <input
-                  type="text"
-                  placeholder="Search feature"
-                  className="border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-1/2 focus:ring-2 focus:ring-[#6A3CB1] outline-none"
-                />
+                {/* Search -------------------------------------------------- */}
+                <div className="relative w-full sm:w-1/2">
+                  <Search
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7658A0B2]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search feature"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#6A3CB1] outline-none"
+                  />
+                </div>
+
+                {/* Category + Filter (same icon after text) --------------- */}
                 <div className="flex gap-2 sm:ml-auto">
-                  <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600">
-                    <option>All Category</option>
-                  </select>
-                  <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600">
-                    <option>Sort By: All</option>
-                  </select>
+                  {/* Category */}
+                  <div className="relative flex items-center border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#7658A0B2] bg-white">
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="bg-transparent outline-none pr-6 appearance-none cursor-pointer"
+                      aria-label="Filter by category"
+                    >
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category === "all" ? "All Category" : category}
+                        </option>
+                      ))}
+                    </select>
+                    <Funnel size={20} className="ml-2 text-[#7658A0B2]" />
+                  </div>
+
+                  {/* Filter */}
+                  <div className="relative flex items-center border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#7658A0B2] bg-white">
+                    <select
+                      value={sortBy}
+                      onChange={(e) =>
+                        setSortBy(
+                          e.target.value as
+                            | "default"
+                            | "name_asc"
+                            | "name_desc"
+                            | "price_low_high"
+                            | "price_high_low"
+                        )
+                      }
+                      className="bg-transparent outline-none pr-6 appearance-none cursor-pointer"
+                      aria-label="Sort features"
+                    >
+                      <option value="default">Sort By: Default</option>
+                      <option value="name_asc">Name: A-Z</option>
+                      <option value="name_desc">Name: Z-A</option>
+                      <option value="price_low_high">Price: Low to High</option>
+                      <option value="price_high_low">Price: High to Low</option>
+                    </select>
+                    <Funnel size={20} className="ml-2 text-[#7658A0B2]" />
+                  </div>
                 </div>
               </div>
 
               {/* Feature Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {features.map((f) => {
-                  const isAdded = selected.includes(f.id);
+                {filteredFeatures.length === 0 && (
+                  <div className="col-span-full text-center text-gray-500 py-10">
+                    No features match your search/filter.
+                  </div>
+                )}
+                {filteredFeatures.map((f) => {
+                  const fid = getFeatureId(f.id);
+                  const isAdded = selected.includes(fid);
                   return (
                     <div
-                      key={f.id}
-                      className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition bg-white"
+                      key={fid}
+                      className={`rounded-xl p-4 transition bg-white ${
+                        isAdded
+                          ? "border border-[#22c55e]" // green border when added
+                          : "border border-transparent bg-[#7658A00D]" // 5% purple tint, no border
+                      }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-medium text-gray-800 text-sm">
@@ -199,15 +370,18 @@ useEffect(() => {
                           </span>
                         )}
                       </div>
+
                       <p className="text-xs text-gray-500 mb-3 leading-snug">
                         {f.description}
                       </p>
+
                       <div className="flex items-center justify-between">
                         <p className="font-semibold text-gray-800 text-sm">
-                          ₹ {f.price}/mo
+                          ₹ {priceNum(f.price)}/mo
                         </p>
+
                         <button
-                          onClick={() => toggleSelect(f.id)}
+                          onClick={() => toggleSelect(fid)}
                           disabled={loading}
                           className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition ${
                             isAdded
@@ -215,8 +389,18 @@ useEffect(() => {
                               : "bg-[#6A3CB1] text-white hover:bg-[#5b32a2]"
                           }`}
                         >
-                          <ShoppingCart size={14} />
-                          {isAdded ? "Added" : "Add"}
+                          {isAdded ? (
+                            <>
+                              <Check size={14} />
+                              Added
+                            </>
+                          ) : (
+                            <>
+                              <Plus  size={14} />
+                              <ShoppingCart size={14} />
+                              Add
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -242,7 +426,7 @@ useEffect(() => {
                       <p className="text-xs text-gray-500">{f.description}</p>
                     </div>
                     <p className="text-sm font-semibold text-gray-800">
-                      ₹ {f.price}/mo
+                      ₹ {priceNum(f.price)}/mo
                     </p>
                   </div>
                 ))}
@@ -268,28 +452,33 @@ useEffect(() => {
 
         {/* FOOTER */}
         <div className="border-t px-5 py-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          {stage === "list" ? (
-            <>
+          {stage === "list" && (
+            <div className="sticky bottom-0 left-0 right-0 z-10 w-full h-16 bg-white rounded-t-xl shadow-t-md flex items-center justify-between px-5">
               <p className="text-sm text-gray-700 flex items-center gap-2">
                 <ShoppingCart size={16} className="text-[#6A3CB1]" />
-                {selected.length} Features Selected •{" "}
-                <span className="font-semibold">Total: ₹{subtotal}/month</span>
+                {selected.length} Features Selected ·{" "}
+                <span className="font-semibold">
+                  Total: ₹{total.toFixed(0)}/mo
+                </span>
               </p>
+
               <button
-                disabled={selected.length === 0}
                 onClick={() => setStage("checkout")}
-                className={`px-5 py-2 rounded-lg font-medium text-sm transition ${
-                  selected.length === 0
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-[#6A3CB1] text-white hover:bg-[#5b32a2]"
-                }`}
+                disabled={selected.length === 0}
+                className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  width: 220,
+                  height: 40,
+                  borderRadius: 10,
+                  background:
+                    "linear-gradient(90deg, #AE84EB 0%, #7CB2E5 100%)",
+                }}
               >
-                {selected.length === 0
-                  ? "Select Features"
-                  : "Proceed to Checkout"}
+                Proceed to Checkout
               </button>
-            </>
-          ) : (
+            </div>
+          )}
+          {/* : (
             <>
               <button
                 onClick={() => setStage("list")}
@@ -304,7 +493,7 @@ useEffect(() => {
                 Pay & Activate
               </button>
             </>
-          )}
+          ) */}
         </div>
       </div>
     </div>
