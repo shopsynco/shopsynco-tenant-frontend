@@ -1,8 +1,15 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import bgImage from "../../../../assets/backgroundsuccess.png";
+import shopLogo from "../../../../assets/Name-Logo.png";
 import { CheckCircle } from "lucide-react";
+import { markTenantSubscriptionActive } from "../../../../utils/planFlow";
 
 export default function PaymentSuccessPage() {
+  useEffect(() => {
+    markTenantSubscriptionActive();
+  }, []);
+
   return (
     <div
       className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center justify-center px-6 py-10"
@@ -15,7 +22,7 @@ export default function PaymentSuccessPage() {
     >
       {/* ShopSynco Logo */}
       <div className="absolute top-6 left-6">
-        <img src="/logo.svg" alt="ShopSynco" className="w-36" />
+        <img src={shopLogo} alt="ShopSynco" className="h-10 w-auto object-contain" />
       </div>
 
       {/* Success Modal with Glassmorphism Effect */}

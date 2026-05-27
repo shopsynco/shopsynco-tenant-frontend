@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import Swal from "sweetalert2";
 import AuthLayout from "../components/AuthLayout";
-import { sendEmailVerificationCode } from "../../../api/auth/authapi";
+import {
+  preSignupVerificationPayload,
+  sendEmailVerificationCode,
+} from "../../../api/auth/authapi";
+import { showError, showSuccess } from "../../../components/swalHelper";
 
 export default function EnterEmail() {
   const navigate = useNavigate();
@@ -21,33 +24,41 @@ export default function EnterEmail() {
     e.preventDefault();
 
     if (!email) {
-      Swal.fire("Error", "Please enter your email", "error");
-      return;
-    }
+  showError("Validation Error", "Please enter your email.");
+  return;
+}
 
-    try {
-      setLoading(true);
+try {
+  setLoading(true);
+  const trimmed = email.toLowerCase().trim();
+  const result = await sendEmailVerificationCode(trimmed);
+  const payload = preSignupVerificationPayload(result);
+  const skipVerification =
+    payload.skip_verification === true ||
+    payload.can_proceed_to_signup === true;
 
-      // 🔹 Call pre-signup send API
-      await sendEmailVerificationCode(email.toLowerCase().trim());
+  if (skipVerification) {
+    showSuccess(
+      "Email verified",
+      "This email is already verified. Continue to create your store.",
+      () => navigate(`/signup?email=${encodeURIComponent(trimmed)}`)
+    );
+    return;
+  }
 
-      Swal.fire(
-        "Verification Sent",
-        "We’ve sent a 6-digit verification code to your email.",
-        "success"
-      );
-
-      // 🔹 Go to verification page with email
-      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
-    } catch (err: any) {
-      Swal.fire(
-        "Error",
-        err.message || "Failed to send verification email. Please try again.",
-        "error"
-      );
-    } finally {
-      setLoading(false);
-    }
+  showSuccess(
+    "Verification Sent",
+    "We’ve sent a 6-digit verification code to your email.",
+    () => navigate(`/verify-email?email=${encodeURIComponent(trimmed)}`)
+  );
+} catch (err: any) {
+  showError(
+    "Send Failed",
+    err.message || "Failed to send verification email. Please try again."
+  );
+} finally {
+  setLoading(false);
+}
   };
 
   return (

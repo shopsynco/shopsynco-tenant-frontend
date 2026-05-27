@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from "react";
-import Swal from "sweetalert2";
-import { registerUser } from "../../../api/auth/authapi";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import bgImage from "../../../assets/authbackground.png";
+import { registerUser } from "../../../api/auth/authapi";
+import { showSuccess, showError } from "../../../components/swalHelper";
+import { startTenantGoogleOAuth } from "../utils/googleOAuth";
+import { isValidSignupPhone, SIGNUP_PHONE_HINT } from "../../../utils/signupPhoneValidation";
 
 interface RegisterFormData {
   first_name: string;
@@ -27,8 +30,10 @@ export default function RegisterPage() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // 🔹 Prefill email from verified flow
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const emailParam = params.get("email");
@@ -36,6 +41,16 @@ export default function RegisterPage() {
       setFormData((prev) => ({ ...prev, email: emailParam }));
     }
   }, [location.search]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const access = params.get("auth_access_token");
+    const refresh = params.get("auth_refresh_token");
+    if (!access || !refresh) return;
+    localStorage.setItem("accessToken", access);
+    localStorage.setItem("refreshToken", refresh);
+    window.location.assign("/dashboard");
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
@@ -47,7 +62,14 @@ export default function RegisterPage() {
     setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
-      Swal.fire("Error", "Passwords do not match!", "error");
+      showError("Error", "Passwords do not match!");
+      setLoading(false);
+      return;
+    }
+
+    const phoneTrimmed = formData.phone.trim();
+    if (!isValidSignupPhone(phoneTrimmed)) {
+      showError("Invalid phone number", SIGNUP_PHONE_HINT);
       setLoading(false);
       return;
     }
@@ -57,31 +79,42 @@ export default function RegisterPage() {
         first_name: formData.first_name,
         company_name: formData.company_name,
         email: formData.email.toLowerCase().trim(),
-        phone: formData.phone,
+        phone: phoneTrimmed,
         password: formData.password,
         confirm_password: formData.confirmPassword,
       };
 
-
-      // ✅ Now actually create the account
       await registerUser(payload);
 
-      await Swal.fire(
+      showSuccess(
         "Account Created!",
         "Your account has been created successfully. Please log in to continue.",
-        "success"
+        () => {
+          navigate("/login");
+        }
       );
-
-      navigate("/login");
     } catch (error: any) {
       console.error("Signup error:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Signup Failed",
-        text: error.message || "Signup failed. Please try again.",
-      });
+      showError(
+        "Signup Failed",
+        error?.message || "Signup failed. Please try again."
+      );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    setGoogleLoading(true);
+    try {
+      await startTenantGoogleOAuth("/signup");
+    } catch (error: unknown) {
+      setGoogleLoading(false);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to continue with Google sign-in.";
+      showError("Google Sign Up", message);
     }
   };
 
@@ -91,30 +124,29 @@ export default function RegisterPage() {
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       <div
-        className="w-full max-w-2xl p-12 rounded-3xl shadow-2xl backdrop-blur-sm border border-white/50 flex flex-col gap-6"
+        className="w-full max-w-2xl p-12 shadow-2xl backdrop-blur-sm border border-white/20 flex flex-col gap-6
+                   text-[#42739A] font-raleway"
         style={{
           boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.1)",
+          background:
+            "linear-gradient(139.18deg, rgba(255,255,255,0) 1.22%, rgba(113,156,191,0.3) 98.56%)",
+          borderRadius: "30px",
         }}
       >
         <h2
-          className="text-3xl font-bold text-center text-[#719CBF] mb-2"
-          style={{
-            fontFamily: "Raleway, sans-serif",
-            fontWeight: 700,
-            fontSize: "32px",
-            lineHeight: "100%",
-          }}
+          className="mx-auto mb-2 text-center font-raleway font-bold
+                     text-[32px] leading-[38px] tracking-[0.04em] text-[#719CBF]"
         >
           Create Your Account
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Row 1: First Name & Company Name */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* First Name */}
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="first_name"
-                className="text-[#719CBF] font-semibold text-base"
+                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
               >
                 First Name
               </label>
@@ -125,15 +157,16 @@ export default function RegisterPage() {
                 placeholder="Your First Name"
                 value={formData.first_name}
                 onChange={handleChange}
-                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
                 required
               />
             </div>
 
+            {/* Company Name */}
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="company_name"
-                className="text-[#719CBF] font-semibold text-base"
+                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
               >
                 Company Name
               </label>
@@ -144,18 +177,18 @@ export default function RegisterPage() {
                 placeholder="Your Company Name"
                 value={formData.company_name}
                 onChange={handleChange}
-                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
                 required
               />
             </div>
           </div>
 
-          {/* Row 2: Email & Phone */}
+          {/* Email & Phone */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="email"
-                className="text-[#719CBF] font-semibold text-base"
+                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
               >
                 Email Address
               </label>
@@ -166,17 +199,15 @@ export default function RegisterPage() {
                 placeholder="Your Email Address"
                 value={formData.email}
                 onChange={handleChange}
-                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
                 required
-                // optionally lock email:
-                // disabled
               />
             </div>
 
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="phone"
-                className="text-[#719CBF] font-semibold text-base"
+                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
               >
                 Phone Number
               </label>
@@ -184,64 +215,104 @@ export default function RegisterPage() {
                 type="tel"
                 name="phone"
                 id="phone"
-                placeholder="Your Phone Number"
+                placeholder="+1 555 123 4567"
+                autoComplete="tel"
+                inputMode="tel"
+                maxLength={22}
                 value={formData.phone}
                 onChange={handleChange}
-                className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
                 required
               />
             </div>
           </div>
 
-          {/* Password Fields */}
+          {/* Password */}
           <div className="flex flex-col gap-2">
             <label
               htmlFor="password"
-              className="text-[#719CBF] font-semibold text-base"
+              className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
             >
               Create Password
             </label>
-            <input
-              type="password"
-              name="password"
-              id="password"
-              placeholder="Create a strong password (min 8 characters)"
-              value={formData.password}
-              onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                id="password"
+                placeholder="Create a strong password (min 8 characters)"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-5 py-3 pr-12 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-3 flex items-center text-[#5f7f9c] hover:text-[#42739A]"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
+          {/* Confirm Password */}
           <div className="flex flex-col gap-2">
             <label
               htmlFor="confirmPassword"
-              className="text-[#719CBF] font-semibold text-base"
+              className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
             >
               Confirm Password
             </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              id="confirmPassword"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className="rounded-xl px-5 py-3 bg-white text-black border border-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                id="confirmPassword"
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="w-full px-5 py-3 pr-12 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-3 flex items-center text-[#5f7f9c] hover:text-[#42739A]"
+                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
+          {/* Submit button */}
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full py-4 rounded-xl font-bold text-white bg-[#6A9ECF] hover:bg-[#5c91c4] shadow-lg border border-white/30 transition"
+            className="mt-2 w-full py-4 rounded-[10px] shadow-lg border border-white/10
+              bg-[#719CBF] hover:bg-[#5f97b6] transition
+              font-poppins font-semibold text-[24px] leading-[33px] text-[#FCFCFC]
+              disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? "Creating Account..." : "Create Account"}
           </button>
 
-          <p className="text-center text-sm text-[#4A5C74] mt-2">
-            Already have an account?{" "}
+          <button
+            type="button"
+            disabled={googleLoading}
+            onClick={handleGoogleSignup}
+            className="mt-1 w-full py-4 rounded-[10px] shadow-lg border border-gray-300
+              bg-white hover:bg-gray-100 transition
+              font-poppins font-semibold text-[24px] leading-[33px] text-[#1f2937]
+              disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {googleLoading ? "Connecting..." : "Sign Up with Google"}
+          </button>
+
+          <p className="text-center text-sm mt-2">
+            <span className="text-[#4A5C74]">Already have an account? </span>
             <a
               href="/login"
               className="text-[#6A9ECF] font-medium hover:underline transition"

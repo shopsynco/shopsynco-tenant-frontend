@@ -2,6 +2,59 @@ import axios from "axios";
 import { BASE_URL } from "../axios_config";
 import axiosInstance from "../../store/refreshToken/tokenUtils";
 
+/** Shown when forgot-password is submitted for an email with no user account. */
+export const FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE =
+  "No account is registered with this email address.";
+
+/** First human-readable string from DRF / standardized error payloads. */
+function messageFromResponseData(data: unknown, fallback: string): string {
+  if (!data || typeof data !== "object") return fallback;
+  const d = data as Record<string, unknown>;
+  const detail = d.detail;
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+    const fields = detail as Record<string, unknown>;
+    for (const key of Object.keys(fields)) {
+      const v = fields[key];
+      if (Array.isArray(v) && v.length > 0) {
+        const first = v[0];
+        if (typeof first === "string") return first;
+      }
+      if (typeof v === "string") return v;
+    }
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0];
+    if (typeof first === "string") return first;
+  }
+  if (typeof d.message === "string" && d.message !== "Validation failed") {
+    return d.message;
+  }
+  return fallback;
+}
+
+/** Payload from POST /api/user/pre-signup/verify-email/send/ (nested under `verification`). */
+export function preSignupVerificationPayload(
+  data: unknown
+): Record<string, unknown> {
+  if (!data || typeof data !== "object") return {};
+  const root = data as Record<string, unknown>;
+  const nested = root.verification;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>;
+  }
+  return root;
+}
+
+function messageFromAxiosError(error: unknown, fallback: string): string {
+  const err = error as { response?: { data?: unknown } };
+  const data = err.response?.data;
+  if (data !== undefined) {
+    return messageFromResponseData(data, fallback);
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
 // -----------------------------
 // 🔹 Forget Password Code API
 // -----------------------------
@@ -14,8 +67,44 @@ export const forgotPassword = async (email: string) => {
     );
     return response.data;
   } catch (error: any) {
-    const detail =
-      error.response?.data?.detail || "Request failed. Please try again.";
+    const statusCode = error?.response?.status;
+    const data = error?.response?.data;
+
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      const raw = (data as Record<string, unknown>).email;
+      const first =
+        Array.isArray(raw) && raw.length > 0
+          ? String(raw[0])
+          : typeof raw === "string"
+            ? raw
+            : "";
+      const low = first.toLowerCase();
+      if (
+        low.includes("no user found") ||
+        low.includes("does not exist") ||
+        low.includes("not registered") ||
+        low.includes("no account")
+      ) {
+        throw new Error(FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE);
+      }
+    }
+
+    const detail = messageFromAxiosError(
+      error,
+      "Request failed. Please try again."
+    );
+    const normalized = detail.toLowerCase();
+
+    if (
+      statusCode === 404 ||
+      normalized.includes("user not found") ||
+      normalized.includes("no user") ||
+      normalized.includes("email does not exist") ||
+      normalized.includes("not registered")
+    ) {
+      throw new Error(FORGOT_PASSWORD_NO_ACCOUNT_MESSAGE);
+    }
+
     throw new Error(detail);
   }
 };
@@ -25,13 +114,19 @@ export const forgotPassword = async (email: string) => {
 // -----------------------------
 export const resetPassword = async (
   email: string,
+  verificationCode: string,
   password: string,
   confirmPassword: string
 ) => {
   try {
     const response = await axios.post(
       `${BASE_URL}api/user/auth/reset-password/`,
-      { email, password, confirm_password: confirmPassword },
+      {
+        email,
+        verification_code: verificationCode,
+        new_password: password,
+        confirm_password: confirmPassword,
+      },
       { headers: { "Content-Type": "application/json" } }
     );
     return response.data;
@@ -152,6 +247,26 @@ export const registerUser = async (data: RegisterPayload) => {
     throw new Error(errorMessage);
   }
 };
+
+export const tenantGoogleAuth = async (idToken: string) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}api/tenants/auth/google/`,
+      { id_token: idToken },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw new Error(
+      messageFromAxiosError(error, "Google authentication failed.")
+    );
+  }
+};
 // ------------------------------------------------------
 // ✅ SEND EMAIL VERIFICATION CODE (after signup)
 // ------------------------------------------------------
@@ -163,8 +278,10 @@ export const sendEmailVerificationCode = async (email: string) => {
       { headers: { "Content-Type": "application/json" } }
     );
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.detail || "Failed to send email verification code.");
+  } catch (error: unknown) {
+    throw new Error(
+      messageFromAxiosError(error, "Failed to send email verification code.")
+    );
   }
 };
 
@@ -179,8 +296,10 @@ export const verifyEmailCode = async (email: string, otp: string) => {
       { headers: { "Content-Type": "application/json" } }
     );
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.detail || "Invalid or expired verification code.");
+  } catch (error: unknown) {
+    throw new Error(
+      messageFromAxiosError(error, "Invalid or expired verification code.")
+    );
   }
 };
 
@@ -191,12 +310,20 @@ export const discoverTenant = async (domain: string) => {
   return response.data;
 };
 
+/** GET /api/tenants/{tenant_slug}/auth/profile/ — slug must match localStorage store_slug */
 export const fetchUserProfile = async () => {
+  const slug = localStorage.getItem("store_slug")?.trim();
+  if (!slug) {
+    console.warn("fetchUserProfile: missing store_slug");
+    return null;
+  }
   try {
-    const response = await axiosInstance.get("api/tenants/auth/profile/");
-    return response.data; // expected: { user_name: "...", user_email: "..." }
-  } catch (error: any) {
+    const response = await axiosInstance.get(
+      `api/tenants/${slug}/auth/profile/`
+    );
+    return response.data;
+  } catch (error: unknown) {
     console.error("Error fetching user profile:", error);
-    throw error;
+    return null;
   }
 };

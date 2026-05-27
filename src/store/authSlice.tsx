@@ -1,5 +1,27 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils";
+import { clearPlanFlowFlags, markTenantSubscriptionActive } from "../utils/planFlow";
+import { clearOnboardingTermsAcceptance } from "../utils/termsAcceptance";
+import { readTenantSlugFromAccessToken } from "../utils/tenantStoreSlug";
+import {
+  persistTenantUserEmail,
+  readStoredTenantUserEmail,
+} from "../utils/tenantUserEmail";
+import { decodeJwtPayload } from "../features/auth/utils/googleOAuth";
+
+const SESSION_REQUIRES_STORE_SETUP = "tenant_requires_store_setup";
+const SESSION_STORE_SETUP_INCOMPLETE = "tenant_store_setup_incomplete";
+
+/** Returned from login thunk (also used by LoginPage for routing). */
+export type LoginSuccessPayload = {
+  access: string;
+  refresh: string;
+  requires_store_setup: boolean;
+  action_required: string | null;
+  loginMessage: string | null;
+  has_active_subscription: boolean;
+  store_setup_incomplete: boolean;
+};
 
 interface AuthState {
   accessToken: string | null;
@@ -16,27 +38,97 @@ const initialState: AuthState = {
 };
 
 // ✅ Login Thunk
-export const loginUser = createAsyncThunk(
-  "auth/loginUser",
-  async (
-    credentials: { email: string; password: string },
-    { rejectWithValue }
-  ) => {
-    try {
-      const res = await axiosInstance.post(LOGIN_URL, credentials);
-      const { access, refresh } = res.data;
+export const loginUser = createAsyncThunk<
+  LoginSuccessPayload,
+  { email: string; password: string },
+  { rejectValue: string }
+>("auth/loginUser", async (credentials, { rejectWithValue }) => {
+  try {
+    const res = await axiosInstance.post(LOGIN_URL, credentials);
+    const { access, refresh } = res.data;
 
-      localStorage.setItem("accessToken", access);
-      localStorage.setItem("refreshToken", refresh);
+    localStorage.setItem("accessToken", access);
+    localStorage.setItem("refreshToken", refresh);
 
-      return { access, refresh };
-    } catch (err: any) {
-      const msg =
-        err.response?.data?.detail || "Login failed, please try again.";
-      return rejectWithValue(msg);
+    const jwtSlug = readTenantSlugFromAccessToken();
+    if (jwtSlug) {
+      localStorage.setItem("store_slug", jwtSlug);
     }
+
+    const userEmail =
+      (typeof res.data?.user?.email === "string" && res.data.user.email.trim()) ||
+      readStoredTenantUserEmail() ||
+      (() => {
+        const payload = decodeJwtPayload(access);
+        return typeof payload?.email === "string" ? payload.email.trim() : "";
+      })();
+    if (userEmail) {
+      persistTenantUserEmail(userEmail);
+    }
+
+    // Stale slug breaks onboarding: interceptor would call .../{slug}/store/setup/ → 404
+    const requiresStoreSetup = Boolean(res.data?.requires_store_setup);
+    if (requiresStoreSetup) {
+      localStorage.removeItem("store_slug");
+    }
+    try {
+      if (requiresStoreSetup) {
+        sessionStorage.setItem(SESSION_REQUIRES_STORE_SETUP, "1");
+      } else {
+        sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    const hasActiveSubscription = Boolean(res.data?.has_active_subscription);
+    if (hasActiveSubscription) {
+      markTenantSubscriptionActive();
+    } else {
+      // Prevent stale local flag from allowing dashboard access without payment.
+      localStorage.removeItem("tenant_subscription_active");
+    }
+
+    const storeSetupIncomplete = Boolean(res.data?.store_setup_incomplete);
+    try {
+      if (storeSetupIncomplete) {
+        sessionStorage.setItem(SESSION_STORE_SETUP_INCOMPLETE, "1");
+      } else {
+        sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    return {
+      access,
+      refresh,
+      requires_store_setup: Boolean(res.data?.requires_store_setup),
+      action_required:
+        typeof res.data?.action_required === "string"
+          ? res.data.action_required
+          : null,
+      loginMessage:
+        typeof res.data?.message === "string" ? res.data.message : null,
+      has_active_subscription: hasActiveSubscription,
+      store_setup_incomplete: storeSetupIncomplete,
+    };
+  } catch (err: unknown) {
+    const ax = err as {
+      response?: {
+        data?: { detail?: unknown; message?: unknown; code?: unknown };
+      };
+    };
+    const data = ax.response?.data;
+    const msg =
+      typeof data?.message === "string"
+        ? data.message
+        : typeof data?.detail === "string"
+          ? data.detail
+          : "Login failed, please try again.";
+    return rejectWithValue(msg);
   }
-);
+});
 
 // ✅ Refresh Token Thunk
 export const refreshAccessToken = createAsyncThunk(
@@ -50,6 +142,9 @@ export const refreshAccessToken = createAsyncThunk(
       const { access } = res.data;
 
       localStorage.setItem("accessToken", access);
+      if (typeof res.data.refresh === "string" && res.data.refresh.length > 0) {
+        localStorage.setItem("refreshToken", res.data.refresh);
+      }
       return access;
     } catch {
       return rejectWithValue("Token refresh failed");
@@ -66,6 +161,15 @@ const authSlice = createSlice({
       state.refreshToken = null;
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
+      localStorage.removeItem("store_slug");
+      clearPlanFlowFlags();
+      clearOnboardingTermsAcceptance();
+      try {
+        sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
+        sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);
+      } catch {
+        /* ignore */
+      }
     },
   },
   extraReducers: (builder) => {
@@ -85,6 +189,7 @@ const authSlice = createSlice({
       })
       .addCase(refreshAccessToken.fulfilled, (state, action) => {
         state.accessToken = action.payload;
+        state.refreshToken = localStorage.getItem("refreshToken");
       });
   },
 });

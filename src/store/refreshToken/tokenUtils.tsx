@@ -1,5 +1,6 @@
 import axios from "axios";
 import { BASE_URL } from "../../api/axios_config";
+import { resolveTenantStoreSlugForApi } from "../../utils/tenantStoreSlug";
 
 // ✅ API Endpoints
 const LOGIN_URL = `${BASE_URL}api/tenants/auth/login/`;
@@ -14,8 +15,8 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("accessToken");
-    // 🏷️ Get store slug from localStorage for multi-tenant routing
-    const storeSlug = localStorage.getItem("store_slug");
+    // JWT tenant_slug wins over stale localStorage (another store's shopper session).
+    const storeSlug = resolveTenantStoreSlugForApi();
 
     // Log request for debugging (development only)
     if (import.meta.env.DEV) {
@@ -61,6 +62,7 @@ axiosInstance.interceptors.request.use(
       // Define prefixes that should NEVER get the slug injected.
       // Add any other endpoints you want to exempt here.
       const noSlugPrefixes = [
+        "api/tenants/store", // create-store flow: POST .../store/setup/ (no tenant slug yet)
         "api/tenants/pricing", // pricing endpoints
         "api/tenants/payment", // payment endpoints (plural)
         "api/tenant/payment", // payment endpoints (singular)
@@ -182,6 +184,18 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = res.data.access;
 
         localStorage.setItem("accessToken", newAccessToken);
+        try {
+          const { readTenantSlugFromAccessToken } = await import("../../utils/tenantStoreSlug");
+          const slug = readTenantSlugFromAccessToken();
+          if (slug) localStorage.setItem("store_slug", slug);
+        } catch {
+          /* ignore */
+        }
+        // SIMPLE_JWT ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION: server returns a new refresh;
+        // if we don't persist it, the next refresh uses a blacklisted token → 401 on all APIs.
+        if (typeof res.data.refresh === "string" && res.data.refresh.length > 0) {
+          localStorage.setItem("refreshToken", res.data.refresh);
+        }
         axiosInstance.defaults.headers.common[
           "Authorization"
         ] = `Bearer ${newAccessToken}`;
@@ -202,6 +216,7 @@ axiosInstance.interceptors.response.use(
         // 🚪 Force logout
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        localStorage.removeItem("store_slug");
         console.warn(
           "%c[Auth] 🚪 Logged out due to expired token",
           "color:#ef4444"

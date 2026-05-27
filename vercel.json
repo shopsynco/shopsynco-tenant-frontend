@@ -1,0 +1,25 @@
+{
+  "redirects": [
+    {
+      "source": "/Plans",
+      "destination": "/plans",
+      "permanent": false
+    },
+    {
+      "source": "/Plans/",
+      "destination": "/plans",
+      "permanent": false
+    },
+    {
+      "source": "/Plans/:path*",
+      "destination": "/plans/:path*",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
