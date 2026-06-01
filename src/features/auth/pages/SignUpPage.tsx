@@ -4,7 +4,10 @@ import { Eye, EyeOff } from "lucide-react";
 import bgImage from "../../../assets/authbackground.png";
 import { registerUser } from "../../../api/auth/authapi";
 import { showSuccess, showError } from "../../../components/swalHelper";
-import { startTenantGoogleOAuth } from "../utils/googleOAuth";
+import {
+  startTenantGoogleOAuth,
+  oauthErrorMessage as getOauthErrorMessage,
+} from "../utils/googleOAuth";
 import { isValidSignupPhone, SIGNUP_PHONE_HINT } from "../../../utils/signupPhoneValidation";
 
 interface RegisterFormData {
@@ -33,6 +36,7 @@ export default function RegisterPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [googleErrorMessage, setGoogleErrorMessage] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -44,9 +48,23 @@ export default function RegisterPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const oauthError = (params.get("error") || "").trim();
     const access = params.get("auth_access_token");
     const refresh = params.get("auth_refresh_token");
+    const emailParam = params.get("email");
+
+    if (oauthError) {
+      const cleanPath = emailParam
+        ? `${window.location.pathname}?email=${encodeURIComponent(emailParam)}`
+        : window.location.pathname;
+      window.history.replaceState({}, document.title, cleanPath);
+      setGoogleErrorMessage(getOauthErrorMessage(oauthError));
+      return;
+    }
+
     if (!access || !refresh) return;
+
+    window.history.replaceState({}, document.title, window.location.pathname);
     localStorage.setItem("accessToken", access);
     localStorage.setItem("refreshToken", refresh);
     window.location.assign("/dashboard");
@@ -106,6 +124,7 @@ export default function RegisterPage() {
 
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
+    setGoogleErrorMessage("");
     try {
       await startTenantGoogleOAuth("/signup");
     } catch (error: unknown) {
@@ -141,6 +160,11 @@ export default function RegisterPage() {
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          {googleErrorMessage && (
+            <p role="alert" className="text-red-500 text-sm text-center">
+              {googleErrorMessage}
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* First Name */}
             <div className="flex flex-col gap-2">

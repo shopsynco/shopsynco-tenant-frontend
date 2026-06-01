@@ -72,3 +72,21 @@ export function oauthErrorMessage(errorCode: string): string {
       return "We couldn't complete Google sign-in. Please try again.";
   }
 }
+
+/** OAuth callback error codes that should send the user to tenant signup. */
+export const TENANT_SIGNUP_OAUTH_ERRORS = new Set([
+  "tenant_signup_required",
+  "google_customer_account_conflict",
+  "google_tenant_not_found",
+]);
+
+export function isTenantSignupOAuthError(errorCode: string): boolean {
+  return TENANT_SIGNUP_OAUTH_ERRORS.has((errorCode || "").trim());
+}
+
+export function tenantSignupPath(email?: string): string {
+  const trimmed = (email || "").trim();
+  return trimmed
+    ? `/email-verify?email=${encodeURIComponent(trimmed)}`
+    : "/email-verify";
+}
