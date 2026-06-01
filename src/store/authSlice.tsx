@@ -123,7 +123,12 @@ export const loginUser = createAsyncThunk<
   } catch (err: unknown) {
     const ax = err as {
       response?: {
-        data?: { detail?: unknown; message?: unknown; code?: unknown };
+        data?: {
+          detail?: unknown;
+          message?: unknown;
+          code?: unknown;
+          action?: unknown;
+        };
       };
     };
     const data = ax.response?.data;
