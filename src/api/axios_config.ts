@@ -1,6 +1,30 @@
 // Environment configuration
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://stagingbackend.shopsynco.com/";
-export const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || "https://stagingbackend.shopsynco.com/";
+/** Resolve API base URL at call time (hostname wins over stale build env). */
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname.toLowerCase();
+    if (host === "tenant.shopsynco.com") {
+      return "https://backend.shopsynco.com/";
+    }
+    if (host === "stagingtenant.shopsynco.com") {
+      return "https://stagingbackend.shopsynco.com/";
+    }
+  }
+
+  const fromEnv = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (fromEnv) return fromEnv.endsWith("/") ? fromEnv : `${fromEnv}/`;
+
+  return "https://stagingbackend.shopsynco.com/";
+}
+
+function resolveMediaBaseUrl(): string {
+  const fromEnv = (import.meta.env.VITE_MEDIA_URL as string | undefined)?.trim();
+  if (fromEnv) return fromEnv.endsWith("/") ? fromEnv : `${fromEnv}/`;
+  return getApiBaseUrl();
+}
+
+export const BASE_URL = getApiBaseUrl();
+export const MEDIA_URL = resolveMediaBaseUrl();
 
 /**
  * Public tenant URL template. Use `{slug}` for subdomain hosts.

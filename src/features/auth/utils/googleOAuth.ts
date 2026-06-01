@@ -1,4 +1,4 @@
-import { BASE_URL } from "../../../api/axios_config";
+import { getApiBaseUrl } from "../../../api/axios_config";
 
 /** Decode a JWT payload (base64url) without verifying its signature. */
 export function decodeJwtPayload(
@@ -17,6 +17,33 @@ export function decodeJwtPayload(
   }
 }
 
+function expectedGoogleCallbackHost(): string | null {
+  if (typeof window === "undefined") return null;
+  const host = window.location.hostname.toLowerCase();
+  if (host === "tenant.shopsynco.com") return "backend.shopsynco.com";
+  if (host === "stagingtenant.shopsynco.com") return "stagingbackend.shopsynco.com";
+  return null;
+}
+
+function assertGoogleRedirectHost(redirectUrl: string, redirectUri?: string): void {
+  const expectedHost = expectedGoogleCallbackHost();
+  if (!expectedHost) return;
+
+  const callbackUri =
+    redirectUri ||
+    (() => {
+      const match = redirectUrl.match(/[?&]redirect_uri=([^&]+)/);
+      return match ? decodeURIComponent(match[1]) : "";
+    })();
+
+  if (callbackUri && !callbackUri.includes(expectedHost)) {
+    throw new Error(
+      `Google sign-in is misconfigured. Expected callback host ${expectedHost}. ` +
+        "Add the matching redirect URI in Google Cloud Console and redeploy the backend."
+    );
+  }
+}
+
 /**
  * Start tenant Google OAuth: fetch JSON from backend, then redirect to Google.
  * Do not navigate the browser to the API URL directly (that shows DRF JSON).
@@ -25,8 +52,9 @@ export async function startTenantGoogleOAuth(
   callbackPath: string
 ): Promise<void> {
   const callbackReturn = `${window.location.origin}${callbackPath}`;
+  const baseUrl = getApiBaseUrl();
   const initUrl =
-    `${BASE_URL}api/user/auth/google/login/?flow=tenant` +
+    `${baseUrl}api/user/auth/google/login/?flow=tenant` +
     `&return_to=${encodeURIComponent(callbackReturn)}`;
 
   const response = await fetch(initUrl, {
@@ -35,6 +63,7 @@ export async function startTenantGoogleOAuth(
   });
   const data = (await response.json().catch(() => ({}))) as {
     redirect_url?: string;
+    redirect_uri?: string;
     detail?: string;
     message?: string;
   };
@@ -49,6 +78,8 @@ export async function startTenantGoogleOAuth(
   if (!redirectUrl) {
     throw new Error("Google redirect URL was not returned by the server.");
   }
+
+  assertGoogleRedirectHost(redirectUrl, data?.redirect_uri?.trim());
 
   window.location.assign(redirectUrl);
 }
