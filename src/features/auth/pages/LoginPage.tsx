@@ -13,19 +13,33 @@ import { readTenantSlugFromAccessToken } from "../../../utils/tenantStoreSlug";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
 import {
   decodeJwtPayload,
+  isTenantSignupOAuthError,
   oauthErrorMessage,
   startTenantGoogleOAuth,
+  tenantSignupPath,
 } from "../utils/googleOAuth";
 
 type TenantSlugResponse = {
   slug?: string;
   tenant_slug?: string;
   user_role?: string;
+  user_exists?: boolean;
+  has_tenant?: boolean;
   data?: {
     slug?: string;
     tenant_slug?: string;
+    user_exists?: boolean;
+    has_tenant?: boolean;
+    user_role?: string;
   };
 };
+
+function pickField<T>(...values: unknown[]): T | undefined {
+  for (const value of values) {
+    if (value !== undefined && value !== null) return value as T;
+  }
+  return undefined;
+}
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
@@ -39,6 +53,69 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showSignupHint, setShowSignupHint] = useState(false);
 
+  const redirectToSignup = React.useCallback(
+    (signupEmail?: string) => {
+      redirectToTenantAppPath(tenantSignupPath(signupEmail || email));
+    },
+    [email]
+  );
+
+  const offerSignupIfNonTenantEmail = React.useCallback(
+    async (probeEmail: string): Promise<boolean> => {
+      if (!probeEmail || !probeEmail.includes("@")) return false;
+      try {
+        const res = (await discoverTenantSlug(probeEmail)) as TenantSlugResponse;
+        const userExists = pickField<boolean>(
+          res?.user_exists,
+          res?.data?.user_exists
+        );
+        const hasTenant = pickField<boolean>(
+          res?.has_tenant,
+          res?.data?.has_tenant
+        );
+        const role = (
+          pickField<string>(res?.user_role, res?.data?.user_role) || ""
+        )
+          .toString()
+          .trim()
+          .toLowerCase();
+
+        if (userExists === false || hasTenant === false) {
+          setErrorMessage(
+            "No store account found for this email. Sign up to create your store."
+          );
+          setShowSignupHint(true);
+          return true;
+        }
+        if (role === "customer") {
+          setErrorMessage(oauthErrorMessage("google_customer_account_conflict"));
+          setShowSignupHint(true);
+          return true;
+        }
+        return false;
+      } catch (err: unknown) {
+        const ax = err as {
+          response?: { status?: number; data?: TenantSlugResponse };
+        };
+        const status = ax.response?.status;
+        const data = ax.response?.data;
+        const userExists = pickField<boolean>(
+          data?.user_exists,
+          data?.data?.user_exists
+        );
+        if (status === 404 || userExists === false) {
+          setErrorMessage(
+            "No store account found for this email. Sign up to create your store."
+          );
+          setShowSignupHint(true);
+          return true;
+        }
+        return false;
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthError = (params.get("error") || "").trim();
@@ -48,11 +125,13 @@ export default function LoginPage() {
     if (oauthError) {
       const cleanUrl = `${window.location.origin}${window.location.pathname}`;
       window.history.replaceState({}, document.title, cleanUrl);
+
+      if (isTenantSignupOAuthError(oauthError)) {
+        redirectToTenantAppPath(tenantSignupPath());
+        return;
+      }
+
       setErrorMessage(oauthErrorMessage(oauthError));
-      setShowSignupHint(
-        oauthError === "tenant_signup_required" ||
-          oauthError === "google_customer_account_conflict"
-      );
       return;
     }
 
@@ -71,7 +150,7 @@ export default function LoginPage() {
     if (roleFromToken === "customer") {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
-      setErrorMessage(oauthErrorMessage("google_customer_account_conflict"));
+      redirectToTenantAppPath(tenantSignupPath(emailFromToken));
       return;
     }
 
@@ -96,9 +175,7 @@ export default function LoginPage() {
           if (role === "customer") {
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
-            setErrorMessage(
-              oauthErrorMessage("google_customer_account_conflict")
-            );
+            redirectToTenantAppPath(tenantSignupPath(emailFromToken));
             return;
           }
           const slug =
@@ -206,24 +283,34 @@ export default function LoginPage() {
           }
         }, 1200);
       } else {
-        // build readable error message
         let errMsg = "Login failed";
-        if (result && (result as any).payload) {
-          const payload = (result as any).payload;
-          if (typeof payload === "string") {
-            errMsg = payload;
-          } else if (typeof payload === "object") {
-            errMsg =
-              (payload as any)?.message ||
-              (payload as any)?.detail ||
-              JSON.stringify(payload) ||
-              "Login failed";
-          }
+        let signupRequired = false;
+        const payload = (result as { payload?: unknown }).payload;
+        if (typeof payload === "string") {
+          errMsg = payload;
+        } else if (payload && typeof payload === "object") {
+          const p = payload as { message?: string; code?: string; action?: string };
+          errMsg = p.message || "Login failed";
+          signupRequired =
+            p.code === "tenant_signup_required" || p.action === "signup";
         }
+
+        if (
+          !signupRequired &&
+          /sign up|no account found|shopper account|store is no longer active/i.test(
+            errMsg
+          )
+        ) {
+          signupRequired = true;
+        }
+
+        if (!signupRequired) {
+          const offered = await offerSignupIfNonTenantEmail(trimmedEmail);
+          if (offered) return;
+        }
+
         setErrorMessage(errMsg);
-        setShowSignupHint(
-          /sign up|shopper account|store is no longer active/i.test(errMsg)
-        );
+        setShowSignupHint(signupRequired);
       }
     } catch (err: any) {
       setErrorMessage(err?.message || "Something went wrong");
@@ -245,7 +332,17 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     setErrorMessage("");
+    setShowSignupHint(false);
     try {
+      const trimmedEmail = email.trim();
+      if (trimmedEmail && trimmedEmail.includes("@")) {
+        const needsSignup = await offerSignupIfNonTenantEmail(trimmedEmail);
+        if (needsSignup) {
+          setGoogleLoading(false);
+          redirectToSignup(trimmedEmail);
+          return;
+        }
+      }
       await startTenantGoogleOAuth("/login");
     } catch (err: unknown) {
       setGoogleLoading(false);
@@ -347,11 +444,7 @@ export default function LoginPage() {
           {showSignupHint && (
             <button
               type="button"
-              onClick={() =>
-                redirectToTenantAppPath(
-                  `/email-verify${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`
-                )
-              }
+              onClick={() => redirectToSignup()}
               className="w-full py-3 rounded-xl font-semibold text-white
                 bg-[#6A9ECF] hover:bg-[#5c91c4] shadow-md transition font-raleway -mt-2"
             >

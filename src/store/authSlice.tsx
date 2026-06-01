@@ -37,11 +37,18 @@ const initialState: AuthState = {
   error: null,
 };
 
+/** Rejection payload from failed login (also used by LoginPage for signup routing). */
+export type LoginRejectPayload = {
+  message: string;
+  code?: string;
+  action?: string;
+};
+
 // ✅ Login Thunk
 export const loginUser = createAsyncThunk<
   LoginSuccessPayload,
   { email: string; password: string },
-  { rejectValue: string }
+  { rejectValue: LoginRejectPayload }
 >("auth/loginUser", async (credentials, { rejectWithValue }) => {
   try {
     const res = await axiosInstance.post(LOGIN_URL, credentials);
@@ -126,7 +133,11 @@ export const loginUser = createAsyncThunk<
         : typeof data?.detail === "string"
           ? data.detail
           : "Login failed, please try again.";
-    return rejectWithValue(msg);
+    return rejectWithValue({
+      message: msg,
+      code: typeof data?.code === "string" ? data.code : undefined,
+      action: typeof data?.action === "string" ? data.action : undefined,
+    });
   }
 });
 
@@ -185,7 +196,7 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload?.message ?? "Login failed";
       })
       .addCase(refreshAccessToken.fulfilled, (state, action) => {
         state.accessToken = action.payload;
