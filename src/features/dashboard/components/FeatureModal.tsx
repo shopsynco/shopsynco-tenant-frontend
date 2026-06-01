@@ -25,10 +25,18 @@ interface Feature {
   name: string;
   description: string;
   price: number;
+  discounted_price?: string | number;
+  discount_pct_applied?: number;
+  is_included?: boolean;
   tag?: string;
   category?: string;
   billing_cycle?: string;
   created_at?: string;
+}
+
+interface PlanBenefits {
+  feature_store_discount_pct: number;
+  feature_store_trial_days: number;
 }
 
 export default function FeatureStorePage({
@@ -46,6 +54,8 @@ export default function FeatureStorePage({
   const [sortBy, setSortBy] = useState<
     "default" | "name_asc" | "name_desc" | "price_low_high" | "price_high_low"
   >("default");
+  const [planBenefits, setPlanBenefits] = useState<PlanBenefits | null>(null);
+  const [planName, setPlanName] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const getFeatureId = (id: string | number) => String(id);
@@ -135,6 +145,12 @@ export default function FeatureStorePage({
           Array.isArray(allFeatures.features)
         ) {
           setFeatures(allFeatures.features);
+          if (allFeatures.plan_benefits) {
+            setPlanBenefits(allFeatures.plan_benefits as PlanBenefits);
+          }
+          if (allFeatures.plan_name) {
+            setPlanName(String(allFeatures.plan_name));
+          }
         } else if (allFeatures?.data && Array.isArray(allFeatures.data)) {
           setFeatures(allFeatures.data);
         } else {
@@ -272,6 +288,19 @@ export default function FeatureStorePage({
             <p className="text-center text-red-500 mt-10">{error}</p> // Error message
           ) : stage === "list" ? (
             <>
+              {planBenefits && (
+                <div className="mb-4 rounded-lg border border-[#E8DFFB] bg-[#F9F6FF] px-4 py-3 text-sm text-[#4B3F72]">
+                  {planName ? (
+                    <p className="font-medium mb-1">{planName} plan benefits</p>
+                  ) : null}
+                  <p>
+                    {planBenefits.feature_store_discount_pct > 0
+                      ? `${planBenefits.feature_store_discount_pct}% off Feature Store add-ons · `
+                      : ""}
+                    {planBenefits.feature_store_trial_days}-day free trials on paid add-ons
+                  </p>
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row gap-3 mb-5">
                 {/* Search -------------------------------------------------- */}
                 <div className="relative w-full sm:w-1/2">
@@ -345,6 +374,13 @@ export default function FeatureStorePage({
                 {filteredFeatures.map((f) => {
                   const fid = getFeatureId(f.id);
                   const isAdded = selected.includes(fid);
+                  const includedInPlan = Boolean(f.is_included);
+                  const displayPrice = priceNum(
+                    f.discounted_price ?? f.price,
+                  );
+                  const listPrice = priceNum(f.price);
+                  const showStrike =
+                    f.discounted_price != null && displayPrice < listPrice;
                   return (
                     <div
                       key={fid}
@@ -376,20 +412,31 @@ export default function FeatureStorePage({
                       </p>
 
                       <div className="flex items-center justify-between">
-                        <p className="font-semibold text-gray-800 text-sm">
-                          ₹ {priceNum(f.price)}/mo
-                        </p>
+                        <div>
+                          {showStrike && (
+                            <p className="text-[11px] text-gray-400 line-through">
+                              ₹ {listPrice}/mo
+                            </p>
+                          )}
+                          <p className="font-semibold text-gray-800 text-sm">
+                            ₹ {displayPrice}/mo
+                          </p>
+                        </div>
 
                         <button
                           onClick={() => toggleSelect(fid)}
-                          disabled={loading}
+                          disabled={loading || includedInPlan}
                           className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition ${
-                            isAdded
+                            includedInPlan
+                              ? "bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed"
+                              : isAdded
                               ? "bg-green-50 text-green-600 border border-green-400"
                               : "bg-[#6A3CB1] text-white hover:bg-[#5b32a2]"
                           }`}
                         >
-                          {isAdded ? (
+                          {includedInPlan ? (
+                            "Included"
+                          ) : isAdded ? (
                             <>
                               <Check size={14} />
                               Added
