@@ -322,7 +322,13 @@ export default function ChoosePlanPage() {
       if (result.subscription?.id) {
         localStorage.setItem("subscription_id", String(result.subscription.id));
       }
-      navigate("/payment-success");
+      navigate("/payment-success", {
+        state: {
+          successType: "trial",
+          trialDays: result.trial_days,
+          trialEnd: result.trial_end,
+        },
+      });
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { error?: string } } })?.response?.data;
       showError("Trial unavailable", data?.error || "Could not start your free trial.");

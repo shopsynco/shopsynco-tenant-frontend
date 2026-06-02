@@ -29,7 +29,7 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const goPaymentSuccess = () => {
     markTenantSubscriptionActive();
-    navigate("/payment-success");
+    navigate("/payment-success", { state: { successType: "payment" } });
   };
   const { search } = useLocation();
   const params = new URLSearchParams(search);
