@@ -148,6 +148,8 @@ export default function PaymentPage() {
         subscription_id: activeSubscriptionId,
         amount: total,
         currency: "INR",
+        checkout_purpose: "plan_subscribe",
+        billing_months: months ? Number(months) : undefined,
       });
     } catch (err: unknown) {
       const ax = err as {
@@ -165,6 +167,8 @@ export default function PaymentPage() {
         subscription_id: activeSubscriptionId,
         amount: total,
         currency: "INR",
+        checkout_purpose: "plan_subscribe",
+        billing_months: months ? Number(months) : undefined,
       });
     }
 
@@ -189,6 +193,8 @@ export default function PaymentPage() {
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
             method: "upi",
+            checkout_purpose: "plan_subscribe",
+            billing_months: months ? Number(months) : undefined,
           });
           if (verification.success === true) {
             if (verification.status === "success") {
