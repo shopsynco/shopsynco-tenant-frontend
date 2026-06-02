@@ -56,6 +56,7 @@ export default function FeatureStorePage({
   >("default");
   const [planBenefits, setPlanBenefits] = useState<PlanBenefits | null>(null);
   const [planName, setPlanName] = useState<string | null>(null);
+  const [taxPercentage, setTaxPercentage] = useState(0);
 
   const navigate = useNavigate();
   const getFeatureId = (id: string | number) => String(id);
@@ -65,13 +66,24 @@ export default function FeatureStorePage({
     return Number.isFinite(n) ? n : 0;
   };
 
+  /** Same basis as card prices: plan discount applied, excl. GST. */
+  const featureMonthlyPrice = (f: Feature) =>
+    priceNum(f.discounted_price ?? f.price);
+
   const selectedFeatures = features.filter((f) =>
     selected.includes(getFeatureId(f.id))
   );
-  /** API may return `price` as string — avoid `number + string` concat in reduce. */
-  const subtotal = selectedFeatures.reduce((sum, f) => sum + priceNum(f.price), 0);
-  const gst = subtotal * 0.18;
-  const total = subtotal + gst;
+  const billableSelectedFeatures = selectedFeatures.filter(
+    (f) => !f.is_included,
+  );
+  const subtotal = billableSelectedFeatures.reduce(
+    (sum, f) => sum + featureMonthlyPrice(f),
+    0,
+  );
+  const taxRate = taxPercentage / 100;
+  const gst = subtotal * taxRate;
+  const totalInclGst = subtotal + gst;
+  const hasTax = taxPercentage > 0;
 
   const categoryOptions = useMemo(() => {
     const categories = Array.from(
@@ -108,10 +120,14 @@ export default function FeatureStorePage({
         next.sort((a, b) => b.name.localeCompare(a.name));
         break;
       case "price_low_high":
-        next.sort((a, b) => Number(a.price) - Number(b.price));
+        next.sort(
+          (a, b) => featureMonthlyPrice(a) - featureMonthlyPrice(b),
+        );
         break;
       case "price_high_low":
-        next.sort((a, b) => Number(b.price) - Number(a.price));
+        next.sort(
+          (a, b) => featureMonthlyPrice(b) - featureMonthlyPrice(a),
+        );
         break;
       default:
         break;
@@ -150,6 +166,10 @@ export default function FeatureStorePage({
           }
           if (allFeatures.plan_name) {
             setPlanName(String(allFeatures.plan_name));
+          }
+          if (allFeatures.tax_percentage != null) {
+            const pct = Number(allFeatures.tax_percentage);
+            setTaxPercentage(Number.isFinite(pct) && pct >= 0 ? pct : 0);
           }
         } else if (allFeatures?.data && Array.isArray(allFeatures.data)) {
           setFeatures(allFeatures.data);
@@ -375,9 +395,7 @@ export default function FeatureStorePage({
                   const fid = getFeatureId(f.id);
                   const isAdded = selected.includes(fid);
                   const includedInPlan = Boolean(f.is_included);
-                  const displayPrice = priceNum(
-                    f.discounted_price ?? f.price,
-                  );
+                  const displayPrice = featureMonthlyPrice(f);
                   const listPrice = priceNum(f.price);
                   const showStrike =
                     f.discounted_price != null && displayPrice < listPrice;
@@ -461,7 +479,7 @@ export default function FeatureStorePage({
                 Confirm Your Add-Ons
               </h3>
               <div className="space-y-3 mb-6">
-                {selectedFeatures.map((f) => (
+                {billableSelectedFeatures.map((f) => (
                   <div
                     key={f.id}
                     className="flex justify-between items-center border border-gray-200 rounded-lg px-4 py-2"
@@ -473,7 +491,7 @@ export default function FeatureStorePage({
                       <p className="text-xs text-gray-500">{f.description}</p>
                     </div>
                     <p className="text-sm font-semibold text-gray-800">
-                      ₹ {priceNum(f.price)}/mo
+                      ₹ {featureMonthlyPrice(f)}/mo
                     </p>
                   </div>
                 ))}
@@ -484,13 +502,15 @@ export default function FeatureStorePage({
                   <span>Subtotal</span>
                   <span>₹ {subtotal}/mo</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>GST (18%)</span>
-                  <span>₹ {gst.toFixed(0)}</span>
-                </div>
+                {hasTax ? (
+                  <div className="flex justify-between">
+                    <span>GST ({taxPercentage}%)</span>
+                    <span>₹ {gst.toFixed(0)}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between font-semibold text-base pt-1 border-t mt-2">
-                  <span>Total</span>
-                  <span>₹ {total.toFixed(0)}/mo</span>
+                  <span>{hasTax ? "Total (incl. GST)" : "Total"}</span>
+                  <span>₹ {totalInclGst.toFixed(0)}/mo</span>
                 </div>
               </div>
             </>
@@ -503,15 +523,18 @@ export default function FeatureStorePage({
             <div className="sticky bottom-0 left-0 right-0 z-10 w-full h-16 bg-white rounded-t-xl shadow-t-md flex items-center justify-between px-5">
               <p className="text-sm text-gray-700 flex items-center gap-2">
                 <ShoppingCart size={16} className="text-[#6A3CB1]" />
-                {selected.length} Features Selected ·{" "}
+                {billableSelectedFeatures.length} Features Selected ·{" "}
                 <span className="font-semibold">
-                  Total: ₹{total.toFixed(0)}/mo
+                  Total: ₹{(hasTax ? subtotal : totalInclGst).toFixed(0)}/mo
                 </span>
+                {hasTax ? (
+                  <span className="text-xs text-gray-500">(excl. GST)</span>
+                ) : null}
               </p>
 
               <button
                 onClick={() => setStage("checkout")}
-                disabled={selected.length === 0}
+                disabled={billableSelectedFeatures.length === 0}
                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   width: 220,
