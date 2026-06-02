@@ -404,13 +404,13 @@ export default function UpgradePaymentPage() {
           if (verification.success === true) {
             if (verification.status === "success") {
               await Swal.fire("Success", "Payment successful!", "success");
-              navigate("/payment-success");
+              navigate("/payment-success", { state: { successType: "payment" } });
               return;
             }
             const confirmed = await waitForPaymentConfirmation(activeSubscriptionId);
             if (confirmed) {
               await Swal.fire("Success", "Payment successful!", "success");
-              navigate("/payment-success");
+              navigate("/payment-success", { state: { successType: "payment" } });
               return;
             }
             await Swal.fire(
