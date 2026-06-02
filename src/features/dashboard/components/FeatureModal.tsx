@@ -167,6 +167,10 @@ export default function FeatureStorePage({
           if (allFeatures.plan_name) {
             setPlanName(String(allFeatures.plan_name));
           }
+          if (allFeatures.tax_percentage != null) {
+            const pct = Number(allFeatures.tax_percentage);
+            setTaxPercentage(Number.isFinite(pct) && pct >= 0 ? pct : 0);
+          }
         } else if (allFeatures?.data && Array.isArray(allFeatures.data)) {
           setFeatures(allFeatures.data);
         } else {
