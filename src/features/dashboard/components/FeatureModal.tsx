@@ -16,7 +16,7 @@ import {
   removeFeature,
   getMyFeatures,
 } from "../../../api/mainapi/featureapi";
-import { showError } from "../../../components/swalHelper";
+import { showError, showSuccess } from "../../../components/swalHelper";
 import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
 import axios from "axios";
 
@@ -139,6 +139,23 @@ export default function FeatureStorePage({
   const handleClose = () => {
     if (onClose) onClose();
     else navigate(-1);
+  };
+
+  const handleConfirmCheckout = () => {
+    if (billableSelectedFeatures.length === 0) return;
+
+    const trialDays = planBenefits?.feature_store_trial_days ?? 7;
+    const featureNames = billableSelectedFeatures.map((f) => f.name).join(", ");
+    const trialLine =
+      trialDays > 0
+        ? `Your ${trialDays}-day free trial is active. Billing of ₹${totalInclGst.toFixed(0)}/mo starts after the trial unless you remove the add-on.`
+        : `Your selected add-ons are now active on your plan.`;
+
+    showSuccess(
+      "Add-ons activated",
+      `${featureNames} ${billableSelectedFeatures.length === 1 ? "is" : "are"} ready to use. ${trialLine}`,
+      () => handleClose(),
+    );
   };
 
   // ✅ Fetch features and user's existing selections
@@ -478,6 +495,13 @@ export default function FeatureStorePage({
               <h3 className="font-semibold text-gray-800 mb-4">
                 Confirm Your Add-Ons
               </h3>
+              {planBenefits && planBenefits.feature_store_trial_days > 0 ? (
+                <p className="mb-4 rounded-lg border border-[#E8DFFB] bg-[#F9F6FF] px-4 py-3 text-sm text-[#4B3F72]">
+                  Paid add-ons include a {planBenefits.feature_store_trial_days}-day free
+                  trial. You can use them immediately; payment is only required after the
+                  trial ends.
+                </p>
+              ) : null}
               <div className="space-y-3 mb-6">
                 {billableSelectedFeatures.map((f) => (
                   <div
@@ -519,7 +543,7 @@ export default function FeatureStorePage({
 
         {/* FOOTER */}
         <div className="border-t px-5 py-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          {stage === "list" && (
+          {stage === "list" ? (
             <div className="sticky bottom-0 left-0 right-0 z-10 w-full h-16 bg-white rounded-t-xl shadow-t-md flex items-center justify-between px-5">
               <p className="text-sm text-gray-700 flex items-center gap-2">
                 <ShoppingCart size={16} className="text-[#6A3CB1]" />
@@ -533,6 +557,7 @@ export default function FeatureStorePage({
               </p>
 
               <button
+                type="button"
                 onClick={() => setStage("checkout")}
                 disabled={billableSelectedFeatures.length === 0}
                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -547,23 +572,32 @@ export default function FeatureStorePage({
                 Proceed to Checkout
               </button>
             </div>
-          )}
-          {/* : (
-            <>
+          ) : (
+            <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <button
+                type="button"
                 onClick={() => setStage("list")}
-                className="text-sm text-[#6A3CB1] hover:underline"
+                className="text-sm text-[#6A3CB1] hover:underline text-left"
               >
                 ← Back to Features
               </button>
               <button
-                className="bg-[#6A3CB1] text-white text-sm px-5 py-2 rounded-lg font-medium hover:bg-[#5b32a2] transition"
-                onClick={() => navigate("/upgrade-payment")}
+                type="button"
+                onClick={handleConfirmCheckout}
+                disabled={billableSelectedFeatures.length === 0 || loading}
+                className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed sm:ml-auto"
+                style={{
+                  minWidth: 220,
+                  height: 40,
+                  borderRadius: 10,
+                  background:
+                    "linear-gradient(90deg, #AE84EB 0%, #7CB2E5 100%)",
+                }}
               >
-                Pay & Activate
+                Confirm &amp; Activate
               </button>
-            </>
-          ) */}
+            </div>
+          )}
         </div>
       </div>
     </div>
