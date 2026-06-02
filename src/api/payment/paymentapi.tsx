@@ -91,6 +91,8 @@ interface RazorpayOrderPayload {
   currency?: string;
   /** Optional note for backend; omit to let Razorpay Checkout show all methods */
   method?: "credit_card" | "debit_card" | "upi";
+  checkout_purpose?: "plan_subscribe" | "plan_upgrade" | "feature_purchase";
+  billing_months?: number;
 }
 
 interface RazorpayOrderResponse {
@@ -113,6 +115,8 @@ interface RazorpayVerifyPayload {
   razorpay_payment_id: string;
   razorpay_signature: string;
   method?: "credit_card" | "debit_card" | "upi";
+  checkout_purpose?: "plan_subscribe" | "plan_upgrade" | "feature_purchase";
+  billing_months?: number;
 }
 
 interface CheckoutPayload {

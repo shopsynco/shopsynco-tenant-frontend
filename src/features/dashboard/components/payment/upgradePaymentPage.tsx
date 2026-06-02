@@ -362,6 +362,8 @@ export default function UpgradePaymentPage() {
         amount: total,
         currency: "INR",
         method,
+        checkout_purpose: "plan_upgrade",
+        billing_months: months ? Number(months) : undefined,
       });
     } catch (err: any) {
       const isSubscriptionMissing =
@@ -375,6 +377,8 @@ export default function UpgradePaymentPage() {
         amount: total,
         currency: "INR",
         method,
+        checkout_purpose: "plan_upgrade",
+        billing_months: months ? Number(months) : undefined,
       });
     }
 
@@ -400,6 +404,8 @@ export default function UpgradePaymentPage() {
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
             method,
+            checkout_purpose: "plan_upgrade",
+            billing_months: months ? Number(months) : undefined,
           });
           if (verification.success === true) {
             if (verification.status === "success") {
