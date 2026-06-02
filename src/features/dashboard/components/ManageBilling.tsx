@@ -18,6 +18,8 @@ import {
 } from "./payment/PaymentModal";
 import { useNavigate } from "react-router-dom";
 import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
+import { fetchTenantDashboard } from "../../../api/mainapi/statusapi";
+import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
 import PlatformSupportChatModal from "./PlatformSupportChatModal";
 
 /* ------------------------------------------------------------------ */
@@ -77,6 +79,9 @@ export default function ManageBillingPage() {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [supportTopic, setSupportTopic] = useState<string | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<string>("—");
+  const [nextRenewalDate, setNextRenewalDate] = useState<string>("—");
+  const [billingLoading, setBillingLoading] = useState(true);
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -94,6 +99,43 @@ export default function ManageBillingPage() {
         setInvoices(list);
       })
       .catch(() => setInvoices([]));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBillingSummary = async () => {
+      setBillingLoading(true);
+      try {
+        await ensureTenantStoreSlugForApi();
+        const tenant = await fetchTenantDashboard();
+        if (cancelled) return;
+
+        const data = tenant?.dashboard || {};
+        const summary = data?.account_summary || {};
+        const nextRen = summary?.next_renewal;
+        const planRenewalDate = String(data?.current_plan?.renewal_date || "").trim();
+        const renewalCycle = String(data?.current_plan?.renewal_cycle || "").trim();
+
+        setBillingPeriod(renewalCycle || "—");
+        setNextRenewalDate(
+          nextRen?.date ? String(nextRen.date) : planRenewalDate || "—",
+        );
+      } catch (err) {
+        console.error("Failed to load billing summary:", err);
+        if (!cancelled) {
+          setBillingPeriod("—");
+          setNextRenewalDate("—");
+        }
+      } finally {
+        if (!cancelled) setBillingLoading(false);
+      }
+    };
+
+    void loadBillingSummary();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   /* ----------  fetch card details  ---------- */
   useEffect(() => {
@@ -189,11 +231,16 @@ export default function ManageBillingPage() {
             <div className="rounded-2xl bg-[#AE84EB26] p-6">
               <p className="text-base font-semibold text-black">
                 Billing Period:{" "}
-                <span className="font-semibold text-[#6A3CB1]">Yearly</span>
+                <span className="font-semibold text-[#6A3CB1]">
+                  {billingLoading ? "Loading..." : billingPeriod}
+                </span>
               </p>
               <div className="flex items-center gap-2 mt-2 text-black text-sm">
                 <Clock size={15} />
-                <span>Next Renewal: Aug 25, 2026</span>
+                <span>
+                  Next Renewal:{" "}
+                  {billingLoading ? "Loading..." : nextRenewalDate}
+                </span>
               </div>
             </div>
 
@@ -223,16 +270,7 @@ export default function ManageBillingPage() {
               </p>
               <div className="space-y-3 text-sm">
                 {invoices.length === 0 ? (
-                  <>
-                    <div className="flex justify-between text-[#565756]">
-                      <span className="font-medium">Aug 25, 2025</span>
-                      <span className="font-medium">₹1,899</span>
-                    </div>
-                    <div className="flex justify-between text-[#565756]">
-                      <span className="font-medium">Aug 25, 2024</span>
-                      <span className="font-medium">₹1,899</span>
-                    </div>
-                  </>
+                  <p className="text-sm text-[#565756]">No billing history yet.</p>
                 ) : (
                   invoices
                     .sort(
