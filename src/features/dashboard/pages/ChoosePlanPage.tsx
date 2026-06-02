@@ -12,6 +12,7 @@ interface BillingPeriodOption {
   monthly_price: number;
   total_price: number;
   label: string;
+  badge?: string | null;
 }
 
 interface Plan {
@@ -201,7 +202,7 @@ const PlanCard = ({
 export default function ChoosePlanPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState("12");
+  const [billingPeriod, setBillingPeriod] = useState("");
   const [quoteData, setQuoteData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -344,12 +345,14 @@ export default function ChoosePlanPage() {
         m: String(bp.months),
         p: bp.monthly_price,
         s: Math.round((bp.discount_rate || 0) * 100),
+        label: bp.label,
+        badge: bp.badge,
       }));
     }
     if (!selectedPlan?.base_monthly || Number.isNaN(Number(selectedPlan.base_monthly))) {
       return [];
     }
-    return [{ m: "12", p: Number(selectedPlan.base_monthly), s: 0 }];
+    return [{ m: "12", p: Number(selectedPlan.base_monthly), s: 0, label: "12 Months", badge: null }];
   }, [selectedPlan]);
 
   useEffect(() => {
@@ -472,9 +475,9 @@ export default function ChoosePlanPage() {
                             a ? "text-[#7658A0]" : "text-black"
                           }`}
                         >
-                          {o.m} Months
+                          {o.label || (o.m === "1" ? "1 Month" : `${o.m} Months`)}
                         </div>
-                        {o.s > 0 && (
+                        {(o.badge || o.s > 0) && (
                           <div
                             className="ml-2 inline-block text-xs font-poppins px-2 py-1 rounded-lg"
                             style={{
@@ -482,7 +485,7 @@ export default function ChoosePlanPage() {
                               color: "#5882A4",
                             }}
                           >
-                            Save up to {o.s}%
+                            {o.badge || `Save up to ${o.s}%`}
                           </div>
                         )}
                       </div>
