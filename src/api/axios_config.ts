@@ -35,61 +35,42 @@ export const TENANT_STOREFRONT_URL_TEMPLATE = (
   import.meta.env.VITE_TENANT_STOREFRONT_URL_TEMPLATE as string | undefined
 )?.trim() ?? "";
 
+import {
+  isInternalCheckoutSchemaSlug,
+  platformDomainSuffix,
+  readStorefrontHost,
+  storefrontUrlFromHost,
+} from "../utils/storefrontHost";
+
 export type PostStoreSetupDashboard = {
-  /** Shown in UI and copy-to-clipboard */
+  /** Merchant SaaS dashboard URL (Go to Dashboard) */
   displayUrl: string;
+  /** Customer storefront URL */
+  storefrontUrl: string;
   /** In-app navigation when the dashboard is this SPA */
   sameOriginPath: string | null;
-  /** Full URL when leaving this host (e.g. real tenant subdomain) */
+  /** Full-page navigation when dashboard is on another host */
   leaveAppHref: string | null;
 };
 
-/** Where the user should land after store setup (staging vs subdomain production). */
+/** Where the user should land after store setup (merchant dashboard, not storefront). */
 export function resolvePostStoreSetupDashboard(
   storeSlug: string | null
 ): PostStoreSetupDashboard {
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
-  const slug = storeSlug?.trim() || "";
-  const template = TENANT_STOREFRONT_URL_TEMPLATE;
+  const appOrigin = (resolveTenantAppOrigin() || origin).replace(/\/$/, "");
+  const dashboardUrl = `${appOrigin}/dashboard`;
+  const onSameOrigin =
+    appOrigin.toLowerCase() === origin.replace(/\/$/, "").toLowerCase();
 
-  if (template.includes("{slug}")) {
-    const href = template.replace(/\{slug\}/gi, slug);
-    if (origin && href.startsWith(origin)) {
-      return {
-        displayUrl: `${origin}/dashboard`,
-        sameOriginPath: "/dashboard",
-        leaveAppHref: null,
-      };
-    }
-    return {
-      displayUrl: href.replace(/\/$/, ""),
-      sameOriginPath: null,
-      leaveAppHref: href.replace(/\/$/, ""),
-    };
-  }
-
-  if (template.length > 0) {
-    const base = template.replace(/\/$/, "");
-    const href = `${base}/dashboard`;
-    if (origin && href.startsWith(origin)) {
-      return {
-        displayUrl: href,
-        sameOriginPath: "/dashboard",
-        leaveAppHref: null,
-      };
-    }
-    return {
-      displayUrl: href,
-      sameOriginPath: null,
-      leaveAppHref: href,
-    };
-  }
+  const storefrontUrl = resolveTenantStorefrontUrl(storeSlug);
 
   return {
-    displayUrl: `${origin}/dashboard`,
-    sameOriginPath: "/dashboard",
-    leaveAppHref: null,
+    displayUrl: dashboardUrl,
+    storefrontUrl,
+    sameOriginPath: onSameOrigin ? "/dashboard" : null,
+    leaveAppHref: onSameOrigin ? null : dashboardUrl,
   };
 }
 
@@ -97,13 +78,25 @@ export function resolvePostStoreSetupDashboard(
 export function defaultTenantHostFromSlug(slug: string): string {
   const s = (slug || "").trim().toLowerCase();
   if (!s) return "";
-  const suffix = (
-    (import.meta.env.VITE_PLATFORM_TENANT_DOMAIN_SUFFIX as string | undefined)
-      ?.trim()
-      .toLowerCase()
-      .replace(/^\./, "") || "shopsynco.com"
-  );
-  return `${s}.${suffix}`;
+  const saved = readStorefrontHost();
+  if (saved) return saved;
+  if (isInternalCheckoutSchemaSlug(s)) return "";
+  return `${s}.${platformDomainSuffix()}`;
+}
+
+export function resolveTenantStorefrontUrl(storeSlug: string | null): string {
+  const saved = readStorefrontHost();
+  if (saved) return storefrontUrlFromHost(saved);
+
+  const slug = (storeSlug || "").trim().toLowerCase();
+  if (!slug || isInternalCheckoutSchemaSlug(slug)) return "";
+
+  const template = TENANT_STOREFRONT_URL_TEMPLATE;
+  if (template.includes("{slug}")) {
+    return template.replace(/\{slug\}/gi, slug).replace(/\/$/, "");
+  }
+
+  return `https://${slug}.${platformDomainSuffix()}`;
 }
 
 /**

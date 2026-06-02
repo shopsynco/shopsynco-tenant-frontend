@@ -15,6 +15,7 @@ import {
   ensureTenantUserEmail,
   readStoredTenantUserEmail,
 } from "../../../utils/tenantUserEmail";
+import { saveStorefrontHost } from "../../../utils/storefrontHost";
 
 const StoreSetupContactPage: React.FC = () => {
   const [resolvedEmail, setResolvedEmail] = useState(
@@ -110,10 +111,16 @@ const StoreSetupContactPage: React.FC = () => {
         return;
       }
 
-      await storeContactSetup({ ...formData, contact_email: email });
+      const res = await storeContactSetup({ ...formData, contact_email: email });
+      if (res?.storefront_host) {
+        saveStorefrontHost(res.storefront_host);
+      }
       const loginEmail = resolvedEmail || readStoredTenantUserEmail();
       const discoverEmail = loginEmail || email;
-      await discoverTenantSlug(discoverEmail);
+      const discoverRes = await discoverTenantSlug(discoverEmail);
+      if (discoverRes?.storefront_host) {
+        saveStorefrontHost(discoverRes.storefront_host);
+      }
 
       try {
         localStorage.setItem("tenant_store_onboarding_complete", "1");

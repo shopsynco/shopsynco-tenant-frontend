@@ -60,8 +60,10 @@ export interface ContactFormPayload {
 
 // 📍 Contact setup response
 export interface ContactSetupResponse {
-  success: boolean;
+  success?: boolean;
   message?: string;
+  tenant_slug?: string;
+  storefront_host?: string | null;
   store?: {
     id: number;
     slug: string;

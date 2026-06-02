@@ -9,9 +9,10 @@ import { copyTextToClipboard } from "../../../utils/copyToClipboard";
 
 const StoreSuccessPage: React.FC = () => {
   const [dashboardUrl, setDashboardUrl] = useState<string>("");
+  const [storefrontUrl, setStorefrontUrl] = useState<string>("");
   const [sameOriginPath, setSameOriginPath] = useState<string | null>(null);
   const [leaveAppHref, setLeaveAppHref] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"dashboard" | "storefront" | null>(null);
   const [copyError, setCopyError] = useState(false);
   const navigate = useNavigate();
 
@@ -23,20 +24,34 @@ const StoreSuccessPage: React.FC = () => {
     const storeSlug = localStorage.getItem("store_slug");
     const resolved = resolvePostStoreSetupDashboard(storeSlug);
     setDashboardUrl(resolved.displayUrl);
+    setStorefrontUrl(resolved.storefrontUrl);
     setSameOriginPath(resolved.sameOriginPath);
     setLeaveAppHref(resolved.leaveAppHref);
   }, []);
 
-  const handleCopy = async () => {
-    if (!dashboardUrl.trim()) return;
+  const handleCopy = async (value: string, kind: "dashboard" | "storefront") => {
+    if (!value.trim()) return;
     setCopyError(false);
-    const ok = await copyTextToClipboard(dashboardUrl);
+    const ok = await copyTextToClipboard(value);
     if (ok) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2500);
+      setCopied(kind);
+      window.setTimeout(() => setCopied(null), 2500);
     } else {
       setCopyError(true);
     }
+  };
+
+  const goToDashboard = () => {
+    markStoreOnboardingComplete();
+    if (sameOriginPath) {
+      navigate(sameOriginPath);
+      return;
+    }
+    if (leaveAppHref) {
+      window.location.href = leaveAppHref;
+      return;
+    }
+    navigate("/dashboard");
   };
 
   return (
@@ -66,7 +81,7 @@ const StoreSuccessPage: React.FC = () => {
             Store Created Successfully
           </h2>
 
-          <p className="text-gray-600">Your dashboard is ready at</p>
+          <p className="text-gray-600">Your merchant dashboard is ready at</p>
 
           <div className="w-full">
             <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2 w-full text-gray-700 font-mono text-sm">
@@ -75,48 +90,63 @@ const StoreSuccessPage: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={() => void handleCopy()}
+                onClick={() => void handleCopy(dashboardUrl, "dashboard")}
                 disabled={!dashboardUrl.trim()}
-                aria-label={copied ? "Copied to clipboard" : "Copy dashboard URL"}
+                aria-label={copied === "dashboard" ? "Copied dashboard URL" : "Copy dashboard URL"}
                 className="shrink-0 p-1.5 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {copied ? (
+                {copied === "dashboard" ? (
                   <Check className="w-5 h-5 text-green-600" aria-hidden />
                 ) : (
                   <Copy className="w-5 h-5" aria-hidden />
                 )}
               </button>
             </div>
-            {copied && (
-              <p className="text-xs text-green-600 mt-1 text-left">Copied to clipboard</p>
-            )}
-            {copyError && (
-              <p className="text-xs text-red-600 mt-1 text-left">
-                Could not copy. Select the URL and copy manually.
-              </p>
-            )}
           </div>
+
+          {storefrontUrl ? (
+            <div className="w-full text-left">
+              <p className="text-sm text-gray-600 mb-2">Your storefront is live at</p>
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2 w-full text-gray-700 font-mono text-sm">
+                <span className="truncate flex-1" title={storefrontUrl}>
+                  {storefrontUrl}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleCopy(storefrontUrl, "storefront")}
+                  aria-label={copied === "storefront" ? "Copied storefront URL" : "Copy storefront URL"}
+                  className="shrink-0 p-1.5 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition"
+                >
+                  {copied === "storefront" ? (
+                    <Check className="w-5 h-5 text-green-600" aria-hidden />
+                  ) : (
+                    <Copy className="w-5 h-5" aria-hidden />
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {copied && (
+            <p className="text-xs text-green-600 w-full text-left">Copied to clipboard</p>
+          )}
+          {copyError && (
+            <p className="text-xs text-red-600 w-full text-left">
+              Could not copy. Select the URL and copy manually.
+            </p>
+          )}
 
           <button
             type="button"
-            onClick={() => {
-              markStoreOnboardingComplete();
-              if (sameOriginPath) {
-                navigate(sameOriginPath);
-              } else if (leaveAppHref) {
-                window.location.href = leaveAppHref;
-              } else {
-                navigate("/dashboard");
-              }
-            }}
+            onClick={goToDashboard}
             className="w-full bg-[#6A3CB1] hover:bg-[#5a2d9d] text-white py-3 rounded-lg font-medium transition"
           >
             Go to Dashboard
           </button>
 
           <p className="text-sm text-gray-500">
-            You can always access your dashboard from your email confirmation or
-            by signing in to our website.
+            Manage billing, plans, and store settings from your merchant dashboard.
+            Your customer storefront opens on its own domain.
           </p>
         </div>
       </div>
