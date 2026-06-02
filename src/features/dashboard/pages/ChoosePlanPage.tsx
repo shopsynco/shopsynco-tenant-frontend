@@ -33,10 +33,73 @@ interface Plan {
   billing_periods?: BillingPeriodOption[];
 }
 
-function buildPlanFeatureLines(plan: Plan): string[] {
-  let features: string[] = Array.isArray(plan.highlights)
+const GENERIC_HIGHLIGHT_MARKERS = new Set([
+  "active plan",
+  "standard support",
+  "all core features",
+  "free onboarding",
+  "24x7 priority help-desk",
+  "24/7 priority help-desk",
+]);
+
+const CATALOG_HIGHLIGHTS: Record<string, string[]> = {
+  starter: [
+    "Up to 120 products",
+    "1 staff account (owner only)",
+    "Email support (48 h)",
+    "7-day free plan trial",
+    "7-day Feature Store trials",
+  ],
+  growth: [
+    "Up to 1,000 products",
+    "3 staff accounts",
+    "Marketing engine (coupons, loyalty, abandoned cart)",
+    "Email + Chat support (24 h)",
+    "7-day free plan trial",
+    "4% Feature Store discount · 14-day trials",
+  ],
+  pro: [
+    "Unlimited products",
+    "10 staff accounts + full RBAC",
+    "API access & advanced custom reports",
+    "Priority Email + Chat support (4 h)",
+    "Dedicated onboarding session",
+    "7-day free plan trial",
+    "8% Feature Store discount · 14-day trials",
+  ],
+};
+
+function resolvePlanSlug(plan: Plan): string {
+  if (plan.slug) return plan.slug.trim().toLowerCase();
+  const name = String(plan.name ?? "").trim().toLowerCase();
+  if (name.includes("starter")) return "starter";
+  if (name.includes("growth")) return "growth";
+  if (name.includes("pro") || name.includes("scale") || name.includes("enterprise")) return "pro";
+  return name.replace(/\s+/g, "-");
+}
+
+function looksLikePlaceholderHighlights(highlights: string[]): boolean {
+  if (!highlights.length) return true;
+  const genericHits = highlights.filter((line) => {
+    const lowered = line.toLowerCase();
+    return (
+      GENERIC_HIGHLIGHT_MARKERS.has(lowered) ||
+      [...GENERIC_HIGHLIGHT_MARKERS].some((marker) => lowered.includes(marker))
+    );
+  }).length;
+  return genericHits >= 2;
+}
+
+function effectivePlanHighlights(plan: Plan): string[] {
+  const cleaned = Array.isArray(plan.highlights)
     ? [...new Set(plan.highlights.map((line) => String(line).trim()).filter(Boolean))]
     : [];
+  if (cleaned.length && !looksLikePlaceholderHighlights(cleaned)) return cleaned;
+  return [...(CATALOG_HIGHLIGHTS[resolvePlanSlug(plan)] ?? cleaned)];
+}
+
+function buildPlanFeatureLines(plan: Plan): string[] {
+  let features = effectivePlanHighlights(plan);
 
   const discount = Number(plan.feature_store_discount_pct ?? 0);
   const fsTrialDays = Number(plan.feature_store_trial_days ?? 0);
@@ -93,7 +156,23 @@ function resolveCardVariant(
   return index % 3 === 0 ? "green" : index % 3 === 1 ? "blue" : "yellow";
 }
 
-/** Left-to-right order on Choose Plan: Starter → Professional → Enterprise. */
+function planDedupeKey(plan: Plan): string {
+  const slug = resolvePlanSlug(plan);
+  if (["starter", "growth", "pro"].includes(slug)) return slug;
+  return String(plan.name ?? "").trim().toLowerCase();
+}
+
+function planEntryScore(plan: Plan): number {
+  let score = 0;
+  const highlights = effectivePlanHighlights(plan);
+  if (highlights.length) score += highlights.length * 10;
+  if (plan.billing_cycle === "monthly") score += 5;
+  if (typeof plan.id === "string" && plan.id.includes("-")) score += 3;
+  if (plan.billing_periods?.length) score += 2;
+  return score;
+}
+
+/** Left-to-right order on Choose Plan: Starter → Growth → Pro. */
 function planTierSortIndex(name: string | undefined): number {
   const n = String(name ?? "")
     .trim()
@@ -144,14 +223,12 @@ const PlanCard = ({
     <div
       role="button"
       onClick={onSelect}
-      className={`cursor-pointer p-5 sm:p-6 rounded-[10px] flex flex-col justify-between transition-all duration-200 ${
+      className={`cursor-pointer p-5 sm:p-6 rounded-[10px] flex flex-col transition-all duration-200 ${
         isSelected ? "border-2" : "border"
-      } bg-white`}
+      } bg-white w-full max-w-[255px] min-h-[276px] h-auto`}
       style={{
-        width: 255,
-        height: 276,
         borderWidth: isSelected ? 4 : 3,
-        borderColor: isSelected ? colors.border : colors.border, // ← same as card
+        borderColor: colors.border,
         boxShadow: `2px 2px 25px 0px ${colors.shadow}`,
         transform: isSelected ? "scale(1.03)" : "scale(1)",
         transition: "transform .2s ease, border-width .2s ease",
@@ -182,8 +259,8 @@ const PlanCard = ({
       </div>
 
       {/* features – expands/collapses */}
-      <div className="mt-3 border-t border-gray-100 flex-1 min-h-0">
-        <ul className="space-y-2 pt-3">
+      <div className="mt-3 border-t border-gray-100 flex-1 min-h-0 overflow-hidden">
+        <ul className={`space-y-2 pt-3 ${showMore ? "" : "max-h-[72px] overflow-hidden"}`}>
           {visibleFeatures.map((f) => (
             <li key={f} className="flex items-start gap-3">
               <Check
@@ -191,7 +268,7 @@ const PlanCard = ({
                 style={{ color: colors.accent }}
                 className="mt-1 shrink-0"
               />
-              <span className="font-poppins text-sm text-[#4B4B4B] leading-snug">
+              <span className="font-poppins text-sm text-[#4B4B4B] leading-snug break-words">
                 {f}
               </span>
             </li>
@@ -260,26 +337,18 @@ export default function ChoosePlanPage() {
         const fetched = await fetchPlans();
         const list = (Array.isArray(fetched) ? fetched : []) as Plan[];
 
-        // Remove duplicate plans (same display name) returned by mixed/legacy payloads.
-        const byName = new Map<string, Plan>();
+        // Remove duplicate plans (same slug/name) from mixed/legacy payloads.
+        const byKey = new Map<string, Plan>();
         for (const item of list) {
-          const key = String(item?.name ?? "").trim().toLowerCase();
+          const key = planDedupeKey(item);
           if (!key) continue;
-          const existing = byName.get(key);
-          if (!existing) {
-            byName.set(key, item);
-            continue;
-          }
-          // Prefer monthly entry if both monthly/yearly variants exist for same plan name.
-          if (
-            existing.billing_cycle !== "monthly" &&
-            item.billing_cycle === "monthly"
-          ) {
-            byName.set(key, item);
+          const existing = byKey.get(key);
+          if (!existing || planEntryScore(item) > planEntryScore(existing)) {
+            byKey.set(key, item);
           }
         }
 
-        const deduped = Array.from(byName.values());
+        const deduped = Array.from(byKey.values());
         deduped.sort((a, b) => {
           const diff = planTierSortIndex(a.name) - planTierSortIndex(b.name);
           if (diff !== 0) return diff;
