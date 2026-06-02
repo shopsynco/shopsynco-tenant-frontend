@@ -9,6 +9,10 @@ import {
   getStoreSetupStatus,
 } from "../../../api/mainapi/StoreCreateapi";
 import shopLogo from "../../../assets/Name-Logo.png";
+import {
+  saveStorefrontFromSetupTenant,
+  saveStorefrontHostFromDomainLabel,
+} from "../../../utils/storefrontHost";
 interface FormData {
   store_name: string;
   product_service: string;
@@ -135,6 +139,8 @@ export default function StoreSetupPage() {
 
     setFieldErrors({});
 
+    saveStorefrontHostFromDomainLabel(domainValue);
+
     try {
       setLoading(true);
       const result = await storeSetup({
@@ -147,7 +153,7 @@ export default function StoreSetupPage() {
         for (let i = 0; i < 90; i += 1) {
           const statusRes = await getStoreSetupStatus(result.task_id);
           if (statusRes.status === "completed" && statusRes.tenant?.schema_name) {
-            localStorage.setItem("store_slug", statusRes.tenant.schema_name);
+            saveStorefrontFromSetupTenant(statusRes.tenant);
             navigate("/setup-store-contact");
             return;
           }
@@ -165,8 +171,8 @@ export default function StoreSetupPage() {
       }
 
       const schemaName = result?.tenant?.schema_name;
-      if (schemaName) {
-        localStorage.setItem("store_slug", schemaName);
+      if (schemaName || result?.tenant?.domain) {
+        saveStorefrontFromSetupTenant(result.tenant);
       }
       navigate("/setup-store-contact");
     } catch (err) {

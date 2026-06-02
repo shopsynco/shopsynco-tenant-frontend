@@ -16,6 +16,7 @@ import {
   resolveTenantManagerBaseUrl,
 } from "../../../api/axios_config";
 import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
+import { saveStorefrontHost } from "../../../utils/storefrontHost";
 import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
 import FeatureStorePage from "../components/FeatureModal";
 import FeedbackModal from "../components/FeedbackModal";
@@ -166,6 +167,7 @@ export default function Dashboard() {
         const apiDomain = String(summary?.domain?.name || "").trim();
         const fallbackDomain = defaultTenantHostFromSlug(slug);
         const domain = apiDomain || fallbackDomain;
+        if (apiDomain) saveStorefrontHost(apiDomain);
         const features =
           data?.plan_features?.included_features?.map((f: { name?: string }) => f.name) ||
           [];
@@ -198,8 +200,10 @@ export default function Dashboard() {
               const data = tenant?.dashboard || {};
               const summary = data?.account_summary || {};
               const apiDomain = String(summary?.domain?.name || "").trim();
+              const resolvedDomain = apiDomain || defaultTenantHostFromSlug(correctSlug);
+              if (apiDomain) saveStorefrontHost(apiDomain);
               setTenantData({
-                domain: apiDomain || defaultTenantHostFromSlug(correctSlug),
+                domain: resolvedDomain,
                 features:
                   data?.plan_features?.included_features?.map((f: { name?: string }) => f.name) ||
                   [],
