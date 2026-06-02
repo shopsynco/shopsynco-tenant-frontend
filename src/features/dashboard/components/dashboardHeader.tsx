@@ -1,14 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../../assets/Name-Logo.png";
 import { fetchUserProfile } from "../../../api/auth/authapi";
+import {
+  dismissNotificationIds,
+  fetchTenantNotifications,
+  type TenantNotificationRow,
+} from "../../../api/mainapi/notificationsapi";
+import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
 
 export default function Header() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notifications, setNotifications] = useState<TenantNotificationRow[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const notifRef = useRef<HTMLDivElement | null>(null);
+  const profileRef = useRef<HTMLDivElement | null>(null);
 
-  // ✅ Load cached user info first for instant UI
   const [userData, setUserData] = useState({
     full_name: localStorage.getItem("full_name")?.trim() || "User",
     email: localStorage.getItem("email") || "user@email.com",
@@ -16,15 +25,13 @@ export default function Header() {
 
   const navigate = useNavigate();
 
-  // ✅ Fetch user info from API once component mounts
   useEffect(() => {
     const getProfile = async () => {
       try {
         const data = await fetchUserProfile();
         if (data && data?.user?.full_name && data?.user?.email) {
-          const cleanName = data.user.full_name.trim(); // ← remove trailing space
+          const cleanName = data.user.full_name.trim();
           setUserData({ full_name: cleanName, email: data.user.email });
-
           localStorage.setItem("full_name", cleanName);
           localStorage.setItem("email", data.user.email);
         }
@@ -33,7 +40,46 @@ export default function Header() {
       }
     };
 
-    getProfile();
+    void getProfile();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadNotifications = async () => {
+      try {
+        setNotificationsLoading(true);
+        await ensureTenantStoreSlugForApi();
+        const data = await fetchTenantNotifications();
+        if (!cancelled) {
+          setNotifications(data.notifications || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+        if (!cancelled) setNotifications([]);
+      } finally {
+        if (!cancelled) setNotificationsLoading(false);
+      }
+    };
+
+    void loadNotifications();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (profileRef.current && target && !profileRef.current.contains(target)) {
+        setProfileOpen(false);
+      }
+      if (notifRef.current && target && !notifRef.current.contains(target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = () => {
@@ -41,93 +87,106 @@ export default function Header() {
     navigate("/login");
   };
 
-  // Notifications will be fetched from API in production
-  const [notifications] = useState<
-    Array<{
-      title: string;
-      text: string;
-      time: string;
-    }>
-  >([]);
+  const handleClearAll = () => {
+    const ids = notifications.map((n) => n.id).filter(Boolean);
+    if (ids.length) dismissNotificationIds(ids);
+    setNotifications([]);
+    setNotifOpen(false);
+  };
 
-  // TODO: Fetch notifications from API when endpoint is available
-  // useEffect(() => {
-  //   const fetchNotifications = async () => {
-  //     try {
-  //       const data = await getNotifications();
-  //       setNotifications(data);
-  //     } catch (err) {
-  //       console.error("Failed to fetch notifications:", err);
-  //     }
-  //   };
-  //   fetchNotifications();
-  // }, []);
+  const handleNotificationClick = (notification: TenantNotificationRow) => {
+    if (notification.action_url) {
+      navigate(notification.action_url);
+      setNotifOpen(false);
+    }
+  };
+
+  const renderNotificationList = () => {
+    if (notificationsLoading) {
+      return (
+        <div className="px-4 py-6 text-sm text-gray-500 text-center">
+          Loading notifications...
+        </div>
+      );
+    }
+
+    if (notifications.length === 0) {
+      return (
+        <div className="px-4 py-6 text-sm text-gray-500 text-center">
+          No new notifications right now.
+        </div>
+      );
+    }
+
+    return notifications.map((n) => (
+      <button
+        key={n.id}
+        type="button"
+        onClick={() => handleNotificationClick(n)}
+        className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 border-b border-gray-100 last:border-b-0"
+      >
+        <p className="font-semibold text-gray-900">{n.title}</p>
+        <p className="text-xs text-gray-500 mt-1">{n.message}</p>
+        <p className="text-[11px] text-gray-400 mt-1">{n.time_label || "Recently"}</p>
+      </button>
+    ));
+  };
 
   return (
     <>
-      {/* HEADER */}
-      <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 relative">
-        {/* Logo */}
+      <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 relative z-40">
         <div className="flex items-center gap-3">
           <img src={logo} alt="ShopSynco" className="h-8" />
         </div>
 
-        {/* Right Section */}
         <div className="flex items-center gap-4 relative">
-          {/* Notifications */}
-          <div className="relative">
+          <div ref={notifRef} className="relative">
             <button
+              type="button"
               onClick={() => {
-                setNotifOpen(!notifOpen);
+                setNotifOpen((open) => !open);
                 setProfileOpen(false);
               }}
               className="p-2 rounded-full hover:bg-gray-100 relative"
+              aria-expanded={notifOpen}
+              aria-haspopup="true"
             >
               <Bell size={20} className="text-gray-600" />
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#6A3CB1] rounded-full"></span>
+              {notifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#6A3CB1] rounded-full" />
+              )}
             </button>
 
-            {/* Desktop Notification Dropdown */}
             {notifOpen && (
               <div className="hidden lg:block absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden z-50">
                 <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    Notifications
-                  </h3>
-                  <button className="text-xs text-[#6A3CB1] hover:underline font-medium">
-                    Clear All
-                  </button>
-                </div>
-
-                <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
-                  {notifications.map((n, i) => (
-                    <div
-                      key={i}
-                      className="px-4 py-3 hover:bg-gray-50 text-sm text-gray-700"
+                  <h3 className="text-sm font-semibold text-gray-700">Notifications</h3>
+                  {notifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAll}
+                      className="text-xs text-[#6A3CB1] hover:underline font-medium"
                     >
-                      <p className="font-semibold">{n.title}</p>
-                      <p className="text-xs text-gray-500">{n.text}</p>
-                      <p className="text-[11px] text-gray-400 mt-1">{n.time}</p>
-                    </div>
-                  ))}
+                      Clear All
+                    </button>
+                  )}
                 </div>
+                <div className="max-h-72 overflow-y-auto">{renderNotificationList()}</div>
               </div>
             )}
           </div>
 
-          {/* Profile Dropdown */}
-          <div className="relative">
+          <div ref={profileRef} className="relative">
             <button
+              type="button"
               onClick={() => {
-                setProfileOpen(!profileOpen);
+                setProfileOpen((open) => !open);
                 setNotifOpen(false);
               }}
               className="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-100 transition bg-gray-50"
             >
               <div className="text-left">
-                <p className="text-sm font-semibold text-gray-800">
-                  {userData.full_name}
-                </p>
+                <p className="text-sm font-semibold text-gray-800">{userData.full_name}</p>
                 <p className="text-xs text-gray-500">{userData.email}</p>
               </div>
               <svg
@@ -159,6 +218,7 @@ export default function Header() {
                   Terms &amp; policies
                 </button>
                 <button
+                  type="button"
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50"
                 >
@@ -171,12 +231,12 @@ export default function Header() {
         </div>
       </header>
 
-      {/* MOBILE NOTIFICATION PAGE */}
       {notifOpen && (
         <div className="fixed inset-0 bg-white z-50 p-6 overflow-y-auto lg:hidden">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setNotifOpen(false)}
                 className="p-2 rounded-md hover:bg-gray-100"
               >
@@ -195,32 +255,20 @@ export default function Header() {
                   />
                 </svg>
               </button>
-              <h3 className="text-lg font-semibold text-gray-800">
-                Notifications
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
             </div>
-            <button className="text-sm text-[#6A3CB1] hover:underline font-medium">
-              Clear All
-            </button>
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="text-sm text-[#6A3CB1] hover:underline font-medium"
+              >
+                Clear All
+              </button>
+            )}
           </div>
 
-          <div className="flex flex-col gap-4">
-            {notifications.map((n, i) => (
-              <div
-                key={i}
-                className="border border-gray-200 rounded-xl p-4 shadow-sm hover:bg-gray-50"
-              >
-                <p className="font-semibold text-gray-800">{n.title}</p>
-                <p className="text-sm text-gray-500 mt-1">{n.text}</p>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-xs text-gray-400">{n.time}</span>
-                  <button className="text-xs text-[#6A3CB1] font-medium hover:underline">
-                    View
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="flex flex-col gap-4">{renderNotificationList()}</div>
         </div>
       )}
     </>
