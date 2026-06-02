@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Check } from "lucide-react";
-import { fetchPlans, getPricingQuote } from "../../../api/mainapi/planapi";
+import { fetchPlans, getPricingQuote, startPlanTrial } from "../../../api/mainapi/planapi";
 import { useNavigate } from "react-router-dom";
 import PlansPageHeader from "../components/PlansPageHeader";
-import { canExitPlansToDashboard } from "../../../utils/planFlow";
+import { canExitPlansToDashboard, markTenantSubscriptionActive } from "../../../utils/planFlow";
+import { showError } from "../../../components/swalHelper";
 
 interface BillingPeriodOption {
   months: number;
@@ -20,6 +21,7 @@ interface Plan {
   billing_cycle: string;
   is_active: boolean;
   date_added: string;
+  trial_days?: number;
   variant?: "green" | "blue" | "yellow";
   /** From GET /api/tenants/pricing/options/ — drives billing period row when present */
   billing_periods?: BillingPeriodOption[];
@@ -207,6 +209,7 @@ export default function ChoosePlanPage() {
   const [error, setError] = useState("");
   const [plansError, setPlansError] = useState<string | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [startingTrial, setStartingTrial] = useState(false);
 
   const navigate = useNavigate();
   const allowDashboardExit = useMemo(() => canExitPlansToDashboard(), []);
@@ -306,6 +309,27 @@ export default function ChoosePlanPage() {
     );
   };
 
+  const trialDays = selectedPlan?.trial_days ?? 7;
+
+  const goFreeTrial = async () => {
+    if (!selectedPlan?.id) return;
+    setError("");
+    setStartingTrial(true);
+    try {
+      const result = await startPlanTrial(String(selectedPlan.id));
+      markTenantSubscriptionActive();
+      if (result.subscription?.id) {
+        localStorage.setItem("subscription_id", String(result.subscription.id));
+      }
+      navigate("/payment-success");
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { error?: string } } })?.response?.data;
+      showError("Trial unavailable", data?.error || "Could not start your free trial.");
+    } finally {
+      setStartingTrial(false);
+    }
+  };
+
   const sortedPlans = useMemo(() => {
     return [...plans].sort((a, b) => {
       const diff = planTierSortIndex(a.name) - planTierSortIndex(b.name);
@@ -367,7 +391,8 @@ export default function ChoosePlanPage() {
               Choose Your Plan
             </h1>
             <p className="font-poppins text-[20px] leading-[30px] text-[#6E6E6E] mb-6">
-              Pick the plan and billing period that fit your business best.
+              Pick the plan that fits your business — every plan includes a{" "}
+              <strong>{trialDays}-day free trial</strong>, no payment required to start.
             </p>
 
             {plansError && (
@@ -572,7 +597,18 @@ export default function ChoosePlanPage() {
                 className="w-full max-w-[408px] lg:w-96 flex flex-col h-full rounded-[20px]"
                 style={{ background: "#AE84EB0D" }}
               >
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={goFreeTrial}
+                    disabled={startingTrial || loading || !selectedPlan?.id}
+                    className="flex items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 w-full max-w-[408px]"
+                    style={{ height: 56, padding: "18px 32px" }}
+                  >
+                    {startingTrial
+                      ? "Starting trial..."
+                      : `Start ${trialDays}-day free trial`}
+                  </button>
                   <div className="flex gap-3">
                     {/* Cancel – 162 px (smaller) */}
                     <button
@@ -589,7 +625,7 @@ export default function ChoosePlanPage() {
                       {allowDashboardExit ? "Cancel" : "Back"}
                     </button>
 
-                    {/* Choose Payment – 246 px (wider) */}
+                    {/* Pay now */}
                     <button
                       type="button"
                       onClick={goPayment}
@@ -602,8 +638,7 @@ export default function ChoosePlanPage() {
                         gap: 10,
                       }}
                     >
-                      {loading ? "Processing..." : "Next"}
-                      {/* {loading ? "Processing..." : "Choose Payment Method"} */}
+                      {loading ? "Processing..." : "Pay now"}
                     </button>
                   </div>
                 </div>
