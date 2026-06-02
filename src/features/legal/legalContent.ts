@@ -55,6 +55,7 @@ ${H(3, "Subscription Plans &amp; Billing")}
   <li>Subscriptions renew automatically unless cancelled before the renewal date.</li>
   <li>Applicable taxes (GST or other levies) will be added as required by law.</li>
   <li>Feature Store add-ons are billed monthly and may be cancelled separately from the base plan.</li>
+  <li>All subscription plans include a <strong>7-day free trial</strong> with no upfront payment. After the trial, you must subscribe to a paid plan to keep access.</li>
   <li>Free trials for Feature Store add-ons (7 days for Starter; 14 days for Growth and Pro) require no upfront payment. If not cancelled before the trial ends, paid billing commences automatically.</li>
 </ul>
 

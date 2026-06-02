@@ -32,3 +32,15 @@ export const getPricingQuote = async (plan_id: string, months: string, country: 
     throw error;
   }
 };
+
+export const startPlanTrial = async (plan_id: string) => {
+  const response = await axiosInstance.post("/api/tenants/pricing/start-trial/", {
+    plan_id,
+  });
+  return response.data as {
+    message: string;
+    trial_days: number;
+    trial_end: string;
+    subscription: { id: string; status: string };
+  };
+};
