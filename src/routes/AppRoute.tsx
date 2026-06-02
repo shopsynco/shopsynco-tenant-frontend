@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import PrivateRoute from "./privateRoute";
+import DocumentMeta from "../components/DocumentMeta";
 import Dashboard from "../features/dashboard/pages/Dashboard";
 import ForgotPasswordPage from "../features/auth/pages/ForgotPassword";
 import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
@@ -27,6 +28,7 @@ import ExpiredVerificationPage from "../features/auth/pages/VerificationExpiredP
 const AppRoutes = () => {
   return (
     <Router>
+      <DocumentMeta />
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<RegisterPage />} />
