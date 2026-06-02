@@ -47,8 +47,11 @@ export default function FeatureStorePage({
   const [features, setFeatures] = useState<Feature[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [stage, setStage] = useState<"list" | "checkout">("list");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // State to handle errors
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [updatingFeatureIds, setUpdatingFeatureIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState<
@@ -162,8 +165,8 @@ export default function FeatureStorePage({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        setError(null); // Reset any previous errors
+        setInitialLoading(true);
+        setError(null);
 
         const [allFeatures, myFeaturesResp] = await Promise.all([
           getFeatureStore(),
@@ -229,7 +232,7 @@ export default function FeatureStorePage({
         console.error("Error loading feature store:", err);
         setError("Failed to load feature store data.");
       } finally {
-        setLoading(false);
+        setInitialLoading(false);
       }
     };
     fetchData();
@@ -238,18 +241,24 @@ export default function FeatureStorePage({
   // ✅ Toggle Add/Remove Feature (API integrated)
   const toggleSelect = async (id: string | number) => {
     const normalizedId = getFeatureId(id);
+    const isRemoving = selected.includes(normalizedId);
+    const previousSelected = selected;
+
+    setUpdatingFeatureIds((prev) => new Set(prev).add(normalizedId));
+    setSelected((prev) =>
+      isRemoving
+        ? prev.filter((x) => x !== normalizedId)
+        : [...prev, normalizedId],
+    );
+
     try {
-      setLoading(true);
-      if (selected.includes(normalizedId)) {
+      if (isRemoving) {
         await removeFeature(normalizedId);
-        setSelected((prev) => prev.filter((x) => x !== normalizedId));
       } else {
         await addFeature(normalizedId);
-        setSelected((prev) => [...prev, normalizedId]);
       }
-
-      // ...
     } catch (err: unknown) {
+      setSelected(previousSelected);
       console.error("Feature update error:", err);
 
       const data = axios.isAxiosError(err)
@@ -280,7 +289,11 @@ export default function FeatureStorePage({
           : undefined
       );
     } finally {
-      setLoading(false);
+      setUpdatingFeatureIds((prev) => {
+        const next = new Set(prev);
+        next.delete(normalizedId);
+        return next;
+      });
     }
   };
 
@@ -317,7 +330,7 @@ export default function FeatureStorePage({
 
         {/* BODY */}
         <div className="flex-1 overflow-y-auto px-5 lg:px-6 py-5">
-          {loading ? (
+          {initialLoading ? (
             <p className="text-center text-gray-500 mt-10">
               Loading features...
             </p>
@@ -416,6 +429,7 @@ export default function FeatureStorePage({
                   const listPrice = priceNum(f.price);
                   const showStrike =
                     f.discounted_price != null && displayPrice < listPrice;
+                  const isUpdating = updatingFeatureIds.has(fid);
                   return (
                     <div
                       key={fid}
@@ -459,18 +473,21 @@ export default function FeatureStorePage({
                         </div>
 
                         <button
-                          onClick={() => toggleSelect(fid)}
-                          disabled={loading || includedInPlan}
+                          type="button"
+                          onClick={() => void toggleSelect(fid)}
+                          disabled={isUpdating || includedInPlan}
                           className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition ${
                             includedInPlan
                               ? "bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed"
                               : isAdded
                               ? "bg-green-50 text-green-600 border border-green-400"
                               : "bg-[#6A3CB1] text-white hover:bg-[#5b32a2]"
-                          }`}
+                          } ${isUpdating ? "opacity-60 cursor-wait" : ""}`}
                         >
                           {includedInPlan ? (
                             "Included"
+                          ) : isUpdating ? (
+                            "..."
                           ) : isAdded ? (
                             <>
                               <Check size={14} />
@@ -584,7 +601,7 @@ export default function FeatureStorePage({
               <button
                 type="button"
                 onClick={handleConfirmCheckout}
-                disabled={billableSelectedFeatures.length === 0 || loading}
+                disabled={billableSelectedFeatures.length === 0 || updatingFeatureIds.size > 0}
                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed sm:ml-auto"
                 style={{
                   minWidth: 220,
