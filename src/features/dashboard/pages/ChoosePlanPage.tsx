@@ -18,14 +18,48 @@ interface BillingPeriodOption {
 interface Plan {
   id: string | number;
   name: string;
+  slug?: string;
+  description?: string;
+  highlights?: string[];
   base_monthly: number;
   billing_cycle: string;
   is_active: boolean;
   date_added: string;
   trial_days?: number;
+  feature_store_discount_pct?: number;
+  feature_store_trial_days?: number;
   variant?: "green" | "blue" | "yellow";
   /** From GET /api/tenants/pricing/options/ — drives billing period row when present */
   billing_periods?: BillingPeriodOption[];
+}
+
+function buildPlanFeatureLines(plan: Plan): string[] {
+  let features: string[] = Array.isArray(plan.highlights)
+    ? [...new Set(plan.highlights.map((line) => String(line).trim()).filter(Boolean))]
+    : [];
+
+  const discount = Number(plan.feature_store_discount_pct ?? 0);
+  const fsTrialDays = Number(plan.feature_store_trial_days ?? 0);
+  let benefitLine: string | null = null;
+  if (discount > 0 && fsTrialDays > 0) {
+    benefitLine = `${discount}% Feature Store discount · ${fsTrialDays}-day trials`;
+  } else if (fsTrialDays > 0) {
+    benefitLine = `${fsTrialDays}-day Feature Store trials`;
+  }
+  if (
+    benefitLine &&
+    !features.some((line) => line.toLowerCase().includes("feature store"))
+  ) {
+    features = [...features, benefitLine];
+  }
+
+  const planTrialDays = Number(plan.trial_days ?? 7);
+  const trialLine = `${planTrialDays}-day free plan trial`;
+  if (!features.some((line) => line.toLowerCase().includes("free plan trial"))) {
+    features = [trialLine, ...features];
+  }
+
+  return features.length ? features : ["Standard support"];
 }
 
 const CARD_VARIANTS = {
@@ -65,8 +99,8 @@ function planTierSortIndex(name: string | undefined): number {
     .trim()
     .toLowerCase();
   if (n.includes("starter")) return 0;
-  if (n.includes("professional")) return 1;
-  if (n.includes("enterprise")) return 2;
+  if (n.includes("growth")) return 1;
+  if (n.includes("pro") || n.includes("scale") || n.includes("enterprise")) return 2;
   return 50;
 }
 
@@ -79,8 +113,8 @@ function variantForPlanName(
     .trim()
     .toLowerCase();
   if (n.includes("starter")) return "green";
-  if (n.includes("professional")) return "blue";
-  if (n.includes("enterprise")) return "yellow";
+  if (n.includes("growth")) return "blue";
+  if (n.includes("pro") || n.includes("scale") || n.includes("enterprise")) return "yellow";
   return resolveCardVariant(undefined, fallbackIndex);
 }
 
@@ -102,6 +136,9 @@ const PlanCard = ({
       ? plan.variant
       : "yellow";
   const colors = CARD_VARIANTS[v];
+  const featureLines = buildPlanFeatureLines(plan);
+  const visibleFeatures = showMore ? featureLines : featureLines.slice(0, 2);
+  const canExpand = featureLines.length > 2;
 
   return (
     <div
@@ -147,53 +184,46 @@ const PlanCard = ({
       {/* features – expands/collapses */}
       <div className="mt-3 border-t border-gray-100 flex-1 min-h-0">
         <ul className="space-y-2 pt-3">
-          {/* Placeholder bullets — replace with plan.features from API when available */}
-          {["Active Plan", "Standard support"].map((f) => (
-            <li key={f} className="flex items-center gap-3">
-              <Check size={12} style={{ color: colors.accent }} />
-              <span className="font-poppins text-sm text-[#4B4B4B] truncate">
+          {visibleFeatures.map((f) => (
+            <li key={f} className="flex items-start gap-3">
+              <Check
+                size={12}
+                style={{ color: colors.accent }}
+                className="mt-1 shrink-0"
+              />
+              <span className="font-poppins text-sm text-[#4B4B4B] leading-snug">
                 {f}
               </span>
             </li>
           ))}
-          {showMore &&
-            [
-              "All core features",
-              "Free onboarding",
-              "24×7 priority help-desk",
-            ].map((f) => (
-              <li key={f} className="flex items-center gap-3">
-                <Check size={12} style={{ color: colors.accent }} />
-                <span className="font-poppins text-sm text-[#4B4B4B] truncate">
-                  {f}
-                </span>
-              </li>
-            ))}
         </ul>
       </div>
 
       {/* more/less toggle */}
-      <div className="mt-auto pt-3 border-t border-gray-100 shrink-0">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowMore((s) => !s);
-          }}
-          className="text-xs font-poppins hover:underline flex items-center justify-end gap-1 w-full"
-          style={{ color: colors.accent }}
-        >
-          {showMore ? "Less info" : "More info"}
-          <svg width="12" height="12" fill="none">
-            <path
-              d="M4.5 9L7.5 6L4.5 3"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-      </div>
+      {canExpand ? (
+        <div className="mt-auto pt-3 border-t border-gray-100 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMore((s) => !s);
+            }}
+            className="text-xs font-poppins hover:underline flex items-center justify-end gap-1 w-full"
+            style={{ color: colors.accent }}
+          >
+            {showMore ? "Less info" : "More info"}
+            <svg width="12" height="12" fill="none">
+              <path
+                d="M4.5 9L7.5 6L4.5 3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };
