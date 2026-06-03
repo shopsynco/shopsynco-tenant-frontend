@@ -1,6 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance, { LOGIN_URL, REFRESH_URL } from "./refreshToken/tokenUtils";
-import { clearPlanFlowFlags, markTenantSubscriptionActive } from "../utils/planFlow";
+import {
+  applyTenantOnboardingFlags,
+  clearPlanFlowFlags,
+} from "../utils/planFlow";
 import { clearOnboardingTermsAcceptance } from "../utils/termsAcceptance";
 import { readTenantSlugFromAccessToken } from "../utils/tenantStoreSlug";
 import {
@@ -73,39 +76,10 @@ export const loginUser = createAsyncThunk<
       persistTenantUserEmail(userEmail);
     }
 
-    // Stale slug breaks onboarding: interceptor would call .../{slug}/store/setup/ → 404
-    const requiresStoreSetup = Boolean(res.data?.requires_store_setup);
-    if (requiresStoreSetup) {
-      localStorage.removeItem("store_slug");
-    }
-    try {
-      if (requiresStoreSetup) {
-        sessionStorage.setItem(SESSION_REQUIRES_STORE_SETUP, "1");
-      } else {
-        sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
-      }
-    } catch {
-      /* ignore */
-    }
+    applyTenantOnboardingFlags(res.data, jwtSlug);
 
     const hasActiveSubscription = Boolean(res.data?.has_active_subscription);
-    if (hasActiveSubscription) {
-      markTenantSubscriptionActive();
-    } else {
-      // Prevent stale local flag from allowing dashboard access without payment.
-      localStorage.removeItem("tenant_subscription_active");
-    }
-
     const storeSetupIncomplete = Boolean(res.data?.store_setup_incomplete);
-    try {
-      if (storeSetupIncomplete) {
-        sessionStorage.setItem(SESSION_STORE_SETUP_INCOMPLETE, "1");
-      } else {
-        sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);
-      }
-    } catch {
-      /* ignore */
-    }
 
     return {
       access,
