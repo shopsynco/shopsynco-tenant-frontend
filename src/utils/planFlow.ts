@@ -65,3 +65,46 @@ export function markStoreOnboardingComplete(): void {
     /* ignore */
   }
 }
+
+export type TenantOnboardingFlags = {
+  requires_store_setup?: boolean;
+  has_active_subscription?: boolean;
+  store_setup_incomplete?: boolean;
+};
+
+/** Apply login / auth-me onboarding flags to localStorage + sessionStorage. */
+export function applyTenantOnboardingFlags(
+  flags: TenantOnboardingFlags,
+  tenantSlug?: string | null,
+): void {
+  if (flags.has_active_subscription) {
+    markTenantSubscriptionActive();
+  } else {
+    try {
+      localStorage.removeItem(LOCAL_SUBSCRIPTION_ACTIVE);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  try {
+    if (flags.requires_store_setup) {
+      sessionStorage.setItem(SESSION_REQUIRES_STORE_SETUP, "1");
+      localStorage.removeItem("store_slug");
+    } else {
+      sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
+      const slug = (tenantSlug || "").trim();
+      if (slug) {
+        localStorage.setItem("store_slug", slug);
+      }
+    }
+
+    if (flags.store_setup_incomplete) {
+      sessionStorage.setItem(SESSION_STORE_SETUP_INCOMPLETE, "1");
+    } else {
+      sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);
+    }
+  } catch {
+    /* ignore */
+  }
+}

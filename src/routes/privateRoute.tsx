@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { syncTenantPortalSession } from "../api/auth/sessionApi";
 import { useAppSelector } from "../store/hooks";
 import { hasAcceptedOnboardingTerms } from "../utils/termsAcceptance";
 
@@ -10,6 +11,27 @@ const PrivateRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
   const accessToken =
     useAppSelector((state) => state.auth.accessToken) ||
     localStorage.getItem("accessToken");
+  const [sessionReady, setSessionReady] = useState(!accessToken);
+
+  useEffect(() => {
+    if (!accessToken) {
+      setSessionReady(true);
+      return;
+    }
+    let cancelled = false;
+    void syncTenantPortalSession()
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setSessionReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
+
+  if (accessToken && !sessionReady) {
+    return null;
+  }
 
   if (accessToken) {
     const path = location.pathname.toLowerCase().replace(/\/$/, "") || "/";
