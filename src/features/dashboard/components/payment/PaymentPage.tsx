@@ -29,7 +29,14 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const goPaymentSuccess = () => {
     markTenantSubscriptionActive();
-    navigate("/payment-success", { state: { successType: "payment" } });
+    const purchaseValue = Number(quoteData?.total ?? 1499);
+    navigate("/payment-success", {
+      state: {
+        successType: "payment",
+        purchaseValue: Number.isFinite(purchaseValue) && purchaseValue > 0 ? purchaseValue : 1499,
+        purchaseCurrency: "INR",
+      },
+    });
   };
   const { search } = useLocation();
   const params = new URLSearchParams(search);
