@@ -24,11 +24,13 @@ import PaymentPage from "../features/dashboard/components/payment/PaymentPage";
 import UpgradePaymentPage from "../features/dashboard/components/payment/upgradePaymentPage";
 import EnterEmail from "../features/auth/pages/EnterEmail";
 import ExpiredVerificationPage from "../features/auth/pages/VerificationExpiredPage";
+import MetaPixelPageView from "../components/MetaPixelPageView";
 
 const AppRoutes = () => {
   return (
     <Router>
       <DocumentMeta />
+      <MetaPixelPageView />
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<RegisterPage />} />

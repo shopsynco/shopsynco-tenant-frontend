@@ -9,6 +9,9 @@ import {
   oauthErrorMessage as getOauthErrorMessage,
 } from "../utils/googleOAuth";
 import { isValidSignupPhone, SIGNUP_PHONE_HINT } from "../../../utils/signupPhoneValidation";
+import { trackMetaPixelCompleteRegistration } from "../../../lib/metaPixel";
+import { decodeJwtPayload } from "../utils/googleOAuth";
+import { persistTenantUserEmail } from "../../../utils/tenantUserEmail";
 
 interface RegisterFormData {
   first_name: string;
@@ -67,6 +70,14 @@ export default function RegisterPage() {
     window.history.replaceState({}, document.title, window.location.pathname);
     localStorage.setItem("accessToken", access);
     localStorage.setItem("refreshToken", refresh);
+    const jwtPayload = decodeJwtPayload(access);
+    const jwtEmail =
+      typeof jwtPayload?.email === "string" ? jwtPayload.email.trim() : "";
+    const signupEmail = jwtEmail || String(emailParam || "").trim();
+    if (signupEmail) persistTenantUserEmail(signupEmail);
+    trackMetaPixelCompleteRegistration(
+      signupEmail ? { em: signupEmail } : undefined,
+    );
     window.location.assign("/dashboard");
   }, []);
 
@@ -103,6 +114,11 @@ export default function RegisterPage() {
       };
 
       await registerUser(payload);
+      trackMetaPixelCompleteRegistration({
+        em: payload.email,
+        ph: phoneTrimmed,
+        fn: formData.first_name,
+      });
 
       showSuccess(
         "Account Created!",

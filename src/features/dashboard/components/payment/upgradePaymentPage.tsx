@@ -117,6 +117,16 @@ export default function UpgradePaymentPage() {
   ]);
 
   const navigate = useNavigate();
+  const goPaymentSuccess = () => {
+    const purchaseValue = Number(quoteData?.total ?? 1499);
+    navigate("/payment-success", {
+      state: {
+        successType: "payment",
+        purchaseValue: Number.isFinite(purchaseValue) && purchaseValue > 0 ? purchaseValue : 1499,
+        purchaseCurrency: "INR",
+      },
+    });
+  };
   const { search } = useLocation();
   const params = new URLSearchParams(search);
   const planId = params.get("plan_id");
@@ -410,13 +420,13 @@ export default function UpgradePaymentPage() {
           if (verification.success === true) {
             if (verification.status === "success") {
               await Swal.fire("Success", "Payment successful!", "success");
-              navigate("/payment-success", { state: { successType: "payment" } });
+              goPaymentSuccess();
               return;
             }
             const confirmed = await waitForPaymentConfirmation(activeSubscriptionId);
             if (confirmed) {
               await Swal.fire("Success", "Payment successful!", "success");
-              navigate("/payment-success", { state: { successType: "payment" } });
+              goPaymentSuccess();
               return;
             }
             await Swal.fire(
