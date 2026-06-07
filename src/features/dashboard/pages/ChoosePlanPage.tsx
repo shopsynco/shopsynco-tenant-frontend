@@ -4,6 +4,10 @@ import { fetchPlans, getPricingQuote, startPlanTrial } from "../../../api/mainap
 import { useNavigate } from "react-router-dom";
 import PlansPageHeader from "../components/PlansPageHeader";
 import { canExitPlansToDashboard, markTenantSubscriptionActive } from "../../../utils/planFlow";
+import {
+  trackMetaPixelInitiateCheckout,
+  trackMetaPixelSubscribedButtonClick,
+} from "../../../lib/metaPixel";
 import { showError } from "../../../components/swalHelper";
 
 interface BillingPeriodOption {
@@ -404,6 +408,17 @@ export default function ChoosePlanPage() {
   const goPayment = () => {
     if (!selectedPlan?.id) return;
     setError("");
+    const checkoutValue =
+      totalPayable != null && Number.isFinite(totalPayable) && totalPayable > 0
+        ? totalPayable
+        : undefined;
+    trackMetaPixelSubscribedButtonClick({
+      planId: String(selectedPlan.id),
+      planName: String(selectedPlan.name || ""),
+      value: checkoutValue,
+      currency: "INR",
+    });
+    trackMetaPixelInitiateCheckout(checkoutValue, "INR");
     navigate(
       `/payment?plan_id=${encodeURIComponent(String(selectedPlan.id))}&months=${encodeURIComponent(billingPeriod)}&country=${encodeURIComponent("India")}`
     );

@@ -72,6 +72,25 @@ function trackMetaPixelEvent(
   window.fbq("track", eventName);
 }
 
+function trackMetaPixelCustomEvent(
+  eventName: string,
+  customData?: Record<string, unknown>,
+  userData?: MetaPixelUserData,
+) {
+  if (!window.fbq) return;
+
+  const matching = buildAdvancedMatchingParams(userData);
+  if (matching) {
+    window.fbq("trackCustom", eventName, customData ?? {}, matching);
+    return;
+  }
+  if (customData) {
+    window.fbq("trackCustom", eventName, customData);
+    return;
+  }
+  window.fbq("trackCustom", eventName);
+}
+
 export function trackMetaPixelPageView() {
   trackMetaPixelEvent("PageView");
 }
@@ -80,11 +99,56 @@ export function trackMetaPixelCompleteRegistration(userData?: MetaPixelUserData)
   trackMetaPixelEvent("CompleteRegistration", {}, userData);
 }
 
+/** Store onboarding finished — merchant store is live. */
+export function trackMetaPixelLead(userData?: MetaPixelUserData) {
+  if (typeof window !== "undefined") {
+    if (sessionStorage.getItem("meta_pixel_lead_store_setup")) return;
+    sessionStorage.setItem("meta_pixel_lead_store_setup", "1");
+  }
+  trackMetaPixelEvent("Lead", {}, userData);
+}
+
+export function trackMetaPixelInitiateCheckout(
+  value?: number,
+  currency = "INR",
+  userData?: MetaPixelUserData,
+) {
+  const payload: Record<string, unknown> = { currency };
+  if (value != null && Number.isFinite(value) && value > 0) {
+    payload.value = value;
+  }
+  trackMetaPixelEvent("InitiateCheckout", payload, userData);
+}
+
+/** Custom event for plan subscribe / pay-now intent (Meta custom conversion). */
+export function trackMetaPixelSubscribedButtonClick(params?: {
+  planId?: string;
+  planName?: string;
+  value?: number;
+  currency?: string;
+}) {
+  const customData: Record<string, unknown> = {
+    currency: params?.currency || "INR",
+  };
+  if (params?.planId) customData.content_ids = [String(params.planId)];
+  if (params?.planName) customData.content_name = params.planName;
+  if (params?.value != null && Number.isFinite(params.value) && params.value > 0) {
+    customData.value = params.value;
+  }
+  trackMetaPixelCustomEvent("SubscribedButtonClick", customData);
+}
+
 export function trackMetaPixelPurchase(
   value: number,
   currency = "INR",
   userData?: MetaPixelUserData,
+  dedupeKey?: string,
 ) {
+  const key = dedupeKey || `meta_pixel_purchase_${value}_${currency}`;
+  if (typeof window !== "undefined") {
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+  }
   trackMetaPixelEvent(
     "Purchase",
     {

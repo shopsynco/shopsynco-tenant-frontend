@@ -12,6 +12,7 @@ import {
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
 import { setPlansEntryFromDashboard } from "../../../../utils/planFlow";
+import { trackMetaPixelInitiateCheckout } from "../../../../lib/metaPixel";
 import { paymentErrorMessage } from "../../../../utils/paymentErrorMessage";
 
 declare global {
@@ -359,6 +360,7 @@ export default function UpgradePaymentPage() {
       Swal.fire("Error", "Invalid payable amount. Please refresh and try again.", "error");
       return;
     }
+    trackMetaPixelInitiateCheckout(total, "INR");
     const scriptLoaded = await loadRazorpayScript();
     if (!scriptLoaded || !window.Razorpay) {
       Swal.fire("Error", "Failed to load Razorpay checkout.", "error");
