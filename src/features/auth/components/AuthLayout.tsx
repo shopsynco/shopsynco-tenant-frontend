@@ -1,6 +1,7 @@
 import React from "react";
 import bgImage from "../../../assets/authbackground.png";
 import shopLogo from "../../../assets/Name-Logo.png";
+import { resolveMarketingWebsiteUrl } from "../../../lib/platformLinks";
 
 export default function AuthLayout({
   children,
@@ -51,15 +52,17 @@ export default function AuthLayout({
               </span>
             </p>
 
-            <button
-              onClick={() => window.open("/", "_blank")}
-              className="mt-6 rounded-full bg-[rgba(118,88,160,0.2)]
+            <a
+              href={resolveMarketingWebsiteUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-[rgba(118,88,160,0.2)]
              text-purple-600 font-semibold font-raleway
              h-[71px] px-[46px] py-[24px]
              transition-colors duration-300 hover:bg-[rgba(118,88,160,0.3)]"
             >
               Visit Website
-            </button>
+            </a>
           </div>
 
           {/* RIGHT - auth card */}
