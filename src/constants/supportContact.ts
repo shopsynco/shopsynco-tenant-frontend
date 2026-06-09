@@ -1,0 +1,2 @@
+export const SUPPORT_PHONE_DISPLAY = "+91 8848852450";
+export const SUPPORT_PHONE_TEL = "tel:+918848852450";

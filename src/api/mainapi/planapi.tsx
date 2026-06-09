@@ -14,10 +14,26 @@ function normalizePlansPayload(data: unknown): unknown[] {
   return [];
 }
 
-export const fetchPlans = async () => {
+export type PlanTrialEligibility = {
+  eligible: boolean;
+  message?: string;
+};
+
+export const fetchPlans = async (): Promise<{
+  plans: unknown[];
+  planTrial: PlanTrialEligibility;
+}> => {
   const response = await axiosInstance.get("/api/tenants/pricing/options/");
   const list = normalizePlansPayload(response.data);
-  return list;
+  const d = response.data as Record<string, unknown>;
+  const pt = d.plan_trial as Record<string, unknown> | undefined;
+  return {
+    plans: list,
+    planTrial: {
+      eligible: pt?.eligible !== false,
+      message: typeof pt?.message === "string" ? pt.message : "",
+    },
+  };
 };
 
 

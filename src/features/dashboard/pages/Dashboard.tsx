@@ -10,7 +10,10 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { fetchTenantDashboard } from "../../../api/mainapi/statusapi";
+import {
+  fetchSubscriptionStatus,
+  fetchTenantDashboard,
+} from "../../../api/mainapi/statusapi";
 import {
   defaultTenantHostFromSlug,
   resolveTenantManagerBaseUrl,
@@ -21,6 +24,7 @@ import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
 import FeatureStorePage from "../components/FeatureModal";
 import FeedbackModal from "../components/FeedbackModal";
 import Header from "../components/dashboardHeader";
+import SupportContactBanner from "../components/SupportContactBanner";
 
 export default function Dashboard() {
   const [isFeatureStoreOpen, setIsFeatureStoreOpen] = useState(false);
@@ -60,6 +64,7 @@ export default function Dashboard() {
   });
 
   const [showSetupBanner, setShowSetupBanner] = useState(false);
+  const [isTrialPlan, setIsTrialPlan] = useState(false);
 
   const navigate = useNavigate();
 
@@ -119,8 +124,15 @@ export default function Dashboard() {
       }
 
       try {
-        const tenant = await fetchTenantDashboard();
+        const [tenant, subscriptionRes] = await Promise.all([
+          fetchTenantDashboard(),
+          fetchSubscriptionStatus().catch(() => null),
+        ]);
         if (cancelled) return;
+
+        const subStatus = String(subscriptionRes?.subscription?.status || "").toLowerCase();
+        setIsTrialPlan(subStatus === "trial");
+
         const data = tenant?.dashboard || {};
         const summary = data?.account_summary || {};
         const billing = summary?.billing_summary?.last_payment;
@@ -264,6 +276,13 @@ export default function Dashboard() {
               Continue Setup
             </button>
           </div>
+        )}
+
+        {!dashboardLoading && (
+          <SupportContactBanner
+            variant={isTrialPlan ? "trial" : "default"}
+            showSetupCta={isTrialPlan || showSetupBanner}
+          />
         )}
 
         {/* WELCOME SECTION */}
