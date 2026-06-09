@@ -20,7 +20,11 @@ import {
 } from "../../../api/axios_config";
 import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
 import { saveStorefrontHost } from "../../../utils/storefrontHost";
-import { setPlansEntryFromDashboard } from "../../../utils/planFlow";
+import {
+  markStoreOnboardingComplete,
+  resolveStoreSetupComplete,
+  setPlansEntryFromDashboard,
+} from "../../../utils/planFlow";
 import FeatureStorePage from "../components/FeatureModal";
 import FeedbackModal from "../components/FeedbackModal";
 import Header from "../components/dashboardHeader";
@@ -65,6 +69,9 @@ export default function Dashboard() {
 
   const [showSetupBanner, setShowSetupBanner] = useState(false);
   const [isTrialPlan, setIsTrialPlan] = useState(false);
+  const [storeSetupComplete, setStoreSetupComplete] = useState(() =>
+    resolveStoreSetupComplete(),
+  );
 
   const navigate = useNavigate();
 
@@ -185,6 +192,13 @@ export default function Dashboard() {
           [];
         setTenantData({ domain, features });
 
+        const setupComplete = resolveStoreSetupComplete({ domain });
+        setStoreSetupComplete(setupComplete);
+        if (setupComplete) {
+          markStoreOnboardingComplete();
+          setShowSetupBanner(false);
+        }
+
         if (user_name) localStorage.setItem("user_name", user_name);
         if (user_email) localStorage.setItem("user_email", user_email);
       } catch (err) {
@@ -280,8 +294,8 @@ export default function Dashboard() {
 
         {!dashboardLoading && (
           <SupportContactBanner
-            variant={isTrialPlan ? "trial" : "default"}
-            showSetupCta={isTrialPlan || showSetupBanner}
+            variant={isTrialPlan && !storeSetupComplete ? "trial" : "default"}
+            showSetupCta={!storeSetupComplete && (isTrialPlan || showSetupBanner)}
           />
         )}
 
