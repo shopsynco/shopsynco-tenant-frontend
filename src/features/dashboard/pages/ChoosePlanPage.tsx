@@ -102,8 +102,13 @@ function effectivePlanHighlights(plan: Plan): string[] {
   return [...(CATALOG_HIGHLIGHTS[resolvePlanSlug(plan)] ?? cleaned)];
 }
 
-function buildPlanFeatureLines(plan: Plan): string[] {
+function buildPlanFeatureLines(plan: Plan, showPlanTrial = true): string[] {
   let features = effectivePlanHighlights(plan);
+  if (!showPlanTrial) {
+    features = features.filter(
+      (line) => !line.toLowerCase().includes("free plan trial"),
+    );
+  }
 
   const discount = Number(plan.feature_store_discount_pct ?? 0);
   const fsTrialDays = Number(plan.feature_store_trial_days ?? 0);
@@ -120,10 +125,12 @@ function buildPlanFeatureLines(plan: Plan): string[] {
     features = [...features, benefitLine];
   }
 
-  const planTrialDays = Number(plan.trial_days ?? 7);
-  const trialLine = `${planTrialDays}-day free plan trial`;
-  if (!features.some((line) => line.toLowerCase().includes("free plan trial"))) {
-    features = [trialLine, ...features];
+  if (showPlanTrial) {
+    const planTrialDays = Number(plan.trial_days ?? 7);
+    const trialLine = `${planTrialDays}-day free plan trial`;
+    if (!features.some((line) => line.toLowerCase().includes("free plan trial"))) {
+      features = [trialLine, ...features];
+    }
   }
 
   return features.length ? features : ["Standard support"];
@@ -206,10 +213,12 @@ const PlanCard = ({
   plan,
   isSelected,
   onSelect,
+  showPlanTrial = true,
 }: {
   plan: Plan;
   isSelected: boolean;
   onSelect: () => void;
+  showPlanTrial?: boolean;
 }) => {
   const [showMore, setShowMore] = useState(false);
   const v: CardVariant =
@@ -219,7 +228,7 @@ const PlanCard = ({
       ? plan.variant
       : "yellow";
   const colors = CARD_VARIANTS[v];
-  const featureLines = buildPlanFeatureLines(plan);
+  const featureLines = buildPlanFeatureLines(plan, showPlanTrial);
   const visibleFeatures = showMore ? featureLines : featureLines.slice(0, 2);
   const canExpand = featureLines.length > 2;
 
@@ -322,6 +331,7 @@ export default function ChoosePlanPage() {
   const [plansError, setPlansError] = useState<string | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [startingTrial, setStartingTrial] = useState(false);
+  const [planTrialEligible, setPlanTrialEligible] = useState(true);
 
   const navigate = useNavigate();
   const allowDashboardExit = useMemo(() => canExitPlansToDashboard(), []);
@@ -338,7 +348,8 @@ export default function ChoosePlanPage() {
     const getPlans = async () => {
       try {
         setPlansError(null);
-        const fetched = await fetchPlans();
+        const { plans: fetched, planTrial } = await fetchPlans();
+        setPlanTrialEligible(planTrial.eligible);
         const list = (Array.isArray(fetched) ? fetched : []) as Plan[];
 
         // Remove duplicate plans (same slug/name) from mixed/legacy payloads.
@@ -514,8 +525,14 @@ export default function ChoosePlanPage() {
               Choose Your Plan
             </h1>
             <p className="font-poppins text-[20px] leading-[30px] text-[#6E6E6E] mb-6">
-              Pick the plan that fits your business — every plan includes a{" "}
-              <strong>{trialDays}-day free trial</strong>, no payment required to start.
+              {planTrialEligible ? (
+                <>
+                  Pick the plan that fits your business — every plan includes a{" "}
+                  <strong>{trialDays}-day free trial</strong>, no payment required to start.
+                </>
+              ) : (
+                <>Pick the plan that fits your business and continue with payment.</>
+              )}
             </p>
 
             {plansError && (
@@ -536,6 +553,7 @@ export default function ChoosePlanPage() {
                   <PlanCard
                     key={String(plan.id ?? plan.name)}
                     plan={plan}
+                    showPlanTrial={planTrialEligible}
                     isSelected={String(selectedPlan?.id) === String(plan.id)}
                     onSelect={() => setSelectedPlan(plan)}
                   />
@@ -721,17 +739,19 @@ export default function ChoosePlanPage() {
                 style={{ background: "#AE84EB0D" }}
               >
                 <div className="flex flex-col items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={goFreeTrial}
-                    disabled={startingTrial || loading || !selectedPlan?.id}
-                    className="flex items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 w-full max-w-[408px]"
-                    style={{ height: 56, padding: "18px 32px" }}
-                  >
-                    {startingTrial
-                      ? "Starting trial..."
-                      : `Start ${trialDays}-day free trial`}
-                  </button>
+                  {planTrialEligible && (
+                    <button
+                      type="button"
+                      onClick={goFreeTrial}
+                      disabled={startingTrial || loading || !selectedPlan?.id}
+                      className="flex items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 w-full max-w-[408px]"
+                      style={{ height: 56, padding: "18px 32px" }}
+                    >
+                      {startingTrial
+                        ? "Starting trial..."
+                        : `Start ${trialDays}-day free trial`}
+                    </button>
+                  )}
                   <div className="flex gap-3">
                     {/* Cancel – 162 px (smaller) */}
                     <button

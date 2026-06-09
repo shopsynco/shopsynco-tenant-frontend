@@ -4,6 +4,10 @@ import bgImage from "../../../../assets/backgroundsuccess.png";
 import shopLogo from "../../../../assets/Name-Logo.png";
 import { CheckCircle } from "lucide-react";
 import { markTenantSubscriptionActive } from "../../../../utils/planFlow";
+import {
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_PHONE_TEL,
+} from "../../../../constants/supportContact";
 import { trackMetaPixelPurchase, resolveMetaPixelUserDataForPurchase, type MetaPixelUserData } from "../../../../lib/metaPixel";
 
 type SuccessLocationState = {
@@ -116,6 +120,18 @@ export default function PaymentSuccessPage() {
         >
           Set Up My Store
         </Link>
+
+        {isTrial && (
+          <p className="mt-6 text-sm text-gray-600">
+            Not sure what to do next? Call our support team at{" "}
+            <a
+              href={SUPPORT_PHONE_TEL}
+              className="font-semibold text-emerald-700 hover:underline whitespace-nowrap"
+            >
+              {SUPPORT_PHONE_DISPLAY}
+            </a>
+          </p>
+        )}
       </div>
     </div>
   );
