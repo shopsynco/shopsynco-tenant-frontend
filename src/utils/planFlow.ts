@@ -55,14 +55,36 @@ export function clearPlanFlowFlags(): void {
 /** Mirrors authSlice session keys — clear when store + contact onboarding is finished. */
 const SESSION_REQUIRES_STORE_SETUP = "tenant_requires_store_setup";
 const SESSION_STORE_SETUP_INCOMPLETE = "tenant_store_setup_incomplete";
+const LOCAL_STORE_ONBOARDING_COMPLETE = "tenant_store_onboarding_complete";
 
 /** Call when store setup is fully complete so PrivateRoute stops sending users back to /setup-store. */
 export function markStoreOnboardingComplete(): void {
   try {
     sessionStorage.removeItem(SESSION_REQUIRES_STORE_SETUP);
     sessionStorage.removeItem(SESSION_STORE_SETUP_INCOMPLETE);
+    localStorage.setItem(LOCAL_STORE_ONBOARDING_COMPLETE, "1");
   } catch {
     /* ignore */
+  }
+}
+
+/** True when the tenant has finished store onboarding (local flags or live domain). */
+export function resolveStoreSetupComplete(options?: { domain?: string }): boolean {
+  try {
+    if (localStorage.getItem(LOCAL_STORE_ONBOARDING_COMPLETE) === "1") {
+      return true;
+    }
+    const domain = (options?.domain || "").trim();
+    if (domain && domain !== "—") {
+      return true;
+    }
+    if (sessionStorage.getItem(SESSION_STORE_SETUP_INCOMPLETE) === "1") {
+      return false;
+    }
+    const slug = localStorage.getItem("store_slug")?.trim();
+    return Boolean(slug);
+  } catch {
+    return false;
   }
 }
 
