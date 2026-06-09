@@ -1,12 +1,15 @@
 import { ensureTenantUserEmail, readStoredTenantUserEmail } from "../utils/tenantUserEmail";
 
+/** Same pixel as tenant app index.html and marketing site. */
+export const META_PIXEL_ID = "854120904427076";
+
 declare global {
   interface Window {
     fbq?: (
       command: string,
       eventName: string,
       customData?: Record<string, unknown>,
-      advancedMatching?: Record<string, string>,
+      options?: Record<string, unknown>,
     ) => void;
   }
 }
@@ -53,6 +56,15 @@ function buildAdvancedMatchingParams(
   return Object.keys(out).length ? out : undefined;
 }
 
+/** Advanced matching belongs on fbq('init'), not as a 4th arg to track(). */
+function applyAdvancedMatchingInit(userData?: MetaPixelUserData) {
+  if (!window.fbq) return;
+  const matching = buildAdvancedMatchingParams(userData);
+  if (matching) {
+    window.fbq("init", META_PIXEL_ID, matching);
+  }
+}
+
 function trackMetaPixelEvent(
   eventName: string,
   customData?: Record<string, unknown>,
@@ -60,12 +72,9 @@ function trackMetaPixelEvent(
 ) {
   if (!window.fbq) return;
 
-  const matching = buildAdvancedMatchingParams(userData);
-  if (matching) {
-    window.fbq("track", eventName, customData ?? {}, matching);
-    return;
-  }
-  if (customData) {
+  applyAdvancedMatchingInit(userData);
+
+  if (customData && Object.keys(customData).length > 0) {
     window.fbq("track", eventName, customData);
     return;
   }
@@ -79,16 +88,27 @@ function trackMetaPixelCustomEvent(
 ) {
   if (!window.fbq) return;
 
-  const matching = buildAdvancedMatchingParams(userData);
-  if (matching) {
-    window.fbq("trackCustom", eventName, customData ?? {}, matching);
-    return;
-  }
-  if (customData) {
+  applyAdvancedMatchingInit(userData);
+
+  if (customData && Object.keys(customData).length > 0) {
     window.fbq("trackCustom", eventName, customData);
     return;
   }
   window.fbq("trackCustom", eventName);
+}
+
+function sessionDedupeKey(prefix: string, suffix = ""): string {
+  return `${prefix}${suffix ? `_${suffix}` : ""}`;
+}
+
+function hasSessionDedupe(key: string): boolean {
+  if (typeof window === "undefined") return false;
+  return Boolean(sessionStorage.getItem(key));
+}
+
+function markSessionDedupe(key: string) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(key, "1");
 }
 
 export function trackMetaPixelPageView() {
@@ -96,16 +116,26 @@ export function trackMetaPixelPageView() {
 }
 
 export function trackMetaPixelCompleteRegistration(userData?: MetaPixelUserData) {
-  trackMetaPixelEvent("CompleteRegistration", {}, userData);
+  const dedupeKey = sessionDedupeKey(
+    "meta_pixel_complete_registration",
+    userData?.em?.trim().toLowerCase() || "",
+  );
+  if (hasSessionDedupe(dedupeKey)) return;
+  markSessionDedupe(dedupeKey);
+  trackMetaPixelEvent("CompleteRegistration", undefined, userData);
 }
 
-/** Store onboarding finished — merchant store is live. */
+/** Merchant finished store provisioning — custom conversion event. */
+export function trackMetaPixelStoreSetup(userData?: MetaPixelUserData) {
+  const dedupeKey = sessionDedupeKey("meta_pixel_store_setup");
+  if (hasSessionDedupe(dedupeKey)) return;
+  markSessionDedupe(dedupeKey);
+  trackMetaPixelCustomEvent("StoreSetup", {}, userData);
+}
+
+/** @deprecated Prefer trackMetaPixelStoreSetup for store-created milestone. */
 export function trackMetaPixelLead(userData?: MetaPixelUserData) {
-  if (typeof window !== "undefined") {
-    if (sessionStorage.getItem("meta_pixel_lead_store_setup")) return;
-    sessionStorage.setItem("meta_pixel_lead_store_setup", "1");
-  }
-  trackMetaPixelEvent("Lead", {}, userData);
+  trackMetaPixelStoreSetup(userData);
 }
 
 export function trackMetaPixelInitiateCheckout(
@@ -145,10 +175,8 @@ export function trackMetaPixelPurchase(
   dedupeKey?: string,
 ) {
   const key = dedupeKey || `meta_pixel_purchase_${value}_${currency}`;
-  if (typeof window !== "undefined") {
-    if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, "1");
-  }
+  if (hasSessionDedupe(key)) return;
+  markSessionDedupe(key);
   trackMetaPixelEvent(
     "Purchase",
     {
