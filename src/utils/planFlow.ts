@@ -1,3 +1,5 @@
+import { unpaidTenantEntryPath } from "./termsAcceptance";
+
 /**
  * Controls whether /plans may navigate back to the dashboard.
  * First-time checkout (login → plans) must not skip payment by opening the dashboard.
@@ -93,6 +95,22 @@ export type TenantOnboardingFlags = {
   has_active_subscription?: boolean;
   store_setup_incomplete?: boolean;
 };
+
+/** Route after password login, OAuth, or auth/me sync. */
+export function resolvePostLoginNavigationPath(
+  flags: TenantOnboardingFlags,
+): string {
+  if (!flags.has_active_subscription) {
+    return unpaidTenantEntryPath();
+  }
+  if (flags.requires_store_setup) {
+    return "/setup-store";
+  }
+  if (flags.store_setup_incomplete) {
+    return "/setup-store-contact";
+  }
+  return "/dashboard";
+}
 
 /** Apply login / auth-me onboarding flags to localStorage + sessionStorage. */
 export function applyTenantOnboardingFlags(

@@ -1,9 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { fetchPlans, getPricingQuote, startPlanTrial } from "../../../api/mainapi/planapi";
 import { useNavigate } from "react-router-dom";
 import PlansPageHeader from "../components/PlansPageHeader";
-import { canExitPlansToDashboard, markTenantSubscriptionActive } from "../../../utils/planFlow";
+import { syncTenantPortalSession } from "../../../api/auth/sessionApi";
+import {
+  canExitPlansToDashboard,
+  markTenantSubscriptionActive,
+  resolvePostLoginNavigationPath,
+} from "../../../utils/planFlow";
 import {
   trackMetaPixelInitiateCheckout,
   trackMetaPixelSubscribedButtonClick,
@@ -332,6 +337,7 @@ export default function ChoosePlanPage() {
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [startingTrial, setStartingTrial] = useState(false);
   const [planTrialEligible, setPlanTrialEligible] = useState(true);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   const navigate = useNavigate();
   const allowDashboardExit = useMemo(() => canExitPlansToDashboard(), []);
@@ -345,50 +351,112 @@ export default function ChoosePlanPage() {
   }, [allowDashboardExit, navigate]);
 
   useEffect(() => {
-    const getPlans = async () => {
-      try {
+    let cancelled = false;
+
+    const waitForAccessToken = async (): Promise<boolean> => {
+      for (let i = 0; i < 25; i += 1) {
+        if (cancelled) return false;
+        if (localStorage.getItem("accessToken")) return true;
+        await new Promise((resolve) => window.setTimeout(resolve, 100));
+      }
+      return Boolean(localStorage.getItem("accessToken"));
+    };
+
+    const normalizePlans = (fetched: unknown): Plan[] => {
+      const list = (Array.isArray(fetched) ? fetched : []) as Plan[];
+      const byKey = new Map<string, Plan>();
+      for (const item of list) {
+        const key = planDedupeKey(item);
+        if (!key) continue;
+        const existing = byKey.get(key);
+        if (!existing || planEntryScore(item) > planEntryScore(existing)) {
+          byKey.set(key, item);
+        }
+      }
+      const deduped = Array.from(byKey.values());
+      deduped.sort((a, b) => {
+        const diff = planTierSortIndex(a.name) - planTierSortIndex(b.name);
+        if (diff !== 0) return diff;
+        return String(a.name).localeCompare(String(b.name));
+      });
+      return deduped.map((p, i) => ({
+        ...p,
+        variant: variantForPlanName(p.name, i),
+      }));
+    };
+
+    const applyPlans = (withVariants: Plan[]) => {
+      setPlans(withVariants);
+      if (withVariants.length) {
+        const first = withVariants[0];
+        setSelectedPlan(first);
+        const bp = first.billing_periods?.[0]?.months;
+        if (bp != null) setBillingPeriod(String(bp));
         setPlansError(null);
-        const { plans: fetched, planTrial } = await fetchPlans();
-        setPlanTrialEligible(planTrial.eligible);
-        const list = (Array.isArray(fetched) ? fetched : []) as Plan[];
-
-        // Remove duplicate plans (same slug/name) from mixed/legacy payloads.
-        const byKey = new Map<string, Plan>();
-        for (const item of list) {
-          const key = planDedupeKey(item);
-          if (!key) continue;
-          const existing = byKey.get(key);
-          if (!existing || planEntryScore(item) > planEntryScore(existing)) {
-            byKey.set(key, item);
-          }
-        }
-
-        const deduped = Array.from(byKey.values());
-        deduped.sort((a, b) => {
-          const diff = planTierSortIndex(a.name) - planTierSortIndex(b.name);
-          if (diff !== 0) return diff;
-          return String(a.name).localeCompare(String(b.name));
-        });
-        const withVariants = deduped.map((p, i) => ({
-          ...p,
-          variant: variantForPlanName(p.name, i),
-        }));
-        setPlans(withVariants);
-        if (withVariants.length) {
-          const first = withVariants[0];
-          setSelectedPlan(first);
-          const bp = first.billing_periods?.[0]?.months;
-          if (bp != null) setBillingPeriod(String(bp));
-        } else {
-          setPlansError("No plans are available right now. Please try again later.");
-        }
-      } catch {
-        setPlans([]);
-        setPlansError("Could not load plans. Please refresh or try again.");
+      } else {
+        setPlansError("No plans are available right now. Please try again later.");
       }
     };
-    getPlans();
-  }, []);
+
+    const getPlans = async () => {
+      setPlansLoading(true);
+      setPlansError(null);
+
+      const hasToken = await waitForAccessToken();
+      if (cancelled) return;
+      if (!hasToken) {
+        setPlans([]);
+        setPlansError("Your session expired. Please sign in again.");
+        setPlansLoading(false);
+        return;
+      }
+
+      try {
+        const session = await syncTenantPortalSession();
+        if (cancelled) return;
+        if (session.has_active_subscription) {
+          const next = resolvePostLoginNavigationPath(session);
+          if (next !== "/plans") {
+            navigate(next, { replace: true });
+            return;
+          }
+        }
+      } catch {
+        /* plans fetch may still succeed */
+      }
+
+      const maxAttempts = 3;
+      for (let attempt = 1; attempt <= maxAttempts && !cancelled; attempt += 1) {
+        try {
+          const { plans: fetched, planTrial } = await fetchPlans();
+          if (cancelled) return;
+          setPlanTrialEligible(planTrial.eligible);
+          const withVariants = normalizePlans(fetched);
+          if (withVariants.length > 0 || attempt === maxAttempts) {
+            applyPlans(withVariants);
+            break;
+          }
+        } catch {
+          if (attempt === maxAttempts) {
+            setPlans([]);
+            setPlansError("Could not load plans. Please refresh or try again.");
+          }
+        }
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, 400 * attempt),
+          );
+        }
+      }
+
+      if (!cancelled) setPlansLoading(false);
+    };
+
+    void getPlans();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   useEffect(() => {
     if (!selectedPlan || !billingPeriod) return;
@@ -548,7 +616,14 @@ export default function ChoosePlanPage() {
 
             {/* Cards – parent stays hook-safe */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start auto-rows-min">
-              {sortedPlans.length > 0 ? (
+              {plansLoading ? (
+                <div className="col-span-full flex flex-col items-center justify-center gap-3 py-16 text-[#7658A0]">
+                  <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
+                  <p className="font-poppins text-sm text-gray-600">
+                    Loading plans…
+                  </p>
+                </div>
+              ) : sortedPlans.length > 0 ? (
                 sortedPlans.map((plan) => (
                   <PlanCard
                     key={String(plan.id ?? plan.name)}

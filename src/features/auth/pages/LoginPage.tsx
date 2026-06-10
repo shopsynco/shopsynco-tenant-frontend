@@ -6,8 +6,11 @@ import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../components/AuthLayout";
 import { showSuccess } from "../../../components/swalHelper";
 import { discoverTenantSlug } from "../../../api/auth/slugapi";
-import { setPlansEntryFromCheckout } from "../../../utils/planFlow";
-import { unpaidTenantEntryPath } from "../../../utils/termsAcceptance";
+import { completeTenantAuthAndRedirect } from "../../../api/auth/sessionApi";
+import {
+  resolvePostLoginNavigationPath,
+  setPlansEntryFromCheckout,
+} from "../../../utils/planFlow";
 import { persistTenantUserEmail } from "../../../utils/tenantUserEmail";
 import { readTenantSlugFromAccessToken } from "../../../utils/tenantStoreSlug";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
@@ -165,34 +168,11 @@ export default function LoginPage() {
         ? payload.tenant_slug.trim()
         : "";
 
-    if (!slugFromToken && emailFromToken) {
-      discoverTenantSlug(emailFromToken)
-        .then((discovered) => {
-          const role = (discovered as { user_role?: string })?.user_role
-            ?.toString()
-            .trim()
-            .toLowerCase();
-          if (role === "customer") {
-            localStorage.removeItem("accessToken");
-            localStorage.removeItem("refreshToken");
-            redirectToTenantAppPath(tenantSignupPath(emailFromToken));
-            return;
-          }
-          const slug =
-            discovered?.tenant_slug ?? discovered?.slug ?? slugFromToken;
-          if (slug) localStorage.setItem("store_slug", slug);
-          window.location.assign("/dashboard");
-        })
-        .catch(() => {
-          window.location.assign("/dashboard");
-        });
-      return;
-    }
-
     if (slugFromToken) {
       localStorage.setItem("store_slug", slugFromToken);
     }
-    window.location.assign("/dashboard");
+
+    void completeTenantAuthAndRedirect();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -255,33 +235,30 @@ export default function LoginPage() {
             ? payload.loginMessage
             : "Login Successful";
 
-        // Flow: payment (plans) → then store creation when subscribed → then contact if incomplete → dashboard.
-        // Do not send unpaid users to /setup-store (PrivateRoute will keep them on /plans anyway; avoids redirect loops / blank screens).
-        let nextPath = "/dashboard";
+        const nextPath = resolvePostLoginNavigationPath({
+          has_active_subscription: hasPaidAccess,
+          requires_store_setup: needsStoreSetup,
+          store_setup_incomplete: setupIncomplete,
+        });
         if (!hasPaidAccess) {
-          nextPath = unpaidTenantEntryPath();
           setPlansEntryFromCheckout();
-        } else if (needsStoreSetup) {
-          nextPath = "/setup-store";
-        } else if (setupIncomplete) {
-          nextPath = "/setup-store-contact";
-        } else {
-          nextPath = "/dashboard";
         }
 
         showSuccess(successTitle, successText, () => {
           setErrorMessage("");
-          navigate(nextPath);
+          window.location.assign(nextPath);
         });
 
-        // Fallback: if Swal/navigation fails, force navigation to the intended route.
         window.setTimeout(() => {
           const current = window.location.pathname.toLowerCase();
           const target = nextPath.toLowerCase();
-          if (current !== target && current.replace(/\/$/, "") !== target.replace(/\/$/, "")) {
+          if (
+            current !== target &&
+            current.replace(/\/$/, "") !== target.replace(/\/$/, "")
+          ) {
             window.location.assign(nextPath);
           }
-        }, 1200);
+        }, 800);
       } else {
         let errMsg = "Login failed";
         let signupRequired = false;

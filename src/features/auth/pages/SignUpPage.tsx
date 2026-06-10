@@ -11,6 +11,7 @@ import {
 import { isValidSignupPhone, SIGNUP_PHONE_HINT } from "../../../utils/signupPhoneValidation";
 import { trackMetaPixelCompleteRegistration } from "../../../lib/metaPixel";
 import { decodeJwtPayload } from "../utils/googleOAuth";
+import { completeTenantAuthAndRedirect } from "../../../api/auth/sessionApi";
 import { persistTenantUserEmail } from "../../../utils/tenantUserEmail";
 
 interface RegisterFormData {
@@ -78,7 +79,7 @@ export default function RegisterPage() {
     trackMetaPixelCompleteRegistration(
       signupEmail ? { em: signupEmail } : undefined,
     );
-    window.location.assign("/dashboard");
+    void completeTenantAuthAndRedirect();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
