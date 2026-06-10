@@ -1,8 +1,11 @@
 import axiosInstance from "../../store/refreshToken/tokenUtils";
 import {
   applyTenantOnboardingFlags,
+  resolvePostLoginNavigationPath,
+  setPlansEntryFromCheckout,
   type TenantOnboardingFlags,
 } from "../../utils/planFlow";
+import { unpaidTenantEntryPath } from "../../utils/termsAcceptance";
 import { readTenantSlugFromAccessToken } from "../../utils/tenantStoreSlug";
 
 export type TenantAuthSession = TenantOnboardingFlags & {
@@ -21,4 +24,18 @@ export async function syncTenantPortalSession(): Promise<TenantAuthSession> {
     null;
   applyTenantOnboardingFlags(data, slug);
   return data;
+}
+
+/** After OAuth or token handoff — sync flags and hard-navigate to the right onboarding step. */
+export async function completeTenantAuthAndRedirect(): Promise<void> {
+  try {
+    const session = await syncTenantPortalSession();
+    if (!session.has_active_subscription) {
+      setPlansEntryFromCheckout();
+    }
+    window.location.assign(resolvePostLoginNavigationPath(session));
+  } catch {
+    setPlansEntryFromCheckout();
+    window.location.assign(unpaidTenantEntryPath());
+  }
 }

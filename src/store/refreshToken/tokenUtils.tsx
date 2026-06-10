@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BASE_URL } from "../../api/axios_config";
+import { BASE_URL, getApiBaseUrl } from "../../api/axios_config";
 import { resolveTenantStoreSlugForApi } from "../../utils/tenantStoreSlug";
 
 // ✅ API Endpoints
@@ -14,6 +14,7 @@ const axiosInstance = axios.create({
 // ✅ Attach Access Token + Auto Inject Store Slug into URL (with skip list)
 axiosInstance.interceptors.request.use(
   (config) => {
+    config.baseURL = getApiBaseUrl();
     const token = localStorage.getItem("accessToken");
     // JWT tenant_slug wins over stale localStorage (another store's shopper session).
     const storeSlug = resolveTenantStoreSlugForApi();
