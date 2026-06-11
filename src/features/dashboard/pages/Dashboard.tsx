@@ -8,6 +8,7 @@ import {
   Calendar,
   Package,
   MessageSquare,
+  Store,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -269,6 +270,51 @@ export default function Dashboard() {
             {dashboardError}
           </div>
         )}
+
+        <section
+          className="relative overflow-hidden rounded-2xl border border-[#6A3CB1]/25 bg-gradient-to-br from-[#5A2D9D] via-[#6A3CB1] to-[#8B6BB6] p-6 sm:p-8 shadow-[0_16px_48px_rgba(106,60,177,0.38)]"
+          aria-label="Manage your store"
+        >
+          <div
+            className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -bottom-14 -left-10 h-36 w-36 rounded-full bg-white/5"
+            aria-hidden
+          />
+          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/75 sm:text-sm">
+                Your storefront command center
+              </p>
+              <h2 className="text-3xl font-bold leading-tight text-white sm:text-4xl">
+                Manage My Store
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/90 sm:text-base">
+                Jump into your store dashboard to manage products, orders, design,
+                and customers — everything you need to run your shop.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openManagerDashboard}
+              className="group inline-flex w-full shrink-0 items-center justify-center gap-3 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[#6A3CB1] shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all hover:scale-[1.02] hover:bg-[#F8F4FF] hover:shadow-[0_12px_32px_rgba(0,0,0,0.22)] active:scale-[0.99] sm:w-auto sm:min-w-[260px] sm:text-lg"
+            >
+              <Store
+                size={24}
+                className="text-[#6A3CB1] transition-transform group-hover:scale-110"
+                strokeWidth={2}
+              />
+              Manage My Store
+              <ArrowUpRight
+                size={22}
+                className="text-[#6A3CB1] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              />
+            </button>
+          </div>
+        </section>
+
         {showSetupBanner && (
           <div
             className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
@@ -358,46 +404,24 @@ export default function Dashboard() {
             </div>
 
             {/* DOMAIN */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6 border-b border-gray-200 pb-4">
-              <div>
-                <p className="flex items-center gap-2 font-semibold text-black">
-                  <Globe size={20} className="text-[#8B6BB6]" />
-                  Your Domain
-                </p>
-                {domainUrl ? (
-                  <a
-                    href={domainUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[#6A3CB1] hover:underline text-sm break-all"
-                  >
-                    {domainHost}
-                  </a>
-                ) : (
-                  <span className="text-sm text-gray-400">—</span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={openManagerDashboard}
-                className="inline-flex items-center gap-[10px] cursor-pointer hover:opacity-90"
-                style={{
-                  width: 254,
-                  height: 38,
-                  borderRadius: 5,
-                  backgroundColor: "#AE84EB0D",
-                  padding: "10px 20px",
-                  fontFamily: "Poppins, sans-serif",
-                  fontWeight: 500,
-                  fontSize: 16,
-                  lineHeight: "30px",
-                  color: "#8B6BB6",
-                  letterSpacing: 0,
-                }}
-              >
-                Manage My Store
-                <ArrowUpRight size={18} className="text-[#8B6BB6]" />
-              </button>
+            <div className="mb-6 border-b border-gray-200 pb-4">
+              <p className="flex items-center gap-2 font-semibold text-black">
+                <Globe size={20} className="text-[#8B6BB6]" />
+                Your Domain
+              </p>
+              {domainUrl ? (
+                <a
+                  href={domainUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-flex items-center gap-1 text-sm text-[#6A3CB1] break-all hover:underline"
+                >
+                  {domainHost}
+                  <ArrowUpRight size={14} className="shrink-0" />
+                </a>
+              ) : (
+                <span className="mt-1 text-sm text-gray-400">—</span>
+              )}
             </div>
 
             {/* BILLING + PLAN FEATURES */}
