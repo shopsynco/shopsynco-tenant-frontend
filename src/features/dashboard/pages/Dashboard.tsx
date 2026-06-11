@@ -395,7 +395,7 @@ export default function Dashboard() {
                   letterSpacing: 0,
                 }}
               >
-                Go to SaaS Dashboard
+                Manage My Store
                 <ArrowUpRight size={18} className="text-[#8B6BB6]" />
               </button>
             </div>
