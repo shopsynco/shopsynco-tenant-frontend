@@ -15,6 +15,10 @@ import {
   markTenantSubscriptionActive,
   setPlansEntryFromCheckout,
 } from "../../../../utils/planFlow";
+import {
+  resolveMetaPixelUserDataForPurchase,
+  trackMetaPixelPaymentSuccess,
+} from "../../../../lib/metaPixel";
 
 type RazorpayCtor = new (options: Record<string, unknown>) => { open: () => void };
 
@@ -27,6 +31,20 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(false);
   const [quoteData, setQuoteData] = useState<Record<string, unknown> | null>(null);
   const navigate = useNavigate();
+  const fireVerifiedPaymentPixel = async (paymentId: string) => {
+    const purchaseValue = Number(quoteData?.total ?? 1499);
+    const userData = await resolveMetaPixelUserDataForPurchase();
+    trackMetaPixelPaymentSuccess(
+      {
+        value:
+          Number.isFinite(purchaseValue) && purchaseValue > 0 ? purchaseValue : 1499,
+        currency: "INR",
+        dedupeKey: `meta_pixel_payment_success_${paymentId}`,
+      },
+      userData,
+    );
+  };
+
   const goPaymentSuccess = () => {
     markTenantSubscriptionActive();
     const purchaseValue = Number(quoteData?.total ?? 1499);
@@ -205,12 +223,14 @@ export default function PaymentPage() {
           });
           if (verification.success === true) {
             if (verification.status === "success") {
+              await fireVerifiedPaymentPixel(response.razorpay_payment_id);
               await Swal.fire("Success", "Payment successful!", "success");
               goPaymentSuccess();
               return;
             }
             const confirmed = await waitForPaymentConfirmation(activeSubscriptionId);
             if (confirmed) {
+              await fireVerifiedPaymentPixel(response.razorpay_payment_id);
               await Swal.fire("Success", "Payment successful!", "success");
               goPaymentSuccess();
               return;

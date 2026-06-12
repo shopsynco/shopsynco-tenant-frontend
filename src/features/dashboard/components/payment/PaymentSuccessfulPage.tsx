@@ -8,7 +8,6 @@ import {
   SUPPORT_PHONE_DISPLAY,
   SUPPORT_PHONE_TEL,
 } from "../../../../constants/supportContact";
-import { trackMetaPixelPurchase, resolveMetaPixelUserDataForPurchase, type MetaPixelUserData } from "../../../../lib/metaPixel";
 
 type SuccessLocationState = {
   successType?: "trial" | "payment";
@@ -39,23 +38,6 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     markTenantSubscriptionActive();
   }, []);
-
-  useEffect(() => {
-    if (isTrial) return;
-
-    let cancelled = false;
-    const value = Number(state.purchaseValue ?? 1499);
-    const currency = String(state.purchaseCurrency || "INR").toUpperCase();
-
-    void resolveMetaPixelUserDataForPurchase().then((userData: MetaPixelUserData | undefined) => {
-      if (cancelled) return;
-      trackMetaPixelPurchase(value, currency, userData);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isTrial, state.purchaseCurrency, state.purchaseValue]);
 
   return (
     <div
