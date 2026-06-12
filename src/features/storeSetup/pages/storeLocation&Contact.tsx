@@ -16,6 +16,7 @@ import {
   readStoredTenantUserEmail,
 } from "../../../utils/tenantUserEmail";
 import { saveStorefrontHost } from "../../../utils/storefrontHost";
+import { trackMetaPixelStoreSetup } from "../../../lib/metaPixel";
 
 const StoreSetupContactPage: React.FC = () => {
   const [resolvedEmail, setResolvedEmail] = useState(
@@ -129,6 +130,8 @@ const StoreSetupContactPage: React.FC = () => {
       } catch {
         /* ignore */
       }
+
+      trackMetaPixelStoreSetup({ em: email });
 
       showSuccess(
         "Store Created",

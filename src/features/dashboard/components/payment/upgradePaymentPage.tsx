@@ -12,7 +12,11 @@ import {
 } from "../../../../api/payment/paymentapi";
 import { getPricingQuote } from "../../../../api/mainapi/planapi";
 import { setPlansEntryFromDashboard } from "../../../../utils/planFlow";
-import { trackMetaPixelInitiateCheckout } from "../../../../lib/metaPixel";
+import {
+  resolveMetaPixelUserDataForPurchase,
+  trackMetaPixelInitiateCheckout,
+  trackMetaPixelPaymentSuccess,
+} from "../../../../lib/metaPixel";
 import { paymentErrorMessage } from "../../../../utils/paymentErrorMessage";
 
 declare global {
@@ -118,6 +122,19 @@ export default function UpgradePaymentPage() {
   ]);
 
   const navigate = useNavigate();
+  const fireVerifiedPaymentPixel = async (paymentId: string) => {
+    const purchaseValue = Number(quoteData?.total ?? 1499);
+    const userData = await resolveMetaPixelUserDataForPurchase();
+    trackMetaPixelPaymentSuccess(
+      {
+        value:
+          Number.isFinite(purchaseValue) && purchaseValue > 0 ? purchaseValue : 1499,
+        currency: "INR",
+        dedupeKey: `meta_pixel_payment_success_${paymentId}`,
+      },
+      userData,
+    );
+  };
   const goPaymentSuccess = () => {
     const purchaseValue = Number(quoteData?.total ?? 1499);
     navigate("/payment-success", {
@@ -421,12 +438,14 @@ export default function UpgradePaymentPage() {
           });
           if (verification.success === true) {
             if (verification.status === "success") {
+              await fireVerifiedPaymentPixel(response.razorpay_payment_id);
               await Swal.fire("Success", "Payment successful!", "success");
               goPaymentSuccess();
               return;
             }
             const confirmed = await waitForPaymentConfirmation(activeSubscriptionId);
             if (confirmed) {
+              await fireVerifiedPaymentPixel(response.razorpay_payment_id);
               await Swal.fire("Success", "Payment successful!", "success");
               goPaymentSuccess();
               return;

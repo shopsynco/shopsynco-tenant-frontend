@@ -11,6 +11,7 @@ import {
   resolvePostLoginNavigationPath,
   setPlansEntryFromCheckout,
 } from "../../../utils/planFlow";
+import { trackMetaPixelShopSyncoLogin } from "../../../lib/metaPixel";
 import { persistTenantUserEmail } from "../../../utils/tenantUserEmail";
 import { readTenantSlugFromAccessToken } from "../../../utils/tenantStoreSlug";
 import { redirectToTenantAppPath } from "../../../api/axios_config";
@@ -172,6 +173,10 @@ export default function LoginPage() {
       localStorage.setItem("store_slug", slugFromToken);
     }
 
+    trackMetaPixelShopSyncoLogin(
+      emailFromToken ? { em: emailFromToken } : undefined,
+    );
+
     void completeTenantAuthAndRedirect();
   }, []);
 
@@ -194,6 +199,7 @@ export default function LoginPage() {
 
       if (loginUser.fulfilled.match(result)) {
         const payload = result.payload;
+        trackMetaPixelShopSyncoLogin({ em: trimmedEmail });
         const needsStoreSetup =
           payload.requires_store_setup === true ||
           payload.action_required === "store_setup";

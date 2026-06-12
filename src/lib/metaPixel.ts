@@ -125,6 +125,17 @@ export function trackMetaPixelCompleteRegistration(userData?: MetaPixelUserData)
   trackMetaPixelEvent("CompleteRegistration", undefined, userData);
 }
 
+/** Successful tenant login — Meta custom conversion event. */
+export function trackMetaPixelShopSyncoLogin(userData?: MetaPixelUserData) {
+  const dedupeKey = sessionDedupeKey(
+    "meta_pixel_shop_synco_login",
+    userData?.em?.trim().toLowerCase() || "",
+  );
+  if (hasSessionDedupe(dedupeKey)) return;
+  markSessionDedupe(dedupeKey);
+  trackMetaPixelCustomEvent("ShopSyncoLogin", {}, userData);
+}
+
 /** Merchant finished store provisioning — custom conversion event. */
 export function trackMetaPixelStoreSetup(userData?: MetaPixelUserData) {
   const dedupeKey = sessionDedupeKey("meta_pixel_store_setup");
@@ -185,6 +196,29 @@ export function trackMetaPixelPurchase(
     },
     userData,
   );
+}
+
+/** Verified subscription payment — Meta custom conversion event. */
+export function trackMetaPixelPaymentSuccess(
+  params?: {
+    value?: number;
+    currency?: string;
+    dedupeKey?: string;
+  },
+  userData?: MetaPixelUserData,
+) {
+  const key = params?.dedupeKey || "meta_pixel_payment_success";
+  if (hasSessionDedupe(key)) return;
+  markSessionDedupe(key);
+
+  const customData: Record<string, unknown> = {};
+  const currency = String(params?.currency || "INR").toUpperCase();
+  if (currency) customData.currency = currency;
+  if (params?.value != null && Number.isFinite(params.value) && params.value > 0) {
+    customData.value = params.value;
+  }
+
+  trackMetaPixelCustomEvent("PaymentSuccess", customData, userData);
 }
 
 /** Resolve email for logged-in purchase events. */

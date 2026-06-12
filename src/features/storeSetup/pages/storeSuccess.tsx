@@ -6,8 +6,6 @@ import { useNavigate } from "react-router-dom";
 import { resolvePostStoreSetupDashboard } from "../../../api/axios_config";
 import { markStoreOnboardingComplete } from "../../../utils/planFlow";
 import { copyTextToClipboard } from "../../../utils/copyToClipboard";
-import { trackMetaPixelStoreSetup } from "../../../lib/metaPixel";
-
 const StoreSuccessPage: React.FC = () => {
   const [dashboardUrl, setDashboardUrl] = useState<string>("");
   const [storefrontUrl, setStorefrontUrl] = useState<string>("");
@@ -19,10 +17,6 @@ const StoreSuccessPage: React.FC = () => {
 
   useLayoutEffect(() => {
     markStoreOnboardingComplete();
-  }, []);
-
-  useEffect(() => {
-    trackMetaPixelStoreSetup();
   }, []);
 
   useEffect(() => {
