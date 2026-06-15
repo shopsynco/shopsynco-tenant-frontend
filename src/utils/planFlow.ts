@@ -25,10 +25,19 @@ export function setPlansEntryFromDashboard(): void {
   }
 }
 
+/** True when /plans was opened from dashboard, billing, or feature store (upgrade flow). */
+export function openedPlansFromDashboard(): boolean {
+  try {
+    return sessionStorage.getItem(SESSION_ALLOW_DASHBOARD_BACK) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function canExitPlansToDashboard(): boolean {
   try {
     return (
-      sessionStorage.getItem(SESSION_ALLOW_DASHBOARD_BACK) === "1" ||
+      openedPlansFromDashboard() ||
       localStorage.getItem(LOCAL_SUBSCRIPTION_ACTIVE) === "1"
     );
   } catch {

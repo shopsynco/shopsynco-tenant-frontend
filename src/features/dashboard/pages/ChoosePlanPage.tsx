@@ -7,6 +7,7 @@ import { syncTenantPortalSession } from "../../../api/auth/sessionApi";
 import {
   canExitPlansToDashboard,
   markTenantSubscriptionActive,
+  openedPlansFromDashboard,
   resolvePostLoginNavigationPath,
 } from "../../../utils/planFlow";
 import {
@@ -416,7 +417,11 @@ export default function ChoosePlanPage() {
         if (cancelled) return;
         if (session.has_active_subscription) {
           const next = resolvePostLoginNavigationPath(session);
-          if (next !== "/plans") {
+          const upgradingFromDashboard = openedPlansFromDashboard();
+          if (
+            next !== "/plans" &&
+            !(next === "/dashboard" && upgradingFromDashboard)
+          ) {
             navigate(next, { replace: true });
             return;
           }
@@ -498,8 +503,11 @@ export default function ChoosePlanPage() {
       currency: "INR",
     });
     trackMetaPixelInitiateCheckout(checkoutValue, "INR");
+    const hasActiveSubscription =
+      localStorage.getItem("tenant_subscription_active") === "1";
+    const paymentPath = hasActiveSubscription ? "/upgrade-payment" : "/payment";
     navigate(
-      `/payment?plan_id=${encodeURIComponent(String(selectedPlan.id))}&months=${encodeURIComponent(billingPeriod)}&country=${encodeURIComponent("India")}`
+      `${paymentPath}?plan_id=${encodeURIComponent(String(selectedPlan.id))}&months=${encodeURIComponent(billingPeriod)}&country=${encodeURIComponent("India")}`
     );
   };
 
