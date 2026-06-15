@@ -1,4 +1,12 @@
 import { ensureTenantUserEmail, readStoredTenantUserEmail } from "../utils/tenantUserEmail";
+import {
+  trackGoogleAnalyticsCompleteRegistration,
+  trackGoogleAnalyticsInitiateCheckout,
+  trackGoogleAnalyticsPaymentSuccess,
+  trackGoogleAnalyticsShopSyncoLogin,
+  trackGoogleAnalyticsStoreSetup,
+  trackGoogleAnalyticsSubscribedButtonClick,
+} from "./googleAnalytics";
 
 /** Same pixel as tenant app index.html and marketing site. */
 export const META_PIXEL_ID = "854120904427076";
@@ -123,6 +131,7 @@ export function trackMetaPixelCompleteRegistration(userData?: MetaPixelUserData)
   if (hasSessionDedupe(dedupeKey)) return;
   markSessionDedupe(dedupeKey);
   trackMetaPixelEvent("CompleteRegistration", undefined, userData);
+  trackGoogleAnalyticsCompleteRegistration(userData);
 }
 
 /** Successful tenant login — Meta custom conversion event. */
@@ -134,6 +143,7 @@ export function trackMetaPixelShopSyncoLogin(userData?: MetaPixelUserData) {
   if (hasSessionDedupe(dedupeKey)) return;
   markSessionDedupe(dedupeKey);
   trackMetaPixelCustomEvent("ShopSyncoLogin", {}, userData);
+  trackGoogleAnalyticsShopSyncoLogin(userData);
 }
 
 /** Merchant finished store provisioning — custom conversion event. */
@@ -142,6 +152,7 @@ export function trackMetaPixelStoreSetup(userData?: MetaPixelUserData) {
   if (hasSessionDedupe(dedupeKey)) return;
   markSessionDedupe(dedupeKey);
   trackMetaPixelCustomEvent("StoreSetup", {}, userData);
+  trackGoogleAnalyticsStoreSetup(userData);
 }
 
 /** @deprecated Prefer trackMetaPixelStoreSetup for store-created milestone. */
@@ -159,6 +170,7 @@ export function trackMetaPixelInitiateCheckout(
     payload.value = value;
   }
   trackMetaPixelEvent("InitiateCheckout", payload, userData);
+  trackGoogleAnalyticsInitiateCheckout(value, currency);
 }
 
 /** Custom event for plan subscribe / pay-now intent (Meta custom conversion). */
@@ -177,6 +189,7 @@ export function trackMetaPixelSubscribedButtonClick(params?: {
     customData.value = params.value;
   }
   trackMetaPixelCustomEvent("SubscribedButtonClick", customData);
+  trackGoogleAnalyticsSubscribedButtonClick(params);
 }
 
 export function trackMetaPixelPurchase(
@@ -219,6 +232,13 @@ export function trackMetaPixelPaymentSuccess(
   }
 
   trackMetaPixelCustomEvent("PaymentSuccess", customData, userData);
+  trackGoogleAnalyticsPaymentSuccess({
+    value: params?.value,
+    currency: params?.currency,
+    dedupeKey: params?.dedupeKey
+      ? params.dedupeKey.replace(/^meta_pixel_/, "ga_")
+      : undefined,
+  });
 }
 
 /** Resolve email for logged-in purchase events. */
