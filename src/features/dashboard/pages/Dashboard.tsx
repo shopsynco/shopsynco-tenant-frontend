@@ -565,11 +565,12 @@ export default function Dashboard() {
               </p>
 
               <button
+                type="button"
                 onClick={() => {
                   setPlansEntryFromDashboard();
                   navigate("/plans");
                 }}
-                className="absolute text-center"
+                className="absolute text-center z-10"
                 style={{
                   top: 199,
                   left: 28,
@@ -591,7 +592,7 @@ export default function Dashboard() {
               </button>
 
               <div
-                className="absolute left-0 bottom-0"
+                className="absolute left-0 bottom-0 pointer-events-none"
                 style={{
                   width: 445,
                   height: 78,
