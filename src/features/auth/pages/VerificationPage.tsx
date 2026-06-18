@@ -307,6 +307,14 @@ const VerificationPage: React.FC = () => {
           Continue
         </button>
 
+        <p
+          className="text-center text-xs mb-3 max-w-[320px] mx-auto"
+          style={{ color: "#6b8aa2" }}
+        >
+          If the mail is not received in your inbox, please check your spam folder
+          in email also.
+        </p>
+
         {/* Resend text */}
         <p className="text-center text-xs" style={{ color: "#6b8aa2" }}>
           If you don't receive any code!{" "}
