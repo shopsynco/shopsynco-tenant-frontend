@@ -19,12 +19,6 @@ import {
 } from "../../../../lib/metaPixel";
 import { paymentErrorMessage } from "../../../../utils/paymentErrorMessage";
 
-declare global {
-  interface Window {
-    Razorpay?: any;
-  }
-}
-
 // Define types
 interface PaymentMethod {
   label: string;

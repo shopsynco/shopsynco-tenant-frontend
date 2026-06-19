@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Clock, HelpCircle, ArrowRight, FileText } from "lucide-react";
-import Swal from "sweetalert2";
 import Header from "./dashboardHeader";
 import { useNavigate } from "react-router-dom";
 import { fetchTenantDashboard } from "../../../api/mainapi/statusapi";

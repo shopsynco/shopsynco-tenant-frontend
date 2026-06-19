@@ -11,14 +11,6 @@ import {
   verifyRazorpayPayment,
 } from "../../../api/payment/paymentapi";
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => {
-      open: () => void;
-    };
-  }
-}
-
 const loadRazorpayScript = (): Promise<boolean> =>
   new Promise((resolve) => {
     if (window.Razorpay) {
