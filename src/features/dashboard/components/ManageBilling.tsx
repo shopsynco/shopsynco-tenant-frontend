@@ -1,208 +1,95 @@
 import { useState, useEffect } from "react";
-import { Clock, HelpCircle, ArrowRight } from "lucide-react";
+import { Clock, HelpCircle, ArrowRight, FileText } from "lucide-react";
 import Swal from "sweetalert2";
 import Header from "./dashboardHeader";
-import { getCardDetails } from "../../../api/payment/paymentapi";
-import {
-  DeleteModal,
-  EditCardModal,
-  EditBankModal,
-  EditUpiModal,
-  ViewCardModal,
-} from "./payment/EditPaymentMethod";
-import AddPaymentMethodModal from "./payment/AddPaymentMethodModal";
-import {
-  AddBankModal,
-  AddCardModal,
-  AddUpiModal,
-} from "./payment/PaymentModal";
 import { useNavigate } from "react-router-dom";
-import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
 import { fetchTenantDashboard } from "../../../api/mainapi/statusapi";
 import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
 import PlatformSupportChatModal from "./PlatformSupportChatModal";
+import {
+  fetchPlatformBills,
+  fetchBillingSummary,
+  type PlatformBill,
+  type BillingSummary,
+} from "../../../api/billing/platformBillingApi";
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                             */
-/* ------------------------------------------------------------------ */
+const formatDate = (d: string | null | undefined) => {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
-/* Shape that comes from the API */
-interface CardDetails {
-  card_brand: string;
-  card_last4: string;
-  exp_month: number;
-  exp_year: number;
-  card_holder_name: string;
-  billing_address?: {
-    line1?: string;
-    line2?: string;
-    city?: string;
-    state?: string;
-    postal_code?: string;
-    country?: string;
-  };
-}
+const formatAmount = (amount: string | number, currency = "INR") => {
+  const n = Number(amount);
+  const sym = currency === "INR" ? "₹" : `${currency} `;
+  return sym + (Number.isFinite(n) ? n.toLocaleString("en-IN") : amount);
+};
 
-/* Props expected by the ViewCardModal (strings only) */
-interface ViewCardModalProps {
-  card_brand: string;
-  card_last4: string;
-  exp_month: string;
-  exp_year: string;
-  card_holder_name: string;
-  billing_address?: CardDetails["billing_address"];
-}
-
-type PaymentModalType =
-  | "add"
-  | "editCard"
-  | "editBank"
-  | "editUPI"
-  | "addCard"
-  | "addBank"
-  | "addUpi"
-  | "viewCard"
-  | "viewBank"
-  | "viewUpi"
-  | "deleteCard"
-  | "deleteBank"
-  | "deleteUpi"
-  | null;
-
-/* ------------------------------------------------------------------ */
-/*  Component                                                         */
-/* ------------------------------------------------------------------ */
+const statusClass = (status: string) => {
+  const s = status.toLowerCase();
+  if (s === "paid") return "text-green-700 bg-green-50 border-green-200";
+  if (s === "overdue") return "text-red-700 bg-red-50 border-red-200";
+  return "text-amber-700 bg-amber-50 border-amber-200";
+};
 
 export default function ManageBillingPage() {
-  const [activeModal, setActiveModal] = useState<PaymentModalType>(null);
-  const [cardDetails, setCardDetails] = useState<CardDetails | null>(null);
   const navigate = useNavigate();
-  const [invoices, setInvoices] = useState<any[]>([]);
   const [supportTopic, setSupportTopic] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<string>("—");
   const [nextRenewalDate, setNextRenewalDate] = useState<string>("—");
   const [billingLoading, setBillingLoading] = useState(true);
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
-  const formatAmount = (n: number) => "₹" + n.toLocaleString("en-IN");
-  useEffect(() => {
-    fetchInvoices()
-      .then((data) => {
-        const list = Array.isArray(data)
-          ? data
-          : data.results || data.invoices || [];
-        setInvoices(list);
-      })
-      .catch(() => setInvoices([]));
-  }, []);
+  const [bills, setBills] = useState<PlatformBill[]>([]);
+  const [summary, setSummary] = useState<BillingSummary | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadBillingSummary = async () => {
+    const load = async () => {
       setBillingLoading(true);
       try {
         await ensureTenantStoreSlugForApi();
-        const tenant = await fetchTenantDashboard();
+        const [tenant, billList, billSummary] = await Promise.all([
+          fetchTenantDashboard(),
+          fetchPlatformBills().catch(() => []),
+          fetchBillingSummary().catch(() => null),
+        ]);
         if (cancelled) return;
 
         const data = tenant?.dashboard || {};
-        const summary = data?.account_summary || {};
-        const nextRen = summary?.next_renewal;
+        const accountSummary = data?.account_summary || {};
+        const nextRen = accountSummary?.next_renewal;
         const planRenewalDate = String(data?.current_plan?.renewal_date || "").trim();
         const renewalCycle = String(data?.current_plan?.renewal_cycle || "").trim();
 
-        setBillingPeriod(renewalCycle || "—");
+        setBillingPeriod(renewalCycle || "Monthly");
         setNextRenewalDate(
-          nextRen?.date ? String(nextRen.date) : planRenewalDate || "—",
+          billSummary?.next_unified_bill_at
+            ? formatDate(billSummary.next_unified_bill_at)
+            : nextRen?.date
+              ? String(nextRen.date)
+              : planRenewalDate || "—",
         );
+        setBills(billList);
+        setSummary(billSummary);
       } catch (err) {
-        console.error("Failed to load billing summary:", err);
-        if (!cancelled) {
-          setBillingPeriod("—");
-          setNextRenewalDate("—");
-        }
+        console.error("Failed to load billing:", err);
       } finally {
         if (!cancelled) setBillingLoading(false);
       }
     };
 
-    void loadBillingSummary();
+    void load();
     return () => {
       cancelled = true;
     };
   }, []);
-  /* ----------  fetch card details  ---------- */
-  useEffect(() => {
-    const fetchCardDetails = async () => {
-      try {
-        const response = await getCardDetails();
-        if (response.card_details?.length) {
-          setCardDetails(response.card_details[0]);
-        } else {
-          setCardDetails(null);
-        }
-      } catch (err) {
-        console.error("Error fetching card details:", err);
-        setCardDetails(null);
-      }
-    };
-    fetchCardDetails();
-  }, []);
 
-  const closeModal = () => setActiveModal(null);
-
-  /* ----------  delete handler  ---------- */
-  const handleDelete = async (type: string) => {
-    const result = await Swal.fire({
-      title: "Delete Payment Method",
-      text: `Are you sure you want to delete this ${type} payment method?`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it",
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      await Swal.fire("Deleted!", `${type} removed.`, "success");
-      const response = await getCardDetails();
-      setCardDetails(response.card_details?.[0] ?? null);
-      closeModal();
-    } catch {
-      Swal.fire("Error", "Failed to delete payment method.", "error");
-    }
-  };
-
-  /* ----------  edit handler  ---------- */
-  const handleEdit = (type: string) => {
-    if (type === "card") setActiveModal("editCard");
-    else if (type === "bank") setActiveModal("editBank");
-    else if (type === "upi") setActiveModal("editUPI");
-  };
-
-  /* ----------  helpers  ---------- */
-  const toViewModalShape = (
-    src: CardDetails | null
-  ): ViewCardModalProps | null => {
-    if (!src) return null;
-    return {
-      ...src,
-      exp_month: String(src.exp_month).padStart(2, "0"),
-      exp_year: String(src.exp_year),
-    };
-  };
-
-  /* ------------------------------------------------------------------ */
-  /*  Render                                                            */
-  /* ------------------------------------------------------------------ */
+  const outstanding = bills.filter(
+    (b) => b.status === "issued" || b.status === "overdue",
+  );
 
   return (
     <div className="min-h-screen bg-[#FFFFFF]">
@@ -218,95 +105,118 @@ export default function ManageBillingPage() {
           <span className="mx-1">›</span>
           <span className="text-gray-700 font-medium">Manage Billing</span>
         </p>
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900">
-            Manage Billing
-          </h1>
-        </div>
+        <h1 className="text-3xl font-semibold text-gray-900 mb-8">Manage Billing</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-          {/* ------------  Left  ------------ */}
-          <div className="space-y-8">
-            {/* Billing period */}
-            <div className="rounded-2xl bg-[#AE84EB26] p-6">
-              <p className="text-base font-semibold text-black">
-                Billing Period:{" "}
-                <span className="font-semibold text-[#6A3CB1]">
-                  {billingLoading ? "Loading..." : billingPeriod}
-                </span>
-              </p>
-              <div className="flex items-center gap-2 mt-2 text-black text-sm">
-                <Clock size={15} />
-                <span>
-                  Next Renewal:{" "}
-                  {billingLoading ? "Loading..." : nextRenewalDate}
-                </span>
+          <div className="space-y-6">
+            {/* Summary cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-2xl bg-[#AE84EB26] p-6">
+                <p className="text-sm text-gray-600">Next unified bill</p>
+                <p className="text-lg font-semibold text-[#6A3CB1] mt-1">
+                  {billingLoading ? "…" : nextRenewalDate}
+                </p>
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                  <Clock size={14} />
+                  <span>Plan: {billingPeriod}</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                <p className="text-sm text-gray-600">Accrued fees (unbilled)</p>
+                <p className="text-lg font-semibold text-gray-900 mt-1">
+                  {billingLoading
+                    ? "…"
+                    : formatAmount(summary?.estimated_transaction_fees || "0")}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Rolled into your next Shopify-style bill
+                </p>
               </div>
             </div>
 
-            {/*
-              Payment Method block intentionally hidden — payments run through the
-              checkout gateway (Razorpay) per subscription, so a saved card list
-              isn't shown on the Manage Billing page.
-            */}
-          </div>
-
-          {/* ------------  Right  ------------ */}
-          <div className="space-y-6">
-            <div className="bg-[#AE84EB1A] rounded-2xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-[#6A3CB1]">
-                  Billing History
-                </h3>
+            {/* Outstanding */}
+            {outstanding.length > 0 && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6">
+                <h3 className="font-semibold text-amber-900 mb-2">Payment due</h3>
+                <p className="text-sm text-amber-800 mb-4">
+                  {outstanding.length} bill(s) ·{" "}
+                  {formatAmount(summary?.outstanding_total || "0")}
+                </p>
                 <button
-                  onClick={() => navigate("/invoice")}
-                  className="bg-[#7658A0] text-sm font-medium text-white rounded-lg px-3 py-1.5 hover:opacity-90 transition"
+                  type="button"
+                  onClick={() => navigate(`/billing/bill/${outstanding[0].id}`)}
+                  className="text-sm font-semibold text-[#7658A0] hover:underline"
                 >
-                  View All
+                  Pay now →
                 </button>
               </div>
-              <p className="text-sm text-[#565756] mb-4">
-                Recent invoices and payments
-              </p>
-              <div className="space-y-3 text-sm">
-                {invoices.length === 0 ? (
-                  <p className="text-sm text-[#565756]">No billing history yet.</p>
-                ) : (
-                  invoices
-                    .sort(
-                      (a, b) =>
-                        new Date(b.date).getTime() - new Date(a.date).getTime()
-                    )
-                    .slice(0, 2)
-                    .map((inv) => (
-                      <div
-                        key={inv.id}
-                        className="flex justify-between text-[#565756]"
-                      >
-                        <span className="font-medium">
-                          {formatDate(inv.date)}
-                        </span>
-                        <span className="font-medium">
-                          {formatAmount(inv.amount)}
-                        </span>
-                      </div>
-                    ))
-                )}
-              </div>
-            </div>
+            )}
 
+            {/* Bills list — Shopify style */}
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+                <FileText size={18} className="text-[#6A3CB1]" />
+                <h3 className="font-semibold text-gray-900">Bills</h3>
+              </div>
+              {billingLoading ? (
+                <p className="p-6 text-sm text-gray-500">Loading bills…</p>
+              ) : bills.length === 0 ? (
+                <p className="p-6 text-sm text-gray-500">
+                  No bills yet. After your first paid month, unified bills appear here
+                  every 30 days (subscription + transaction fees + apps).
+                </p>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {bills.map((bill) => (
+                    <li key={bill.id}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/billing/bill/${bill.id}`)}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 text-left transition"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {bill.bill_number}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-0.5">
+                            {formatDate(bill.issue_date)} ·{" "}
+                            {formatDate(bill.period_start)} –{" "}
+                            {formatDate(bill.period_end)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full border capitalize ${statusClass(bill.status)}`}
+                          >
+                            {bill.status}
+                          </span>
+                          <span className="font-semibold text-gray-900">
+                            {formatAmount(bill.total_amount, bill.currency)}
+                          </span>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6">
             <div className="rounded-2xl border border-[#8B6BB6] bg-white p-6 text-gray-700">
               <div className="flex items-center gap-2 mb-2">
                 <HelpCircle size={24} className="text-[#6A3CB1]" />
-                <h4 className="font-semibold text-gray-800">
-                  Need help with billing?
-                </h4>
+                <h4 className="font-semibold text-gray-800">How billing works</h4>
               </div>
-              <p className="text-sm text-gray-500 mb-3 leading-relaxed">
-                Our support team is ready to assist you with any questions about
-                your subscription.
-              </p>
-              <div className="flex justify-end">
+              <ul className="text-sm text-gray-600 space-y-2 leading-relaxed list-disc pl-4">
+                <li>Month 1 plan is paid at checkout after your free trial.</li>
+                <li>
+                  Every 30 days you receive one bill: subscription, transaction
+                  fees, and Feature Store apps.
+                </li>
+                <li>Pay once from the bill detail page.</li>
+              </ul>
+              <div className="flex justify-end mt-4">
                 <button
                   type="button"
                   onClick={() => setSupportTopic("Manage billing")}
@@ -316,36 +226,24 @@ export default function ManageBillingPage() {
                 </button>
               </div>
             </div>
+
+            <div className="bg-[#AE84EB1A] rounded-2xl p-6">
+              <h3 className="font-semibold text-[#6A3CB1] mb-2">Plan receipts</h3>
+              <p className="text-sm text-[#565756] mb-3">
+                Separate receipts from your first plan checkout
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate("/invoice")}
+                className="text-sm font-medium text-[#7658A0] hover:underline"
+              >
+                View plan payment history →
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* =====================  MODALS  ===================== */}
-      {activeModal === "add" && (
-        <AddPaymentMethodModal
-          onClose={closeModal}
-          onPaymentMethodSelect={(method: PaymentModalType) =>
-            setActiveModal(method)
-          }
-        />
-      )}
-      {activeModal === "addCard" && <AddCardModal onClose={closeModal} />}
-      {activeModal === "addBank" && <AddBankModal onClose={closeModal} />}
-      {activeModal === "addUpi" && <AddUpiModal onClose={closeModal} />}
-      {activeModal === "editCard" && <EditCardModal onClose={closeModal} />}
-      {activeModal === "editBank" && <EditBankModal onClose={closeModal} />}
-      {activeModal === "editUPI" && <EditUpiModal onClose={closeModal} />}
-      {activeModal === "viewCard" && (
-        <ViewCardModal
-          onClose={closeModal}
-          onEditCard={() => handleEdit("card")}
-          onDeleteCard={() => handleDelete("card")}
-          cardDetails={toViewModalShape(cardDetails)}
-        />
-      )}
-      {activeModal === "deleteCard" && (
-        <DeleteModal type="card" onClose={closeModal} />
-      )}
       <PlatformSupportChatModal
         open={supportTopic !== null}
         onClose={() => setSupportTopic(null)}

@@ -12,6 +12,7 @@ import StoreSuccessPage from "../features/storeSetup/pages/storeSuccess";
 import StoreSetupContactPage from "../features/storeSetup/pages/storeLocation&Contact";
 import FeatureStorePage from "../features/dashboard/components/FeatureModal";
 import ManageBillingPage from "../features/dashboard/components/ManageBilling";
+import PlatformBillDetailPage from "../features/dashboard/pages/PlatformBillDetailPage";
 import RegisterPage from "../features/auth/pages/SignUpPage";
 import LoginPage from "../features/auth/pages/LoginPage";
 import VerificationPage from "../features/auth/pages/VerificationPage";
@@ -95,6 +96,7 @@ const AppRoutes = () => {
           <Route path="store-success" element={<StoreSuccessPage />} />
           <Route path="feature-store" element={<FeatureStorePage />} />
           <Route path="manage-billing" element={<ManageBillingPage />} />
+          <Route path="billing/bill/:billId" element={<PlatformBillDetailPage />} />
           <Route path="invoice" element={<InvoicesPage />} />
         </Route>
       </Routes>
