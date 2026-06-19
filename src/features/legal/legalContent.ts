@@ -39,7 +39,7 @@ export const LEGAL_POLICIES: Record<LegalSlug, PolicyBlock> = {
   terms: {
     title: "Terms & Conditions",
     html: `
-<p class="mb-2 text-xs text-gray-400">Last updated: May 2025 &mdash; Effective immediately upon account creation or plan purchase.</p>
+<p class="mb-2 text-xs text-gray-400">Last updated: June 2025 &mdash; Effective immediately upon account creation or plan purchase.</p>
 <p class="mb-4">These Terms &amp; Conditions (&ldquo;Terms&rdquo;) constitute a legally binding agreement between you (&ldquo;Merchant&rdquo;, &ldquo;you&rdquo;) and ShopSynco Technologies (&ldquo;ShopSynco&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). By registering an account, activating a store, or using any part of the ShopSynco platform, you unconditionally accept these Terms in their entirety. If you do not agree, do not use the platform.</p>
 
 ${H(1, "Services")}
@@ -55,12 +55,13 @@ ${H(3, "Subscription Plans &amp; Billing")}
   <li>Subscriptions renew automatically unless cancelled before the renewal date.</li>
   <li>Applicable taxes (GST or other levies) will be added as required by law.</li>
   <li>Feature Store add-ons are billed monthly and may be cancelled separately from the base plan.</li>
-  <li>All subscription plans include a <strong>7-day free trial</strong> with no upfront payment. After the trial, you must subscribe to a paid plan to keep access.</li>
+  <li>All subscription plans include a <strong>7-day free trial</strong> with no upfront payment. During the trial, <strong>no ShopSynco platform transaction fees</strong> are charged on storefront orders.</li>
+  <li>After the trial, month 1 of your plan is paid separately at checkout. From month 2 onward, subscription, platform transaction fees, and active Feature Store add-ons are combined on a <strong>unified platform bill</strong> every 30 days (see Section 4).</li>
   <li>Free trials for Feature Store add-ons (7 days for Starter; 14 days for Growth and Pro) require no upfront payment. If not cancelled before the trial ends, paid billing commences automatically.</li>
 </ul>
 
-${H(4, "Transaction Fees &mdash; Detailed Breakdown")}
-<p class="mb-3">Every order processed through your ShopSynco store carries the following fees, which are deducted automatically from each transaction settlement:</p>
+${H(4, "Transaction Fees &amp; Platform Billing")}
+<p class="mb-3">Every completed order on your ShopSynco storefront (online payment, Cash on Delivery, or other supported methods) accrues a <strong>ShopSynco platform transaction fee</strong> based on your active subscription plan. Razorpay payment gateway fees (when customers pay online) are separate and are charged by Razorpay on the order value.</p>
 <div class="overflow-x-auto mb-4">
   <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
     <thead class="bg-[#F3EEFF]">
@@ -74,16 +75,16 @@ ${H(4, "Transaction Fees &mdash; Detailed Breakdown")}
     </thead>
     <tbody class="divide-y divide-gray-100">
       <tr class="bg-white">
-        <td class="px-4 py-2">Razorpay payment gateway fee</td>
-        <td class="px-4 py-2">2% per order</td>
-        <td class="px-4 py-2">2% per order</td>
-        <td class="px-4 py-2">2% per order</td>
-        <td class="px-4 py-2 text-gray-500">Razorpay (their cut)</td>
+        <td class="px-4 py-2">Razorpay payment gateway fee <em>(online orders only)</em></td>
+        <td class="px-4 py-2">As per Razorpay</td>
+        <td class="px-4 py-2">As per Razorpay</td>
+        <td class="px-4 py-2">As per Razorpay</td>
+        <td class="px-4 py-2 text-gray-500">Razorpay</td>
       </tr>
       <tr class="bg-gray-50">
         <td class="px-4 py-2"><strong>ShopSynco platform fee</strong></td>
+        <td class="px-4 py-2"><strong>2% per order</strong></td>
         <td class="px-4 py-2"><strong>1.5% per order</strong></td>
-        <td class="px-4 py-2"><strong>1% per order</strong></td>
         <td class="px-4 py-2"><strong>0.5% per order</strong></td>
         <td class="px-4 py-2 text-gray-500">ShopSynco</td>
       </tr>
@@ -97,10 +98,11 @@ ${H(4, "Transaction Fees &mdash; Detailed Breakdown")}
     </tbody>
   </table>
 </div>
-<p class="mb-3"><strong>How transaction fees are collected:</strong> ShopSynco uses Razorpay Route (split settlement) to automatically separate the ShopSynco platform fee and any third-party integration fee from your earnings at the moment of each transaction. You receive the net settlement in your linked bank account after all applicable fees are deducted. <strong>You do not pay the ShopSynco fee as a separate invoice &mdash; it is deducted directly from the order value before settlement reaches you.</strong></p>
-<p class="mb-3"><strong>Non-payment / bypass attempts:</strong> Because the ShopSynco platform fee is deducted automatically via Razorpay Route, there is no scenario in which it goes unpaid on orders processed through our infrastructure. Routing customer payments outside our payment infrastructure specifically to avoid transaction fee deductions constitutes a material breach of these Terms and will result in immediate account suspension, recovery of outstanding fees, and potential legal action.</p>
-<p class="mb-3"><strong>Transaction fees are strictly non-refundable.</strong> Once an order has been settled and fees have been deducted, those fees cannot be reversed regardless of whether the underlying order is later refunded, disputed, or charged back by the customer. You bear the full cost of issuing customer refunds, including the original transaction fees that applied to that order.</p>
-<p class="mb-4"><strong>Fee revisions:</strong> ShopSynco may revise transaction fee percentages with 30 days&rsquo; written notice. Continued use of the platform after the effective date of a fee change constitutes your acceptance of the revised rates.</p>
+<p class="mb-3"><strong>How platform fees are collected:</strong> ShopSynco platform fees are <strong>accrued on each completed order</strong> during your billing period and included on your <strong>unified platform bill</strong> (subscription + transaction fees + Feature Store apps), issued every 30 days after your first plan payment. You pay the bill once via <strong>Manage Billing</strong> in the tenant dashboard. Customer order payments (Razorpay settlements, COD collections, etc.) go to you separately; platform fees are not deducted at checkout.</p>
+<p class="mb-3"><strong>Free trial:</strong> No ShopSynco platform transaction fees are charged on orders placed during your 7-day free plan trial.</p>
+<p class="mb-3"><strong>Non-payment / bypass attempts:</strong> Deliberately routing sales outside ShopSynco or failing to pay outstanding platform bills constitutes a material breach of these Terms and may result in account suspension, recovery of outstanding fees, and legal action.</p>
+<p class="mb-3"><strong>Platform transaction fees on unified bills are non-refundable</strong> once the underlying order has completed, including where the customer later receives a refund, cancels, or initiates a chargeback. You bear the cost of customer refunds from your own proceeds.</p>
+<p class="mb-4"><strong>Fee revisions:</strong> ShopSynco may revise platform transaction fee percentages with 30 days&rsquo; written notice. Continued use of the platform after the effective date of a fee change constitutes your acceptance of the revised rates.</p>
 
 ${H(5, "Prohibited Products &amp; Content")}
 <p class="mb-2">You expressly agree that you will <strong>not</strong> list, sell, market, or facilitate the sale of any of the following categories of goods, services, or content through your ShopSynco store. This list is illustrative and non-exhaustive:</p>
@@ -162,10 +164,10 @@ ${H(1, "Information We Collect")}
 </ul>
 
 ${H(2, "How We Use Information")}
-<p class="mb-4">We use collected information to: provide, operate, and maintain the platform; authenticate users and prevent fraud; process subscription payments and transaction fee deductions via Razorpay Route; send service notifications (including subscription expiry reminders); generate analytics and reports for your dashboard; comply with legal, tax, and regulatory obligations; and improve platform features and security.</p>
+<p class="mb-4">We use collected information to: provide, operate, and maintain the platform; authenticate users and prevent fraud; process subscription payments and unified platform bills; send service notifications (including subscription expiry and billing reminders); generate analytics and reports for your dashboard; comply with legal, tax, and regulatory obligations; and improve platform features and security.</p>
 
 ${H(3, "Sharing &amp; Disclosure")}
-<p class="mb-4">We may share information with: (a) <strong>Razorpay</strong> for payment processing and split settlements; (b) <strong>AWS</strong> for cloud hosting and media storage; (c) <strong>email service providers</strong> for transactional notifications; (d) <strong>analytics providers</strong> for platform improvement; and (e) <strong>law enforcement or regulatory authorities</strong> where required by a valid court order or applicable law. <strong>We do not sell your personal information to third parties for marketing purposes.</strong></p>
+<p class="mb-4">We may share information with: (a) <strong>Razorpay</strong> for payment processing; (b) <strong>AWS</strong> for cloud hosting and media storage; (c) <strong>email service providers</strong> for transactional notifications; (d) <strong>analytics providers</strong> for platform improvement; and (e) <strong>law enforcement or regulatory authorities</strong> where required by a valid court order or applicable law. <strong>We do not sell your personal information to third parties for marketing purposes.</strong></p>
 
 ${H(4, "Data Retention")}
 <p class="mb-4">We retain account and transaction data for a minimum of 7 years as required under Indian tax and financial regulations. Usage logs are retained for 90 days. Customer data within your store schema is retained until you request deletion or your account is terminated, after which it is deleted within 30 days unless a legal hold applies.</p>
@@ -201,15 +203,15 @@ ${H(1, "No Refund Policy")}
   <li>Prepaid multi-month discounts (6-month, yearly, 2-year) are not refundable in part or in full.</li>
 </ul>
 
-${H(2, "Transaction Fees &mdash; Non-Refundable")}
-<p class="mb-2">Transaction fees (ShopSynco platform fee + Razorpay gateway fee) are deducted automatically from each settled order via Razorpay Route. These fees are earned at the moment of settlement and are <strong>not refundable under any circumstances</strong>, including where:</p>
+${H(2, "Platform Transaction Fees &mdash; Non-Refundable")}
+<p class="mb-2">ShopSynco platform transaction fees (Starter: 2%, Growth: 1.5%, Pro: 0.5% per completed order) are accrued during each billing period and charged on your unified platform bill. These fees are <strong>not refundable under any circumstances</strong> once the underlying order has completed, including where:</p>
 <ul class="list-disc pl-6 space-y-2 mb-4">
   <li>The customer returns the product and receives a full refund from you.</li>
-  <li>An order is cancelled after payment but before dispatch.</li>
-  <li>A chargeback is successfully initiated by the customer.</li>
+  <li>An order is cancelled after placement but before dispatch.</li>
+  <li>A chargeback is successfully initiated by the customer on an online payment.</li>
   <li>A payment dispute is resolved in the customer&rsquo;s favour by Razorpay or the card network.</li>
 </ul>
-<p class="mb-4">You are solely responsible for managing customer refunds out of your own settlement proceeds. ShopSynco will not reimburse, credit, or offset transaction fees that have already been deducted on any order, regardless of outcome.</p>
+<p class="mb-4">You are solely responsible for managing customer refunds out of your own order proceeds. ShopSynco will not reimburse, credit, or offset platform transaction fees that have already been billed, regardless of order outcome.</p>
 
 ${H(3, "Subscription Cancellation")}
 <p class="mb-4">You may cancel the auto-renewal of your subscription at any time from <strong>Settings &rarr; Billing</strong> in your manager dashboard, or by contacting <strong>billing@shopsynco.com</strong>. Cancellation takes effect at the end of the current paid period. You retain full access to all plan features until the period expires. After expiry, your storefront and dashboard are deactivated until you re-subscribe. <strong>Cancellation does not entitle you to a refund for the remaining paid period.</strong></p>
