@@ -134,7 +134,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 relative z-40">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-4 bg-white border-b border-gray-200 relative z-40">
         <div className="flex items-center gap-3">
           <img src={logo} alt="ShopSynco" className="h-8" />
         </div>
@@ -183,11 +183,21 @@ export default function Header() {
                 setProfileOpen((open) => !open);
                 setNotifOpen(false);
               }}
-              className="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-100 transition bg-gray-50"
+              className="flex items-center gap-2 sm:gap-3 border border-gray-200 rounded-lg px-2 sm:px-4 py-2 hover:bg-gray-100 transition bg-gray-50 max-w-[calc(100vw-8rem)] sm:max-w-none"
             >
-              <div className="text-left">
-                <p className="text-sm font-semibold text-gray-800">{userData.full_name}</p>
-                <p className="text-xs text-gray-500">{userData.email}</p>
+              <div className="text-left min-w-0 hidden sm:block">
+                <p className="text-sm font-semibold text-gray-800 truncate max-w-[120px] sm:max-w-[160px] md:max-w-none">
+                  {userData.full_name}
+                </p>
+                <p className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-[160px] md:max-w-none">
+                  {userData.email}
+                </p>
+              </div>
+              <div
+                className="sm:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#6A3CB1] text-xs font-semibold text-white"
+                aria-hidden
+              >
+                {(userData.full_name || "U").trim().charAt(0).toUpperCase()}
               </div>
               <svg
                 xmlns="http://www.w3.org/2000/svg"

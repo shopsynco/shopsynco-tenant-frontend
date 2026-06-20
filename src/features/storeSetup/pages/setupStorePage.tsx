@@ -270,16 +270,15 @@ export default function StoreSetupPage() {
       </div>
 
       {/* Title */}
-      <h2 className="text-4xl font-semibold text-[#6A3CB1] mb-8 text-center">
+      <h2 className="text-2xl sm:text-4xl font-semibold text-[#6A3CB1] mb-8 text-center px-2">
         Setup Your Store
       </h2>
 
       {/* Card */}
       <div
-        className="p-12 rounded-2xl bg-transparent backdrop-blur-sm border border-white/50 
+        className="w-full max-w-3xl mx-auto p-6 sm:p-8 md:p-12 rounded-2xl bg-transparent backdrop-blur-sm border border-white/50 
         shadow-[0_8px_32px_0_rgba(31,38,135,0.1)] flex flex-col items-center text-center gap-8 z-10"
         style={{
-          width: "750px",
           background:
             "linear-gradient(112deg, rgba(255, 255, 255, 0.00) 0%, rgba(113, 156, 191, 0.20) 98.3%)",
         }}
@@ -369,8 +368,7 @@ export default function StoreSetupPage() {
               Domain
             </label>
 
-            {/* flex container → input + suffix */}
-            <div className="flex items-stretch gap-0">
+            <div className="flex flex-col sm:flex-row items-stretch gap-0 w-full">
               {/* editable prefix */}
               <input
                 type="text"
@@ -379,7 +377,7 @@ export default function StoreSetupPage() {
                 value={formData.domain}
                 onChange={handleChange}
                 aria-invalid={Boolean(fieldErrors.domain)}
-                className={`flex-1 rounded-l-xl px-5 py-4 border border-r-0
+                className={`w-full sm:flex-1 rounded-xl sm:rounded-l-xl sm:rounded-r-none px-5 py-4 border sm:border-r-0
            text-black placeholder:text-gray-500
            focus:outline-none focus:ring-2
            text-lg bg-transparent ${
@@ -392,8 +390,8 @@ export default function StoreSetupPage() {
 
               {/* locked suffix */}
               <span
-                className={`px-4 py-4 border-y border-r rounded-r-xl flex items-center
-                     bg-white/10 text-black select-none ${
+                className={`px-4 py-4 border rounded-xl sm:rounded-l-none sm:rounded-r-xl flex items-center justify-center shrink-0
+                     bg-white/10 text-black select-none text-sm sm:text-base ${
                        fieldErrors.domain ? "border-red-500" : "border-gray-300"
                      }`}
               >

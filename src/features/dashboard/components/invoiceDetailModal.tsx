@@ -49,7 +49,7 @@ const InvoiceDetailModal = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-      <div className="bg-white rounded-xl w-[480px] p-8 relative shadow-xl">
+      <div className="bg-white rounded-xl w-[calc(100%-2rem)] max-w-[480px] mx-4 p-4 sm:p-8 relative shadow-xl">
         <button
           onClick={closeModal}
           className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"

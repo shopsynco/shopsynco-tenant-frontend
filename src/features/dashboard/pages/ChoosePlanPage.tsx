@@ -244,7 +244,7 @@ const PlanCard = ({
       onClick={onSelect}
       className={`cursor-pointer p-5 sm:p-6 rounded-[10px] flex flex-col transition-all duration-200 ${
         isSelected ? "border-2" : "border"
-      } bg-white w-full max-w-[255px] min-h-[276px] h-auto`}
+      } bg-white w-full max-w-none sm:max-w-[255px] sm:mx-0 mx-auto min-h-[276px] h-auto`}
       style={{
         borderWidth: isSelected ? 4 : 3,
         borderColor: colors.border,
@@ -403,19 +403,50 @@ export default function ChoosePlanPage() {
       setPlansLoading(true);
       setPlansError(null);
 
-      const hasToken = await waitForAccessToken();
-      if (cancelled) return;
-      if (!hasToken) {
-        setPlans([]);
-        setPlansError("Your session expired. Please sign in again.");
-        setPlansLoading(false);
-        return;
-      }
-
       try {
-        const session = await syncTenantPortalSession();
+        const hasToken = await waitForAccessToken();
         if (cancelled) return;
-        if (session.has_active_subscription) {
+        if (!hasToken) {
+          setPlans([]);
+          setPlansError("Your session expired. Please sign in again.");
+          return;
+        }
+
+        const sessionPromise = Promise.race([
+          syncTenantPortalSession().catch(() => null),
+          new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 8000)),
+        ]);
+
+        const loadPlans = async () => {
+          const maxAttempts = 3;
+          for (let attempt = 1; attempt <= maxAttempts && !cancelled; attempt += 1) {
+            try {
+              const { plans: fetched, planTrial } = await fetchPlans();
+              if (cancelled) return;
+              setPlanTrialEligible(planTrial.eligible);
+              const withVariants = normalizePlans(fetched);
+              if (withVariants.length > 0 || attempt === maxAttempts) {
+                applyPlans(withVariants);
+                return;
+              }
+            } catch {
+              if (attempt === maxAttempts && !cancelled) {
+                setPlans([]);
+                setPlansError("Could not load plans. Please refresh or try again.");
+              }
+            }
+            if (attempt < maxAttempts && !cancelled) {
+              await new Promise((resolve) =>
+                window.setTimeout(resolve, 400 * attempt),
+              );
+            }
+          }
+        };
+
+        const [session] = await Promise.all([sessionPromise, loadPlans()]);
+        if (cancelled) return;
+
+        if (session?.has_active_subscription) {
           const next = resolvePostLoginNavigationPath(session);
           const upgradingFromDashboard = openedPlansFromDashboard();
           if (
@@ -423,38 +454,11 @@ export default function ChoosePlanPage() {
             !(next === "/dashboard" && upgradingFromDashboard)
           ) {
             navigate(next, { replace: true });
-            return;
           }
         }
-      } catch {
-        /* plans fetch may still succeed */
+      } finally {
+        if (!cancelled) setPlansLoading(false);
       }
-
-      const maxAttempts = 3;
-      for (let attempt = 1; attempt <= maxAttempts && !cancelled; attempt += 1) {
-        try {
-          const { plans: fetched, planTrial } = await fetchPlans();
-          if (cancelled) return;
-          setPlanTrialEligible(planTrial.eligible);
-          const withVariants = normalizePlans(fetched);
-          if (withVariants.length > 0 || attempt === maxAttempts) {
-            applyPlans(withVariants);
-            break;
-          }
-        } catch {
-          if (attempt === maxAttempts) {
-            setPlans([]);
-            setPlansError("Could not load plans. Please refresh or try again.");
-          }
-        }
-        if (attempt < maxAttempts) {
-          await new Promise((resolve) =>
-            window.setTimeout(resolve, 400 * attempt),
-          );
-        }
-      }
-
-      if (!cancelled) setPlansLoading(false);
     };
 
     void getPlans();
@@ -597,10 +601,10 @@ export default function ChoosePlanPage() {
         <div className="flex-1 flex flex-col p-6 md:p-10">
           {/* LEFT - nudged left on large screens */}
           <div className="flex-1 flex flex-col pl-0">
-            <h1 className="font-raleway font-semibold text-[40px] leading-[80px] text-[#1E1E1E]">
+            <h1 className="font-raleway font-semibold text-2xl sm:text-3xl lg:text-[40px] leading-tight sm:leading-[1.2] text-[#1E1E1E]">
               Choose Your Plan
             </h1>
-            <p className="font-poppins text-[20px] leading-[30px] text-[#6E6E6E] mb-6">
+            <p className="font-poppins text-base sm:text-lg lg:text-[20px] leading-relaxed lg:leading-[30px] text-[#6E6E6E] mb-6">
               {planTrialEligible ? (
                 <>
                   Pick the plan that fits your business — every plan includes a{" "}
@@ -620,6 +624,28 @@ export default function ChoosePlanPage() {
               <p className="text-amber-700 text-sm mb-4" role="status">
                 {quoteError}
               </p>
+            )}
+
+            {planTrialEligible && (
+              <div className="mb-6 lg:hidden">
+                <button
+                  type="button"
+                  onClick={goFreeTrial}
+                  disabled={
+                    startingTrial ||
+                    loading ||
+                    plansLoading ||
+                    !selectedPlan?.id
+                  }
+                  className="flex w-full items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 h-14 px-8"
+                >
+                  {startingTrial
+                    ? "Starting trial..."
+                    : plansLoading
+                    ? "Loading plans..."
+                    : `Start ${trialDays}-day free trial`}
+                </button>
+              </div>
             )}
 
             {/* Cards – parent stays hook-safe */}
@@ -728,7 +754,7 @@ export default function ChoosePlanPage() {
           </div>
         </div>
 
-        <div className="w-96 flex flex-col p-6 md:p-10 ">
+        <div className="w-full lg:w-96 flex flex-col p-4 sm:p-6 md:p-10 shrink-0">
           {/* RIGHT - wider order summary */}
           <div
             className="w-full lg:w-96 flex flex-col h-full rounded-[20px]"
@@ -740,7 +766,28 @@ export default function ChoosePlanPage() {
                 <h3 className="font-poppins font-semibold text-[32px] leading-[30px] text-black my-6 mx-6">
                   Order Summary
                 </h3>
-                <div className="space-y-3 text-sm text-[#4B4B4B]">
+                {planTrialEligible && (
+                  <div className="px-6 mb-4 hidden lg:block">
+                    <button
+                      type="button"
+                      onClick={goFreeTrial}
+                      disabled={
+                        startingTrial ||
+                        loading ||
+                        plansLoading ||
+                        !selectedPlan?.id
+                      }
+                      className="flex w-full items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 h-14 px-8"
+                    >
+                      {startingTrial
+                        ? "Starting trial..."
+                        : plansLoading
+                        ? "Loading plans..."
+                        : `Start ${trialDays}-day free trial`}
+                    </button>
+                  </div>
+                )}
+                <div className="space-y-3 text-sm text-[#4B4B4B] px-6">
                   <div className="flex justify-between">
                     <span className="font-poppins text-[20px] leading-[30px] text-black">
                       Base Price
@@ -822,31 +869,12 @@ export default function ChoosePlanPage() {
                 style={{ background: "#AE84EB0D" }}
               >
                 <div className="flex flex-col items-center gap-3">
-                  {planTrialEligible && (
-                    <button
-                      type="button"
-                      onClick={goFreeTrial}
-                      disabled={startingTrial || loading || !selectedPlan?.id}
-                      className="flex items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 w-full max-w-[408px]"
-                      style={{ height: 56, padding: "18px 32px" }}
-                    >
-                      {startingTrial
-                        ? "Starting trial..."
-                        : `Start ${trialDays}-day free trial`}
-                    </button>
-                  )}
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3 w-full">
                     {/* Cancel – 162 px (smaller) */}
                     <button
                       type="button"
                       onClick={handlePlanStepBack}
-                      className="flex items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold"
-                      style={{
-                        width: 162,
-                        height: 56,
-                        padding: "18px 52px",
-                        gap: 10,
-                      }}
+                      className="flex flex-1 items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold h-14 px-4"
                     >
                       {allowDashboardExit ? "Cancel" : "Back"}
                     </button>
@@ -856,13 +884,7 @@ export default function ChoosePlanPage() {
                       type="button"
                       onClick={goPayment}
                       disabled={loading || !selectedPlan?.id}
-                      className="flex items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold disabled:opacity-50"
-                      style={{
-                        width: 162,
-                        height: 56,
-                        padding: "18px 52px",
-                        gap: 10,
-                      }}
+                      className="flex flex-1 items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold disabled:opacity-50 h-14 px-4"
                     >
                       {loading ? "Processing..." : "Pay now"}
                     </button>

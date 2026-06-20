@@ -561,8 +561,8 @@ export default function FeatureStorePage({
         {/* FOOTER */}
         <div className="border-t px-5 py-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           {stage === "list" ? (
-            <div className="sticky bottom-0 left-0 right-0 z-10 w-full h-16 bg-white rounded-t-xl shadow-t-md flex items-center justify-between px-5">
-              <p className="text-sm text-gray-700 flex items-center gap-2">
+            <div className="sticky bottom-0 left-0 right-0 z-10 w-full bg-white rounded-t-xl shadow-t-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4">
+              <p className="text-sm text-gray-700 flex flex-wrap items-center gap-2">
                 <ShoppingCart size={16} className="text-[#6A3CB1]" />
                 {billableSelectedFeatures.length} Features Selected ·{" "}
                 <span className="font-semibold">
@@ -577,10 +577,8 @@ export default function FeatureStorePage({
                 type="button"
                 onClick={() => setStage("checkout")}
                 disabled={billableSelectedFeatures.length === 0}
-                className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto sm:min-w-[180px] flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 style={{
-                  width: 220,
-                  height: 40,
                   borderRadius: 10,
                   background:
                     "linear-gradient(90deg, #AE84EB 0%, #7CB2E5 100%)",
