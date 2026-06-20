@@ -483,19 +483,14 @@ export default function Dashboard() {
                       ? navigate("/feature-store")
                       : setIsFeatureStoreOpen(true)
                   }
-                  className="text-white font-semibold rounded-md flex items-center justify-center"
+                  className="w-full sm:w-auto text-white font-semibold rounded-md flex items-center justify-center px-5 py-2.5"
                   style={{
-                    width: 212,
-                    height: 39,
                     borderRadius: 5,
                     background: "linear-gradient(80.21deg, #AE84EB 8.97%, #7CB2E5 94.42%)",
-                    padding: "14px 20px",
-                    gap: 5,
                     fontFamily: "Poppins, sans-serif",
                     fontWeight: 600,
                     fontSize: 16,
                     lineHeight: "30px",
-                    letterSpacing: 0,
                   }}
                 >
                   Browse Feature Store
@@ -505,114 +500,61 @@ export default function Dashboard() {
           </div>
 
           {/* RIGHT */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 w-full min-w-0">
             {/* UPGRADE CARD */}
             <div
-              className="relative text-white overflow-hidden"
+              className="relative w-full max-w-[445px] mx-auto lg:mx-0 overflow-hidden rounded-[10px] text-white flex flex-col min-h-[280px] sm:min-h-[320px]"
               style={{
-                width: 445,
-                height: 358,
-                borderRadius: 10,
                 background: "linear-gradient(218.51deg, #719CBF -9.07%, #A782D8 63.72%)",
               }}
             >
-              <svg
-                className="absolute"
-                style={{ top: 40, left: 58, width: 32, height: 32 }}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v8M8 12l4-4 4 4" />
-              </svg>
+              <div className="flex items-start gap-4 p-6 sm:p-7 pb-4">
+                <svg
+                  className="w-8 h-8 shrink-0 mt-1"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v8M8 12l4-4 4 4" />
+                </svg>
+                <div className="min-w-0">
+                  <h3
+                    className="text-white font-semibold text-xl sm:text-2xl leading-tight"
+                    style={{ fontFamily: "Poppins, sans-serif" }}
+                  >
+                    Upgrade Your Plan
+                  </h3>
+                  <p
+                    className="mt-3 text-sm sm:text-base leading-relaxed text-white/95"
+                    style={{ fontFamily: "Poppins, sans-serif", fontWeight: 500 }}
+                  >
+                    Get access to advanced features and increase your usage limits by upgrading to our premium plans.
+                  </p>
+                </div>
+              </div>
 
-              <h3
-                className="absolute text-white"
-                style={{
-                  top: 45,
-                  left: 102,
-                  width: 266,
-                  height: 20,
-                  fontFamily: "Poppins, sans-serif",
-                  fontWeight: 600,
-                  fontSize: 28,
-                  lineHeight: "30px",
-                  letterSpacing: 0,
-                }}
-              >
-                Upgrade Your Plan
-              </h3>
-
-              <p
-                className="absolute text-center"
-                style={{
-                  top: 90,
-                  left: 28,
-                  width: 389,
-                  height: 75,
-                  fontFamily: "Poppins, sans-serif",
-                  fontWeight: 500,
-                  fontSize: 18,
-                  lineHeight: "25px",
-                  letterSpacing: "2%",
-                }}
-              >
-                Get access to advanced features and increase your usage limits by upgrading to our premium plans.
-              </p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setPlansEntryFromDashboard();
-                  navigate("/plans");
-                }}
-                className="absolute text-center z-10"
-                style={{
-                  top: 199,
-                  left: 28,
-                  width: 389,
-                  height: 50,
-                  borderRadius: 5,
-                  backgroundColor: "#fff",
-                  color: "#6A3CB1",
-                  padding: "10px 65px",
-                  gap: 10,
-                  fontFamily: "Poppins, sans-serif",
-                  fontWeight: 500,
-                  fontSize: 16,
-                  lineHeight: "30px",
-                  letterSpacing: 0,
-                }}
-              >
-                View Upgrade Options
-              </button>
-
-              <div
-                className="absolute left-0 bottom-0 pointer-events-none"
-                style={{
-                  width: 445,
-                  height: 78,
-                  backgroundColor: "#00000047",
-                  borderBottomLeftRadius: 10,
-                  borderBottomRightRadius: 10,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <p
-                  className="text-center text-white"
-                  style={{
-                    fontFamily: "Poppins, sans-serif",
-                    fontWeight: 400,
-                    fontSize: 16,
-                    lineHeight: "30px",
-                    letterSpacing: 0,
+              <div className="px-6 sm:px-7 pb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlansEntryFromDashboard();
+                    navigate("/plans");
                   }}
+                  className="w-full rounded-[5px] bg-white text-[#6A3CB1] py-3 px-4 font-medium text-base"
+                  style={{ fontFamily: "Poppins, sans-serif" }}
+                >
+                  View Upgrade Options
+                </button>
+              </div>
+
+              <div className="mt-auto bg-black/30 px-4 py-4 text-center">
+                <p
+                  className="text-white text-sm sm:text-base"
+                  style={{ fontFamily: "Poppins, sans-serif", fontWeight: 400 }}
                 >
                   Upgrade today and get 20% off your first 3 months!
                 </p>
@@ -620,28 +562,10 @@ export default function Dashboard() {
             </div>
 
             {/* QUICK ACCESS */}
-            <div
-              className="bg-white shadow-sm"
-              style={{
-                width: 445,
-                height: 344,
-                borderRadius: 10,
-                border: "1px solid #8B6BB6",
-                padding: "28px 40px",
-              }}
-            >
+            <div className="w-full max-w-[445px] mx-auto lg:mx-0 bg-white shadow-sm rounded-[10px] border border-[#8B6BB6] p-6 sm:px-10 sm:py-7">
               <h3
-                className="mb-4"
-                style={{
-                  width: 163,
-                  height: 30,
-                  fontFamily: "Poppins, sans-serif",
-                  fontWeight: 600,
-                  fontSize: 24,
-                  lineHeight: "30px",
-                  letterSpacing: 0,
-                  color: "#8B6BB6",
-                }}
+                className="mb-4 font-semibold text-xl sm:text-2xl text-[#8B6BB6]"
+                style={{ fontFamily: "Poppins, sans-serif" }}
               >
                 Quick Access
               </h3>

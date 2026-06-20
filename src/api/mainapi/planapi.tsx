@@ -23,7 +23,9 @@ export const fetchPlans = async (): Promise<{
   plans: unknown[];
   planTrial: PlanTrialEligibility;
 }> => {
-  const response = await axiosInstance.get("/api/tenants/pricing/options/");
+  const response = await axiosInstance.get("/api/tenants/pricing/options/", {
+    timeout: 45000,
+  });
   const list = normalizePlansPayload(response.data);
   const d = response.data as Record<string, unknown>;
   const pt = d.plan_trial as Record<string, unknown> | undefined;
