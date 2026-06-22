@@ -242,11 +242,10 @@ const PlanCard = ({
     <div
       role="button"
       onClick={onSelect}
-      className={`cursor-pointer p-5 sm:p-6 rounded-[10px] flex flex-col transition-all duration-200 ${
-        isSelected ? "border-2" : "border"
-      } bg-white w-full max-w-none sm:max-w-[255px] sm:mx-0 mx-auto min-h-[276px] h-auto`}
+      className={`cursor-pointer p-5 sm:p-6 rounded-[10px] flex flex-col transition-all duration-200 border bg-white w-full max-w-none sm:max-w-[255px] sm:mx-0 mx-auto min-h-[276px] h-auto ${
+        isSelected ? "lg:border-4" : "lg:border-[3px]"
+      }`}
       style={{
-        borderWidth: isSelected ? 4 : 3,
         borderColor: colors.border,
         boxShadow: `2px 2px 25px 0px ${colors.shadow}`,
         transform: isSelected ? "scale(1.03)" : "scale(1)",
@@ -256,7 +255,7 @@ const PlanCard = ({
     >
       {/* price */}
       <div className="flex items-baseline shrink-0">
-        <div className="text-[32px] leading-[50px] font-poppins font-semibold text-[#1E1E1E]">
+        <div className="text-[28px] lg:text-[32px] leading-[50px] font-poppins font-semibold text-[#1E1E1E]">
           ₹
           {plan.base_monthly != null && !Number.isNaN(Number(plan.base_monthly))
             ? Number(plan.base_monthly).toLocaleString("en-IN")
@@ -637,7 +636,7 @@ export default function ChoosePlanPage() {
                     plansLoading ||
                     !selectedPlan?.id
                   }
-                  className="flex w-full items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 h-14 px-8"
+                  className="flex w-full items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 max-lg:py-[14px] max-lg:h-auto h-14 px-8"
                 >
                   {startingTrial
                     ? "Starting trial..."
@@ -677,11 +676,11 @@ export default function ChoosePlanPage() {
 
             {/* Billing period */}
             <div className="mt-auto pt-8">
-              <h3 className="font-poppins font-medium text-[25px] leading-[30px] text-[#1E1E1E] mb-3">
+              <h3 className="font-poppins font-medium text-[20px] lg:text-[25px] leading-[30px] text-[#1E1E1E] mb-3">
                 Select billing period
               </h3>
               <div
-                className="space-y-3 md:space-y-4"
+                className="space-y-[14px] lg:space-y-4"
                 role="radiogroup"
                 aria-label="Billing period"
               >
@@ -700,51 +699,53 @@ export default function ChoosePlanPage() {
                           setBillingPeriod(o.m);
                         }
                       }}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 sm:px-5 sm:py-4 cursor-pointer rounded-[10px] border transition-all ${
+                      className={`flex flex-col px-4 py-3 sm:px-5 sm:py-4 cursor-pointer rounded-[10px] border transition-all ${
                         a
-                          ? "border-2 border-[#7658A0]"
+                          ? "max-lg:border max-lg:border-[#7658A0] lg:border-2 lg:border-[#7658A0]"
                           : "border border-[#D1D1D1]"
                       } hover:border-[#7658A0] hover:border-opacity-50`}
                     >
-                      <div className="flex items-center gap-3 mb-1 sm:mb-0">
-                        <span className="relative flex items-center justify-center w-5 h-5 shrink-0 pointer-events-none">
-                          <span
-                            className={`absolute inset-0 rounded-full border-2 transition ${
-                              a ? "border-[#7658A0]" : "border-[#D1D1D1]"
-                            }`}
-                          />
-                          {a && (
-                            <span className="absolute w-2.5 h-2.5 rounded-full bg-[#7658A0]" />
-                          )}
-                        </span>
+                      {(o.badge || o.s > 0) && (
                         <div
-                          className={`font-poppins font-medium text-[24px] leading-[50px] ${
-                            a ? "text-[#7658A0]" : "text-black"
+                          className="self-start mb-2 inline-block text-xs font-poppins px-2 py-1 rounded-lg"
+                          style={{
+                            backgroundColor: "#7CB2E540",
+                            color: "#5882A4",
+                          }}
+                        >
+                          {o.badge || `Save up to ${o.s}%`}
+                        </div>
+                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                        <div className="flex items-center gap-3 mb-1 sm:mb-0">
+                          <span className="relative flex items-center justify-center w-5 h-5 shrink-0 pointer-events-none">
+                            <span
+                              className={`absolute inset-0 rounded-full border-2 transition ${
+                                a ? "border-[#7658A0]" : "border-[#D1D1D1]"
+                              }`}
+                            />
+                            {a && (
+                              <span className="absolute w-2.5 h-2.5 rounded-full bg-[#7658A0]" />
+                            )}
+                          </span>
+                          <div
+                            className={`font-poppins font-medium text-[16px] lg:text-[24px] leading-tight lg:leading-[50px] ${
+                              a ? "text-[#7658A0]" : "text-black"
+                            }`}
+                          >
+                            {o.label || (o.m === "1" ? "1 Month" : `${o.m} Months`)}
+                          </div>
+                        </div>
+                        <div
+                          className={`font-poppins font-semibold text-[16px] lg:text-[24px] leading-tight lg:leading-[30px] ${
+                            a ? "text-[#1E1E1E]" : "text-black"
                           }`}
                         >
-                          {o.label || (o.m === "1" ? "1 Month" : `${o.m} Months`)}
+                          ₹{o.p != null && !Number.isNaN(Number(o.p)) ? o.p : "—"}
+                          <span className="text-xs text-[#6E6E6E] ml-2">
+                            /month
+                          </span>
                         </div>
-                        {(o.badge || o.s > 0) && (
-                          <div
-                            className="ml-2 inline-block text-xs font-poppins px-2 py-1 rounded-lg"
-                            style={{
-                              backgroundColor: "#7CB2E540",
-                              color: "#5882A4",
-                            }}
-                          >
-                            {o.badge || `Save up to ${o.s}%`}
-                          </div>
-                        )}
-                      </div>
-                      <div
-                        className={`font-poppins font-semibold text-[24px] leading-[30px] ${
-                          a ? "text-[#1E1E1E]" : "text-black"
-                        }`}
-                      >
-                        ₹{o.p != null && !Number.isNaN(Number(o.p)) ? o.p : "—"}
-                        <span className="text-xs text-[#6E6E6E] ml-2">
-                          /month
-                        </span>
                       </div>
                     </div>
                   );
@@ -763,7 +764,7 @@ export default function ChoosePlanPage() {
             {/* scrollable summary */}
             <div className="flex-1 flex flex-col gap-4">
               <div className="rounded-[20px] p-4  flex-1 overflow-y-auto">
-                <h3 className="font-poppins font-semibold text-[32px] leading-[30px] text-black my-6 mx-6">
+                <h3 className="font-poppins font-semibold text-[28px] lg:text-[32px] leading-[30px] text-black my-6 mx-6">
                   Order Summary
                 </h3>
                 {planTrialEligible && (
@@ -777,7 +778,7 @@ export default function ChoosePlanPage() {
                         plansLoading ||
                         !selectedPlan?.id
                       }
-                      className="flex w-full items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 h-14 px-8"
+                      className="flex w-full items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 max-lg:py-[14px] max-lg:h-auto h-14 px-8"
                     >
                       {startingTrial
                         ? "Starting trial..."
@@ -789,10 +790,10 @@ export default function ChoosePlanPage() {
                 )}
                 <div className="space-y-3 text-sm text-[#4B4B4B] px-6">
                   <div className="flex justify-between">
-                    <span className="font-poppins text-[20px] leading-[30px] text-black">
+                    <span className="font-poppins text-[16px] lg:text-[20px] leading-[30px] text-black">
                       Base Price
                     </span>
-                    <span className="font-poppins text-[20px] leading-[30px] text-black">
+                    <span className="font-poppins text-[16px] lg:text-[20px] leading-[30px] text-black">
                       ₹
                       {basePrice != null && !Number.isNaN(basePrice)
                         ? basePrice.toLocaleString("en-IN")
@@ -800,10 +801,10 @@ export default function ChoosePlanPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-poppins text-[20px] leading-[30px] text-black">
+                    <span className="font-poppins text-[16px] lg:text-[20px] leading-[30px] text-black">
                       Taxes & Fees
                     </span>
-                    <span className="font-poppins text-[20px] leading-[30px] text-black">
+                    <span className="font-poppins text-[16px] lg:text-[20px] leading-[30px] text-black">
                       ₹
                       {quoteTaxes != null && !Number.isNaN(Number(quoteTaxes))
                         ? Number(quoteTaxes).toLocaleString("en-IN")
@@ -811,10 +812,10 @@ export default function ChoosePlanPage() {
                     </span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-[#E2D9F0]">
-                    <span className="font-poppins text-[24px] leading-[30px] text-black font-semibold">
+                    <span className="font-poppins text-[20px] lg:text-[24px] leading-[30px] text-black font-semibold">
                       Total Payable
                     </span>
-                    <span className="font-poppins text-[24px] leading-[30px] text-black font-semibold">
+                    <span className="font-poppins text-[20px] lg:text-[24px] leading-[30px] text-black font-semibold">
                       ₹
                       {totalPayable != null && !Number.isNaN(totalPayable)
                         ? totalPayable.toLocaleString("en-IN")
@@ -826,7 +827,7 @@ export default function ChoosePlanPage() {
                   <div className="mt-3">
                     {!isCouponFieldVisible ? (
                       <div className="flex justify-between items-center">
-                        <span className="font-poppins text-[20px] leading-[30px] text-black">
+                        <span className="font-poppins text-[16px] lg:text-[20px] leading-[30px] text-black">
                           Coupon Code
                         </span>
                         <button
@@ -874,7 +875,7 @@ export default function ChoosePlanPage() {
                     <button
                       type="button"
                       onClick={handlePlanStepBack}
-                      className="flex flex-1 items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold h-14 px-4"
+                      className="flex flex-1 items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold max-lg:py-[14px] max-lg:h-auto h-14 px-4"
                     >
                       {allowDashboardExit ? "Cancel" : "Back"}
                     </button>
@@ -884,7 +885,7 @@ export default function ChoosePlanPage() {
                       type="button"
                       onClick={goPayment}
                       disabled={loading || !selectedPlan?.id}
-                      className="flex flex-1 items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold disabled:opacity-50 h-14 px-4"
+                      className="flex flex-1 items-center justify-center rounded-[10px] bg-[#7658A0] text-white font-poppins font-semibold disabled:opacity-50 max-lg:py-[14px] max-lg:h-auto h-14 px-4"
                     >
                       {loading ? "Processing..." : "Pay now"}
                     </button>
