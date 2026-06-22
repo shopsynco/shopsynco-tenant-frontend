@@ -385,37 +385,52 @@ export default function LoginPage() {
               aria-required={true}
             />
 
-            <div className="relative">
-              <input
-                name="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                autoComplete="current-password"
-                className="rounded-xl px-5 py-4 w-full
-                  bg-[rgba(18,75,122,0.14)]
-                  text-black placeholder:text-[#9ea5ad]
-                  focus:outline-none focus:ring-2 focus:ring-[#719CBF]
-                  border border-gray-300 transition-all font-raleway"
-                value={password}
-                onChange={(e) => onPasswordChange(e.target.value)}
-                required
-                aria-required={true}
-              />
+            <div className="flex flex-col max-lg:gap-[20px] lg:gap-6">
+              <div className="relative">
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  autoComplete="current-password"
+                  className="rounded-xl px-5 py-4 w-full
+                    bg-[rgba(18,75,122,0.14)]
+                    text-black placeholder:text-[#9ea5ad]
+                    focus:outline-none focus:ring-2 focus:ring-[#719CBF]
+                    border border-gray-300 transition-all font-raleway"
+                  value={password}
+                  onChange={(e) => onPasswordChange(e.target.value)}
+                  required
+                  aria-required={true}
+                />
 
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                className="
-                  absolute right-4 top-1/2 -translate-y-1/2
-                  text-[#9ea5ad]
-                  hover:text-[#6A9ECF]
-                  p-1 transition-colors duration-200
-                  flex items-center justify-center
-                "
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="
+                    absolute right-4 top-1/2 -translate-y-1/2
+                    text-[#9ea5ad]
+                    hover:text-[#6A9ECF]
+                    p-1 transition-colors duration-200
+                    flex items-center justify-center
+                  "
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/forget-password?email=${encodeURIComponent(email)}`)
+                  }
+                  className="text-[#42739A] hover:text-[#6A9ECF] 
+                    hover:underline text-sm font-medium font-raleway"
+                >
+                  Forgot Password?
+                </button>
+              </div>
             </div>
           </div>
 
@@ -436,19 +451,6 @@ export default function LoginPage() {
               Sign up to create your store
             </button>
           )}
-
-          <div className="text-right">
-            <button
-              type="button"
-              onClick={() =>
-                navigate(`/forget-password?email=${encodeURIComponent(email)}`)
-              }
-              className="text-[#42739A] hover:text-[#6A9ECF] 
-                hover:underline text-sm font-medium font-raleway"
-            >
-              Forgot Password?
-            </button>
-          </div>
 
           <div className="flex flex-col gap-[16px]">
             <button

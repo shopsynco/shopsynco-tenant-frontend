@@ -458,10 +458,10 @@ export default function Dashboard() {
         {/* ACCOUNT SUMMARY + DESKTOP SIDEBAR */}
         <div className="max-lg:order-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-white rounded-2xl border border-[#c9b8ff] shadow-sm p-8">
-            <div className="flex flex-row flex-wrap items-center gap-3 mb-6">
+            <div className="flex flex-row items-center gap-3 mb-6 max-lg:justify-between">
               <h2 className="text-lg font-semibold text-[#6A3CB1]">Account Summary</h2>
               {planData.status && (
-                <span className="inline-flex items-center justify-center rounded-full bg-[#48BC29]/60 px-3 py-0.5 text-xs font-medium leading-none text-white">
+                <span className="inline-flex items-center justify-center rounded-full bg-[#48BC29]/60 px-3 py-0.5 max-lg:px-[12px] max-lg:py-[6px] text-xs font-medium leading-none text-white shrink-0">
                   {planData.status}
                 </span>
               )}
