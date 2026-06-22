@@ -34,7 +34,7 @@ export default function AuthLayout({
           {/* LEFT - marketing block */}
 
           <div className="w-full lg:w-1/2 flex flex-col items-center text-center lg:mr-2">
-            <h1 className="text-display-lg font-poppins bg-purple-gradient bg-clip-text text-transparent">
+            <h1 className="text-[38px] leading-[1.1] md:text-[48px] md:leading-none md:tracking-[0.04em] md:font-bold font-poppins bg-purple-gradient bg-clip-text text-transparent">
               START FRESH
               <br />
               DREAM BOLD
@@ -58,7 +58,7 @@ export default function AuthLayout({
               rel="noopener noreferrer"
               className="mt-6 inline-flex items-center justify-center rounded-full bg-[rgba(118,88,160,0.2)]
              text-purple-600 font-semibold font-raleway
-             h-[71px] px-[46px] py-[24px]
+             px-[40px] py-[16px] md:min-h-[71px] md:px-[46px] md:py-[24px]
              transition-colors duration-300 hover:bg-[rgba(118,88,160,0.3)]"
             >
               Visit Website

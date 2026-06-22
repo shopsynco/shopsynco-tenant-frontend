@@ -303,6 +303,38 @@ export const verifyEmailCode = async (email: string, otp: string) => {
   }
 };
 
+export const sendPhoneVerificationCode = async (phone: string, email?: string) => {
+  try {
+    const payload: { phone: string; email?: string } = { phone };
+    if (email) payload.email = email;
+    const response = await axios.post(
+      `${BASE_URL}api/user/pre-signup/verify-phone/send/`,
+      payload,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw new Error(
+      messageFromAxiosError(error, "Failed to send phone verification code.")
+    );
+  }
+};
+
+export const verifyPhoneCode = async (phone: string, verificationCode: string) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}api/user/pre-signup/verify-phone/verify/`,
+      { phone, verification_code: verificationCode },
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw new Error(
+      messageFromAxiosError(error, "Invalid or expired verification code.")
+    );
+  }
+};
+
 export const discoverTenant = async (domain: string) => {
   const response = await axios.post(`${BASE_URL}api/tenants/discover/`, {
     domain,

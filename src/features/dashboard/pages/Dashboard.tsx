@@ -272,7 +272,7 @@ export default function Dashboard() {
         )}
 
         <section
-          className="relative overflow-hidden rounded-2xl border border-[#6A3CB1]/25 bg-gradient-to-br from-[#5A2D9D] via-[#6A3CB1] to-[#8B6BB6] p-6 sm:p-8 shadow-[0_16px_48px_rgba(106,60,177,0.38)]"
+          className="max-lg:order-1 relative overflow-hidden rounded-2xl border border-[#6A3CB1]/25 bg-gradient-to-br from-[#5A2D9D] via-[#6A3CB1] to-[#8B6BB6] p-6 sm:p-8 shadow-[0_16px_48px_rgba(106,60,177,0.38)]"
           aria-label="Manage your store"
         >
           <div
@@ -317,7 +317,7 @@ export default function Dashboard() {
 
         {showSetupBanner && (
           <div
-            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+            className="max-lg:order-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
             role="region"
             aria-label="Store setup reminder"
           >
@@ -339,14 +339,16 @@ export default function Dashboard() {
         )}
 
         {!dashboardLoading && (
-          <SupportContactBanner
-            variant={isTrialPlan && !storeSetupComplete ? "trial" : "default"}
-            showSetupCta={!storeSetupComplete && (isTrialPlan || showSetupBanner)}
-          />
+          <div className="hidden lg:block">
+            <SupportContactBanner
+              variant={isTrialPlan && !storeSetupComplete ? "trial" : "default"}
+              showSetupCta={!storeSetupComplete && (isTrialPlan || showSetupBanner)}
+            />
+          </div>
         )}
 
-        {/* WELCOME SECTION */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+        {/* WELCOME */}
+        <div className="max-lg:order-3 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl font-semibold text-black">
               Welcome, {dashboardLoading ? "Loading..." : displayName}
@@ -356,7 +358,7 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="bg-[#F5F1FF] border border-[#E2DAFF] rounded-2xl px-6 py-4 shadow-sm w-full sm:w-auto lg:min-w-[280px]">
+          <div className="hidden lg:block bg-[#F5F1FF] border border-[#E2DAFF] rounded-2xl px-6 py-4 shadow-sm w-full sm:w-auto lg:min-w-[280px]">
             <div className="flex items-center gap-2 mb-1">
               <p className="text-sm text-gray-700">
                 <span className="font-medium text-gray-800">Current Plan:</span>{" "}
@@ -375,31 +377,93 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ACCOUNT SUMMARY */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* LEFT */}
+        {/* CURRENT PLAN — mobile */}
+        <div className="max-lg:order-4 lg:hidden bg-[#F5F1FF] border border-[#E2DAFF] rounded-2xl px-6 py-4 shadow-sm w-full">
+          <p className="text-[20px] leading-[28px] text-gray-800">
+            <span className="font-medium">Current Plan:</span>{" "}
+            <span className="text-[#6A3CB1] font-semibold">
+              {dashboardLoading ? "Loading..." : planData.plan_name || "—"}
+            </span>
+          </p>
+          <p className="mt-2 text-sm text-gray-500 flex items-center gap-1">
+            <Clock size={16} className="text-gray-600 shrink-0" />
+            Renews yearly on{" "}
+            <span className="text-[#6A3CB1] font-medium">
+              {planData.renew_date || "—"}
+            </span>
+          </p>
+        </div>
+
+        {/* UPGRADE PLAN — mobile */}
+        <div
+          className="max-lg:order-5 lg:hidden relative w-full overflow-hidden rounded-[10px] text-white flex flex-col min-h-[280px]"
+          style={{
+            background: "linear-gradient(218.51deg, #719CBF -9.07%, #A782D8 63.72%)",
+          }}
+        >
+          <div className="flex items-start gap-4 p-6 pb-4">
+            <svg
+              className="w-8 h-8 shrink-0 mt-1"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v8M8 12l4-4 4 4" />
+            </svg>
+            <div className="min-w-0">
+              <h3
+                className="text-white font-semibold text-xl leading-tight"
+                style={{ fontFamily: "Poppins, sans-serif" }}
+              >
+                Upgrade Your Plan
+              </h3>
+              <p
+                className="mt-3 text-sm leading-relaxed text-white/95"
+                style={{ fontFamily: "Poppins, sans-serif", fontWeight: 500 }}
+              >
+                Get access to advanced features and increase your usage limits by upgrading to our premium plans.
+              </p>
+            </div>
+          </div>
+
+          <div className="px-6 pb-4">
+            <button
+              type="button"
+              onClick={() => {
+                setPlansEntryFromDashboard();
+                navigate("/plans");
+              }}
+              className="w-full rounded-[5px] bg-white text-[#6A3CB1] py-3 px-4 font-medium text-base"
+              style={{ fontFamily: "Poppins, sans-serif" }}
+            >
+              View Upgrade Options
+            </button>
+          </div>
+
+          <div className="mt-auto bg-black/30 px-4 py-4 text-center">
+            <p
+              className="text-white text-sm"
+              style={{ fontFamily: "Poppins, sans-serif", fontWeight: 400 }}
+            >
+              Upgrade today and get 20% off your first 3 months!
+            </p>
+          </div>
+        </div>
+
+        {/* ACCOUNT SUMMARY + DESKTOP SIDEBAR */}
+        <div className="max-lg:order-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-white rounded-2xl border border-[#c9b8ff] shadow-sm p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+            <div className="flex flex-row flex-wrap items-center gap-3 mb-6">
               <h2 className="text-lg font-semibold text-[#6A3CB1]">Account Summary</h2>
               {planData.status && (
-                <p
-                  className="text-xs font-medium text-white flex items-center justify-center"
-                  style={{
-                    backgroundColor: "#48BC2999",
-                    width: 68,
-                    height: 22,
-                    borderRadius: 100,
-                    padding: "6px 12px",
-                    gap: 10,
-                    fontFamily: "Poppins, sans-serif",
-                    fontWeight: 500,
-                    fontSize: 14,
-                    lineHeight: "30px",
-                    letterSpacing: 0,
-                  }}
-                >
+                <span className="inline-flex items-center justify-center rounded-full bg-[#48BC29]/60 px-3 py-0.5 text-xs font-medium leading-none text-white">
                   {planData.status}
-                </p>
+                </span>
               )}
             </div>
 
@@ -499,8 +563,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* RIGHT */}
-          <div className="flex flex-col gap-6 w-full min-w-0">
+          {/* RIGHT — desktop only */}
+          <div className="hidden lg:flex flex-col gap-6 w-full min-w-0">
             {/* UPGRADE CARD */}
             <div
               className="relative w-full max-w-[445px] mx-auto lg:mx-0 overflow-hidden rounded-[10px] text-white flex flex-col min-h-[280px] sm:min-h-[320px]"
@@ -561,8 +625,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* QUICK ACCESS */}
-            <div className="w-full max-w-[445px] mx-auto lg:mx-0 bg-white shadow-sm rounded-[10px] border border-[#8B6BB6] p-6 sm:px-10 sm:py-7">
+            {/* QUICK ACCESS — desktop only */}
+            <div className="hidden lg:block w-full max-w-[445px] mx-auto lg:mx-0 bg-white shadow-sm rounded-[10px] border border-[#8B6BB6] p-6 sm:px-10 sm:py-7">
               <h3
                 className="mb-4 font-semibold text-xl sm:text-2xl text-[#8B6BB6]"
                 style={{ fontFamily: "Poppins, sans-serif" }}
@@ -611,6 +675,15 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {!dashboardLoading && (
+          <div className="max-lg:order-7 lg:hidden">
+            <SupportContactBanner
+              variant={isTrialPlan && !storeSetupComplete ? "trial" : "default"}
+              showSetupCta={!storeSetupComplete && (isTrialPlan || showSetupBanner)}
+            />
+          </div>
+        )}
       </main>
 
       {isFeatureStoreOpen && (
