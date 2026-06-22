@@ -213,10 +213,12 @@ export default function Header() {
     <>
       <header className="px-4 sm:px-6 py-4 bg-white border-b border-gray-200 relative z-40">
         {/* Mobile top bar */}
-        <div className="flex lg:hidden items-center justify-between w-full">
-          <div ref={notifRef}>{notificationButton}</div>
+        <div className="flex lg:hidden items-center w-full">
+          <div ref={notifRef} className="shrink-0">
+            {notificationButton}
+          </div>
 
-          <div className="flex items-center gap-3">
+          <div className="ml-auto flex items-center justify-end gap-3">
             <img src={logo} alt="ShopSynco" className="h-8" />
             <button
               type="button"
@@ -331,19 +333,21 @@ export default function Header() {
             onClick={closeMenu}
           />
           <aside
-            className="fixed top-0 left-0 bottom-0 z-[60] w-[min(292px,78vw)] bg-[#6A3CB1] lg:hidden flex flex-col shadow-xl"
+            className="fixed top-0 right-0 bottom-0 z-[60] w-[min(292px,78vw)] bg-[#6A3CB1] lg:hidden flex flex-col shadow-xl"
             aria-label="Quick Access menu"
           >
-            <div className="flex items-center justify-between px-5 py-5 border-b border-white/20">
+            <div className="flex items-center w-full px-5 py-5 border-b border-white/20">
               <button
                 type="button"
                 onClick={closeMenu}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/10"
                 aria-label="Close menu"
               >
                 <X size={24} strokeWidth={2} aria-hidden />
               </button>
-              <h2 className="text-[16px] font-semibold text-white">Quick Access</h2>
+              <h2 className="ml-auto text-right text-[16px] font-semibold text-white">
+                Quick Access
+              </h2>
             </div>
 
             <nav className="flex flex-col gap-3 p-5">

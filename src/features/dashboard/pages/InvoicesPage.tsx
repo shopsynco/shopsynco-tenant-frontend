@@ -3,7 +3,7 @@ import { Eye, Download, ArrowRight, HelpCircle } from "lucide-react";
 import Header from "../components/dashboardHeader";
 
 import InvoiceDetailModal from "../components/invoiceDetailModal";
-import { fetchInvoices } from "../../../api/mainapi/invoiceapi";
+import { fetchInvoices, downloadInvoiceFile } from "../../../api/mainapi/invoiceapi";
 import { useNavigate } from "react-router-dom";
 import { showError } from "../../../components/swalHelper";
 import PlatformSupportChatModal from "../components/PlatformSupportChatModal";
@@ -64,6 +64,23 @@ export default function InvoicesPage() {
     setSelectedInvoice(null);
   };
 
+  const handleDownloadInvoice = async (inv: {
+    transaction_id?: string | number;
+    invoice_no?: string;
+  }) => {
+    try {
+      const ref = inv.transaction_id ?? inv.invoice_no ?? "";
+      if (!ref) throw new Error("Missing invoice identifier.");
+      await downloadInvoiceFile(ref);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to download invoice. Please try again.";
+      showError("Error", message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FFFFFF]">
       <Header />
@@ -116,7 +133,12 @@ export default function InvoicesPage() {
                   >
                     <Eye size={18} />
                   </button>
-                  <button type="button" className="text-gray-500 hover:text-[#6A3CB1]" aria-label="Download invoice">
+                  <button
+                    type="button"
+                    className="text-gray-500 hover:text-[#6A3CB1]"
+                    onClick={() => void handleDownloadInvoice(inv)}
+                    aria-label="Download invoice"
+                  >
                     <Download size={18} />
                   </button>
                 </div>
@@ -178,13 +200,10 @@ export default function InvoicesPage() {
                         <Eye size={18} />
                       </button>
                       <button
+                        type="button"
                         className="text-gray-500 hover:text-[#6A3CB1]"
-                        // onClick={() =>
-                        //   window.open(
-                        //     `${BASE_URL}/api/tenant/pqrs_company/billing/invoices/${inv.id}/download`,
-                        //     "_blank"
-                        // //   )
-                        // }
+                        onClick={() => void handleDownloadInvoice(inv)}
+                        aria-label="Download invoice"
                       >
                         <Download size={18} />
                       </button>
