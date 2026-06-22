@@ -430,13 +430,16 @@ export default function FeatureStorePage({
                   const showStrike =
                     f.discounted_price != null && displayPrice < listPrice;
                   const isUpdating = updatingFeatureIds.has(fid);
+                  const isPopular = (f.tag || "").toLowerCase() === "popular";
                   return (
                     <div
                       key={fid}
-                      className={`rounded-xl p-4 transition bg-white ${
+                      className={`rounded-[10px] p-4 transition ${
                         isAdded
-                          ? "border border-[#22c55e]" // green border when added
-                          : "border border-transparent bg-[#7658A00D]" // 5% purple tint, no border
+                          ? "border border-[#22c55e] bg-white"
+                          : `border border-[#7658A0] ${
+                              isPopular ? "bg-[#7658A00D]" : "bg-white"
+                            }`
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -446,7 +449,9 @@ export default function FeatureStorePage({
                         {f.tag && (
                           <span
                             className={`text-[10px] px-2 py-[2px] rounded-md ${
-                              f.tag === "New"
+                              (f.tag || "").toLowerCase() === "popular"
+                                ? "bg-[#7658A01A] text-[#7658A0] border border-[#7658A0]"
+                                : f.tag === "New"
                                 ? "bg-green-50 text-green-600"
                                 : "bg-[#F5F1FF] text-[#6A3CB1]"
                             }`}
