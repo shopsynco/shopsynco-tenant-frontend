@@ -368,53 +368,55 @@ export default function LoginPage() {
           aria-labelledby="login-title"
           noValidate
         >
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            autoComplete="email"
-            className="rounded-xl px-5 py-4 w-full
-              bg-[rgba(18,75,122,0.14)]
-              text-black placeholder:text-[#9ea5ad]
-              focus:outline-none focus:ring-2 focus:ring-[#719CBF]
-              border border-gray-300 transition-all font-raleway"
-            value={email}
-            onChange={(e) => onEmailChange(e.target.value)}
-            required
-            aria-required={true}
-          />
-
-          <div className="relative">
+          <div className="flex flex-col gap-[16px]">
             <input
-              name="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              autoComplete="current-password"
+              name="email"
+              type="email"
+              placeholder="Email"
+              autoComplete="email"
               className="rounded-xl px-5 py-4 w-full
                 bg-[rgba(18,75,122,0.14)]
                 text-black placeholder:text-[#9ea5ad]
                 focus:outline-none focus:ring-2 focus:ring-[#719CBF]
                 border border-gray-300 transition-all font-raleway"
-              value={password}
-              onChange={(e) => onPasswordChange(e.target.value)}
+              value={email}
+              onChange={(e) => onEmailChange(e.target.value)}
               required
               aria-required={true}
             />
 
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              className="
-                absolute right-4 top-1/2 -translate-y-1/2
-                text-[#9ea5ad]
-                hover:text-[#6A9ECF]
-                p-1 transition-colors duration-200
-                flex items-center justify-center
-              "
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
+            <div className="relative">
+              <input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                autoComplete="current-password"
+                className="rounded-xl px-5 py-4 w-full
+                  bg-[rgba(18,75,122,0.14)]
+                  text-black placeholder:text-[#9ea5ad]
+                  focus:outline-none focus:ring-2 focus:ring-[#719CBF]
+                  border border-gray-300 transition-all font-raleway"
+                value={password}
+                onChange={(e) => onPasswordChange(e.target.value)}
+                required
+                aria-required={true}
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="
+                  absolute right-4 top-1/2 -translate-y-1/2
+                  text-[#9ea5ad]
+                  hover:text-[#6A9ECF]
+                  p-1 transition-colors duration-200
+                  flex items-center justify-center
+                "
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {/* ERROR MESSAGE (shows under inputs) */}
@@ -448,27 +450,29 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 rounded-xl font-bold text-white
-              bg-[#719CBF] hover:bg-[#5c91c4]
-              shadow-md transition font-raleway disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-busy={loading}
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
+          <div className="flex flex-col gap-[16px]">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 rounded-xl font-bold text-white
+                bg-[#719CBF] hover:bg-[#5c91c4]
+                shadow-md transition font-raleway disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-busy={loading}
+            >
+              {loading ? "Logging in..." : "Login"}
+            </button>
 
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={googleLoading}
-            className="w-full py-4 rounded-xl font-bold text-[#1f2937]
-              bg-white hover:bg-gray-100 border border-gray-300
-              shadow-md transition font-raleway disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {googleLoading ? "Connecting..." : "Sign In with Google"}
-          </button>
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={googleLoading}
+              className="w-full py-4 rounded-xl font-bold text-[#1f2937]
+                bg-white hover:bg-gray-100 border border-gray-300
+                shadow-md transition font-raleway disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {googleLoading ? "Connecting..." : "Sign In with Google"}
+            </button>
+          </div>
 
           <p className="text-center text-sm text-[#42739A] font-raleway">
             Don’t have an account?

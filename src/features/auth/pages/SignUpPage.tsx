@@ -13,6 +13,7 @@ import { trackMetaPixelCompleteRegistration } from "../../../lib/metaPixel";
 import { decodeJwtPayload } from "../utils/googleOAuth";
 import { completeTenantAuthAndRedirect } from "../../../api/auth/sessionApi";
 import { persistTenantUserEmail } from "../../../utils/tenantUserEmail";
+import PhoneOtpVerification from "../components/PhoneOtpVerification";
 
 interface RegisterFormData {
   first_name: string;
@@ -38,6 +39,7 @@ export default function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [googleErrorMessage, setGoogleErrorMessage] = useState("");
@@ -100,6 +102,15 @@ export default function RegisterPage() {
     const phoneTrimmed = formData.phone.trim();
     if (!isValidSignupPhone(phoneTrimmed)) {
       showError("Invalid phone number", SIGNUP_PHONE_HINT);
+      setLoading(false);
+      return;
+    }
+
+    if (!phoneVerified) {
+      showError(
+        "Phone not verified",
+        "Please verify your mobile number with the OTP before creating your account."
+      );
       setLoading(false);
       return;
     }
@@ -244,28 +255,17 @@ export default function RegisterPage() {
                 required
               />
             </div>
+          </div>
 
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="phone"
-                className="font-poppins font-medium text-[16px] leading-[24px] text-[#719CBF]"
-              >
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                id="phone"
-                placeholder="+1 555 123 4567"
-                autoComplete="tel"
-                inputMode="tel"
-                maxLength={22}
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-5 py-3 rounded-[8px] text-[#000000] placeholder-[#B7A9CE] bg-[#124B7A24] border-0 focus:outline-none focus:ring-2 focus:ring-[#719CBF] transition"
-                required
-              />
-            </div>
+          <div className="flex flex-col gap-2">
+            <PhoneOtpVerification
+              phone={formData.phone}
+              email={formData.email}
+              onPhoneChange={(value) =>
+                setFormData((prev) => ({ ...prev, phone: value }))
+              }
+              onVerifiedChange={setPhoneVerified}
+            />
           </div>
 
           {/* Password */}
@@ -328,29 +328,31 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Submit button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 w-full py-4 rounded-[10px] shadow-lg border border-white/10
+          {/* Submit buttons */}
+          <div className="flex flex-col gap-[16px]">
+            <button
+              type="submit"
+              disabled={loading || !phoneVerified}
+              className="w-full py-4 rounded-[10px] shadow-lg border border-white/10
               bg-[#719CBF] hover:bg-[#5f97b6] transition
-              font-poppins font-semibold text-[24px] leading-[33px] text-[#FCFCFC]
+              font-poppins font-semibold text-[16px] leading-[24px] md:text-[24px] md:leading-[33px] text-[#FCFCFC]
               disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {loading ? "Creating Account..." : "Create Account"}
-          </button>
+            >
+              {loading ? "Creating Account..." : "Create Account"}
+            </button>
 
-          <button
-            type="button"
-            disabled={googleLoading}
-            onClick={handleGoogleSignup}
-            className="mt-1 w-full py-4 rounded-[10px] shadow-lg border border-gray-300
+            <button
+              type="button"
+              disabled={googleLoading}
+              onClick={handleGoogleSignup}
+              className="w-full py-4 rounded-[10px] shadow-lg border border-gray-300
               bg-white hover:bg-gray-100 transition
-              font-poppins font-semibold text-[24px] leading-[33px] text-[#1f2937]
+              font-poppins font-semibold text-[16px] leading-[24px] md:text-[24px] md:leading-[33px] text-[#1f2937]
               disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {googleLoading ? "Connecting..." : "Sign Up with Google"}
-          </button>
+            >
+              {googleLoading ? "Connecting..." : "Sign Up with Google"}
+            </button>
+          </div>
 
           <p className="text-center text-sm mt-2">
             <span className="text-[#4A5C74]">Already have an account? </span>
