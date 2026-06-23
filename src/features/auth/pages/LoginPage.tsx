@@ -385,7 +385,7 @@ export default function LoginPage() {
               aria-required={true}
             />
 
-            <div className="flex flex-col max-lg:gap-[16px] lg:gap-6">
+            <div className="flex flex-col max-lg:gap-[14px] lg:gap-6">
               <div className="relative">
                 <input
                   name="password"
