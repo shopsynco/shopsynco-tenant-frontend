@@ -1,6 +1,6 @@
 import axiosInstance from "../../store/refreshToken/tokenUtils";
 
-type InvoiceDetail = {
+export type InvoiceDetail = {
   invoice_no?: string;
   date?: string;
   description?: string;
@@ -48,7 +48,7 @@ export const fetchInvoicedetail = async (transaction_id: string) => {
     const response = await axiosInstance.get(
       `api/tenants/billing/invoices/${transaction_id}/`,
     );
-    return response.data;
+    return normalizeInvoiceDetail(response.data);
   } catch {
     throw new Error("Failed to load invoice detail. Please try again.");
   }
