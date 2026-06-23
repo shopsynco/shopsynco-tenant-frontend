@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Check, Loader2 } from "lucide-react";
-import { fetchPlans, getPricingQuote, startPlanTrial } from "../../../api/mainapi/planapi";
+import { fetchPlans, getPricingQuote, startPlanTrial, startPlanTrialErrorMessage } from "../../../api/mainapi/planapi";
 import { useNavigate } from "react-router-dom";
 import PlansPageHeader from "../components/PlansPageHeader";
 import { syncTenantPortalSession } from "../../../api/auth/sessionApi";
@@ -534,8 +534,8 @@ export default function ChoosePlanPage() {
         },
       });
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: { error?: string } } })?.response?.data;
-      showError("Trial unavailable", data?.error || "Could not start your free trial.");
+      const { title, message } = startPlanTrialErrorMessage(err);
+      showError(title, message);
     } finally {
       setStartingTrial(false);
     }
