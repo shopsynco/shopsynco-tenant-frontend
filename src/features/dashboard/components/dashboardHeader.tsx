@@ -336,7 +336,7 @@ export default function Header() {
             className="fixed top-0 left-0 bottom-0 z-[60] w-[min(292px,78vw)] bg-[#6A3CB1] lg:hidden flex flex-col shadow-xl"
             aria-label="Quick Access menu"
           >
-            <div className="flex items-center gap-3 px-5 py-5 border-b border-white/20">
+            <div className="flex w-full items-center justify-start gap-3 border-b border-white/20 px-5 py-5">
               <button
                 type="button"
                 onClick={closeMenu}
@@ -345,7 +345,7 @@ export default function Header() {
               >
                 <X size={24} strokeWidth={2} aria-hidden />
               </button>
-              <h2 className="text-left text-[16px] font-semibold text-white">
+              <h2 className="m-0 shrink-0 text-left text-[16px] font-semibold leading-none text-white">
                 Quick Access
               </h2>
             </div>

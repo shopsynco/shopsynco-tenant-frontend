@@ -83,7 +83,7 @@ function InputField({
         onChange={(e) => onChange(e.target.value)}
         className={`w-full min-w-0 max-w-full box-border border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent ${
           isMonthInput
-            ? "[&::-webkit-datetime-edit]:min-w-0 [&::-webkit-datetime-edit-fields-wrapper]:min-w-0 [&::-webkit-calendar-picker-indicator]:ml-1"
+            ? "max-lg:px-2 max-lg:text-sm [&::-webkit-datetime-edit]:min-w-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:min-w-0 [&::-webkit-datetime-edit-text]:p-0 [&::-webkit-calendar-picker-indicator]:ml-0 [&::-webkit-calendar-picker-indicator]:shrink-0"
             : ""
         }`}
         {...props}
@@ -582,7 +582,7 @@ export default function UpgradePaymentPage() {
                 }`}
                 onClick={() => handleMethodSelect(method.value)}
               >
-                <div className="w-full flex justify-between items-center p-5 text-left font-medium text-gray-800">
+                <div className="w-full flex justify-between items-center px-4 py-5 sm:px-5 text-left font-medium text-gray-800">
                   <span>{method.label}</span>
                   <span className="text-gray-400">
                     {selectedMethod === method.value ? "▲" : "▼"}
@@ -605,7 +605,11 @@ export default function UpgradePaymentPage() {
                 {selectedMethod === method.value &&
                   (method.value === "credit_card" ||
                     method.value === "debit_card") && (
-                    <div className="border-t border-gray-200 px-4 py-5 sm:px-5 space-y-4 min-w-0">
+                    <div
+                      className="border-t border-gray-200 px-4 py-5 sm:px-5 space-y-4 min-w-0 overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
                       {/* Existing Cards Section */}
                       {existingCards.length > 0 && !showAddCardForm && (
                         <div className="space-y-3">
@@ -723,7 +727,7 @@ export default function UpgradePaymentPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-3 sm:gap-4 min-w-0">
+                          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] sm:gap-4">
                             <div className="min-w-0">
                               <InputField
                                 label="Expiry Date"

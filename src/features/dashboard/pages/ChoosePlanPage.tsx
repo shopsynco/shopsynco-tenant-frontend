@@ -705,9 +705,58 @@ export default function ChoosePlanPage() {
                           : "border border-[#D1D1D1]"
                       } hover:border-[#7658A0] hover:border-opacity-50`}
                     >
+                      {/* Mobile: radio + label + badge on one row */}
+                      <div className="flex w-full items-center justify-between gap-3 lg:hidden">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="relative flex h-5 w-5 shrink-0 items-center justify-center pointer-events-none">
+                            <span
+                              className={`absolute inset-0 rounded-full border-2 transition ${
+                                a ? "border-[#7658A0]" : "border-[#D1D1D1]"
+                              }`}
+                            />
+                            {a && (
+                              <span className="absolute h-2.5 w-2.5 rounded-full bg-[#7658A0]" />
+                            )}
+                          </span>
+                          <div
+                            className={`font-poppins font-medium text-[20px] leading-[28px] ${
+                              a ? "text-[#7658A0]" : "text-black"
+                            }`}
+                          >
+                            {o.label || (o.m === "1" ? "1 Month" : `${o.m} Months`)}
+                          </div>
+                        </div>
+                        {(o.badge || o.s > 0) && (
+                          <div
+                            className="inline-flex shrink-0 items-center rounded-lg px-2 py-1 text-[14px] font-poppins leading-[20px]"
+                            style={{
+                              backgroundColor: "#7CB2E540",
+                              color: "#5882A4",
+                            }}
+                          >
+                            {o.badge || `Save up to ${o.s}%`}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-2 flex gap-3 lg:hidden">
+                        <span className="h-5 w-5 shrink-0" aria-hidden />
+                        <div
+                          className={`font-poppins font-semibold text-[20px] leading-[28px] ${
+                            a ? "text-[#1E1E1E]" : "text-black"
+                          }`}
+                        >
+                          ₹{o.p != null && !Number.isNaN(Number(o.p)) ? o.p : "—"}
+                          <span className="ml-2 text-[20px] leading-[28px] text-xs text-[#6E6E6E]">
+                            /month
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Desktop: badge above, then radio row */}
                       {(o.badge || o.s > 0) && (
                         <div
-                          className="mb-2 inline-flex items-center self-end text-xs font-poppins px-2 py-1 rounded-lg max-lg:text-[14px] max-lg:leading-[20px]"
+                          className="mb-2 hidden items-center self-end text-xs font-poppins px-2 py-1 rounded-lg lg:inline-flex"
                           style={{
                             backgroundColor: "#7CB2E540",
                             color: "#5882A4",
@@ -716,7 +765,7 @@ export default function ChoosePlanPage() {
                           {o.badge || `Save up to ${o.s}%`}
                         </div>
                       )}
-                      <div className="flex w-full flex-col max-lg:items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="hidden w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex">
                         <div className="flex items-center gap-3">
                           <span className="relative flex items-center justify-center w-5 h-5 shrink-0 pointer-events-none">
                             <span
@@ -729,7 +778,7 @@ export default function ChoosePlanPage() {
                             )}
                           </span>
                           <div
-                            className={`font-poppins font-medium max-lg:text-[20px] max-lg:leading-[28px] lg:text-[24px] leading-tight lg:leading-[50px] ${
+                            className={`font-poppins font-medium lg:text-[24px] leading-tight lg:leading-[50px] ${
                               a ? "text-[#7658A0]" : "text-black"
                             }`}
                           >
@@ -737,14 +786,12 @@ export default function ChoosePlanPage() {
                           </div>
                         </div>
                         <div
-                          className={`font-poppins font-semibold max-lg:text-[20px] max-lg:leading-[28px] lg:text-[24px] leading-tight lg:leading-[30px] max-lg:self-start ${
+                          className={`font-poppins font-semibold lg:text-[24px] leading-tight lg:leading-[30px] ${
                             a ? "text-[#1E1E1E]" : "text-black"
                           }`}
                         >
                           ₹{o.p != null && !Number.isNaN(Number(o.p)) ? o.p : "—"}
-                          <span className="max-lg:text-[20px] max-lg:leading-[28px] text-xs text-[#6E6E6E] ml-2">
-                            /month
-                          </span>
+                          <span className="text-xs text-[#6E6E6E] ml-2">/month</span>
                         </div>
                       </div>
                     </div>
