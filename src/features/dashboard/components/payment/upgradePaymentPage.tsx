@@ -69,8 +69,10 @@ function InputField({
   onChange,
   ...props
 }: PaymentInputFieldProps) {
+  const isMonthInput = type === "month";
+
   return (
-    <div>
+    <div className="min-w-0 w-full">
       {label && (
         <label className="text-sm text-gray-600 mb-1 block">{label}</label>
       )}
@@ -79,7 +81,11 @@ function InputField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
+        className={`w-full min-w-0 max-w-full box-border border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent ${
+          isMonthInput
+            ? "[&::-webkit-datetime-edit]:min-w-0 [&::-webkit-datetime-edit-fields-wrapper]:min-w-0 [&::-webkit-calendar-picker-indicator]:ml-1"
+            : ""
+        }`}
         {...props}
       />
     </div>
@@ -558,7 +564,7 @@ export default function UpgradePaymentPage() {
       {/* Main Content */}
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
         {/* Left Section - Payment Methods */}
-        <div>
+        <div className="min-w-0 w-full">
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">
             Choose A Payment Method
           </h2>
@@ -569,7 +575,7 @@ export default function UpgradePaymentPage() {
             paymentMethods.map((method) => (
               <div
                 key={method.value}
-                className={`border rounded-xl mb-5 transition-all cursor-pointer ${
+                className={`min-w-0 overflow-hidden border rounded-xl mb-5 transition-all cursor-pointer ${
                   selectedMethod === method.value
                     ? "border-[#6A3CB1] bg-white shadow-sm ring-2 ring-[#6A3CB1] ring-opacity-20"
                     : "border-gray-200 bg-white hover:border-gray-300"
@@ -599,7 +605,7 @@ export default function UpgradePaymentPage() {
                 {selectedMethod === method.value &&
                   (method.value === "credit_card" ||
                     method.value === "debit_card") && (
-                    <div className="border-t border-gray-200 p-5 space-y-4">
+                    <div className="border-t border-gray-200 px-4 py-5 sm:px-5 space-y-4 min-w-0">
                       {/* Existing Cards Section */}
                       {existingCards.length > 0 && !showAddCardForm && (
                         <div className="space-y-3">
@@ -693,7 +699,7 @@ export default function UpgradePaymentPage() {
                             <label className="text-sm text-gray-600 mb-1 block">
                               Card Number
                             </label>
-                            <div className="relative">
+                            <div className="relative min-w-0">
                               <input
                                 type={showCardNumber ? "text" : "password"}
                                 placeholder="1234 5678 9012 3456"
@@ -705,7 +711,7 @@ export default function UpgradePaymentPage() {
                                   )
                                 }
                                 maxLength={19}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
+                                className="w-full min-w-0 max-w-full box-border border border-gray-300 rounded-md px-3 py-2 pr-10 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6A3CB1] focus:border-transparent"
                               />
                               <Eye
                                 size={18}
@@ -717,28 +723,32 @@ export default function UpgradePaymentPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <InputField
-                              label="Expiry Date"
-                              type="month"
-                              value={cardFormData.expiryDate}
-                              onChange={(value: string) =>
-                                handleCardInputChange("expiryDate", value)
-                              }
-                            />
-                            <InputField
-                              label="CVV"
-                              type="password"
-                              placeholder="123"
-                              maxLength={3}
-                              value={cardFormData.cvv}
-                              onChange={(value: string) =>
-                                handleCardInputChange(
-                                  "cvv",
-                                  value.replace(/[^0-9]/g, "")
-                                )
-                              }
-                            />
+                          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-3 sm:gap-4 min-w-0">
+                            <div className="min-w-0">
+                              <InputField
+                                label="Expiry Date"
+                                type="month"
+                                value={cardFormData.expiryDate}
+                                onChange={(value: string) =>
+                                  handleCardInputChange("expiryDate", value)
+                                }
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <InputField
+                                label="CVV"
+                                type="password"
+                                placeholder="123"
+                                maxLength={3}
+                                value={cardFormData.cvv}
+                                onChange={(value: string) =>
+                                  handleCardInputChange(
+                                    "cvv",
+                                    value.replace(/[^0-9]/g, "")
+                                  )
+                                }
+                              />
+                            </div>
                           </div>
                         </div>
                       )}
