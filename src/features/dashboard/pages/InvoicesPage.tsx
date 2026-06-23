@@ -11,7 +11,9 @@ import PlatformSupportChatModal from "../components/PlatformSupportChatModal";
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null); // Track selected invoice
+  const [selectedTransactionId, setSelectedTransactionId] = useState<
+    string | null
+  >(null);
   const [isModalOpen, setIsModalOpen] = useState(false); // Track modal visibility
   const [supportTopic, setSupportTopic] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -37,10 +39,7 @@ export default function InvoicesPage() {
 
   // Open invoice detail modal
   const openInvoiceDetail = (transactionId: string) => {
-    const invoice = invoices.find(
-      (inv: any) => inv.transaction_id === transactionId,
-    );
-    setSelectedInvoice(invoice);
+    setSelectedTransactionId(transactionId);
     setIsModalOpen(true);
   };
 
@@ -61,7 +60,7 @@ export default function InvoicesPage() {
   // Close modal
   const closeModal = () => {
     setIsModalOpen(false);
-    setSelectedInvoice(null);
+    setSelectedTransactionId(null);
   };
 
   const handleDownloadInvoice = async (inv: {
@@ -111,27 +110,31 @@ export default function InvoicesPage() {
             invoices.map((inv: any) => (
               <div
                 key={inv.transaction_id || inv.invoice_no}
-                className="rounded-xl border border-[#6A3CB1] bg-white p-4 shadow-sm"
+                className="rounded-xl border border-black bg-white p-4"
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{inv.invoice_no}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{inv.date}</p>
-                  </div>
-                  <p className="font-semibold text-gray-900 shrink-0">{formatAmount(inv)}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 flex-1 text-[14px] font-semibold leading-snug text-gray-900 line-clamp-2">
+                    {inv.invoice_no}
+                  </p>
+                  <p className="shrink-0 text-[14px] font-semibold text-gray-900">
+                    {formatAmount(inv)}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 line-clamp-2 mb-2">{inv.description}</p>
-                <p className="text-xs text-gray-500 capitalize mb-3">
-                  {String(inv.payment_method || "—").replace(/_/g, " ")}
-                </p>
-                <div className="flex items-center justify-end gap-3">
+                <div className="mt-2 space-y-0.5">
+                  <p className="text-[12px] text-gray-500">{inv.date}</p>
+                  <p className="text-[12px] text-gray-600">{inv.description}</p>
+                  <p className="text-[12px] text-gray-500 capitalize">
+                    {String(inv.payment_method || "—").replace(/_/g, " ")}
+                  </p>
+                </div>
+                <div className="mt-3 flex items-center justify-end gap-3">
                   <button
                     type="button"
                     className="text-gray-500 hover:text-[#6A3CB1]"
                     onClick={() => openInvoiceDetail(inv.transaction_id)}
                     aria-label="View invoice"
                   >
-                    <Eye size={18} />
+                    <Eye size={20} />
                   </button>
                   <button
                     type="button"
@@ -139,7 +142,7 @@ export default function InvoicesPage() {
                     onClick={() => void handleDownloadInvoice(inv)}
                     aria-label="Download invoice"
                   >
-                    <Download size={18} />
+                    <Download size={20} />
                   </button>
                 </div>
               </div>
@@ -241,9 +244,11 @@ export default function InvoicesPage() {
       </div>
 
       {/* Invoice Detail Modal */}
-      {isModalOpen && selectedInvoice && (
-        <InvoiceDetailModal invoice={selectedInvoice} closeModal={closeModal} />
-      )}
+      <InvoiceDetailModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        transactionId={selectedTransactionId}
+      />
       <PlatformSupportChatModal
         open={supportTopic !== null}
         onClose={() => setSupportTopic(null)}
