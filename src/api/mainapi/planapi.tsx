@@ -52,9 +52,11 @@ export const getPricingQuote = async (plan_id: string, months: string, country: 
 };
 
 export const startPlanTrial = async (plan_id: string) => {
-  const response = await axiosInstance.post("/api/tenants/pricing/start-trial/", {
-    plan_id,
-  });
+  const response = await axiosInstance.post(
+    "/api/tenants/pricing/start-trial/",
+    { plan_id },
+    { timeout: 60000 }
+  );
   return response.data as {
     message: string;
     trial_days: number;
@@ -62,3 +64,41 @@ export const startPlanTrial = async (plan_id: string) => {
     subscription: { id: string; status: string };
   };
 };
+
+/** User-facing copy when start-trial fails (504 / timeout vs other errors). */
+export function startPlanTrialErrorMessage(err: unknown): {
+  title: string;
+  message: string;
+} {
+  const ax = err as {
+    response?: { status?: number; data?: { error?: string; message?: string } };
+    code?: string;
+    message?: string;
+  };
+  const status = ax.response?.status;
+  const isTimeout =
+    status === 504 ||
+    status === 502 ||
+    status === 408 ||
+    ax.code === "ECONNABORTED" ||
+    /timeout|timed out|gateway time/i.test(ax.message || "");
+
+  if (isTimeout) {
+    return {
+      title: "Please try again",
+      message:
+        "Starting your trial took longer than expected. Click Start free trial again — it usually completes on the second try.",
+    };
+  }
+
+  const apiError =
+    ax.response?.data?.error ||
+    ax.response?.data?.message ||
+    ax.message ||
+    "Could not start your free trial. Please try again.";
+
+  return {
+    title: "Trial unavailable",
+    message: apiError,
+  };
+}
