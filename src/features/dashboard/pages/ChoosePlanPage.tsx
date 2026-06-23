@@ -699,7 +699,7 @@ export default function ChoosePlanPage() {
                           setBillingPeriod(o.m);
                         }
                       }}
-                      className={`flex flex-col items-start px-4 py-3 sm:px-5 sm:py-4 cursor-pointer rounded-[10px] border transition-all ${
+                      className={`flex flex-col items-stretch px-4 py-3 sm:px-5 sm:py-4 cursor-pointer rounded-[10px] border transition-all ${
                         a
                           ? "max-lg:border max-lg:border-[#7658A0] lg:border-2 lg:border-[#7658A0]"
                           : "border border-[#D1D1D1]"
@@ -707,7 +707,7 @@ export default function ChoosePlanPage() {
                     >
                       {(o.badge || o.s > 0) && (
                         <div
-                          className="mb-2 inline-flex items-center self-start text-xs font-poppins px-2 py-1 rounded-lg max-lg:text-[16px] max-lg:leading-[22px]"
+                          className="mb-2 inline-flex items-center self-end text-xs font-poppins px-2 py-1 rounded-lg max-lg:text-[14px] max-lg:leading-[20px]"
                           style={{
                             backgroundColor: "#7CB2E540",
                             color: "#5882A4",
@@ -729,7 +729,7 @@ export default function ChoosePlanPage() {
                             )}
                           </span>
                           <div
-                            className={`font-poppins font-medium max-lg:text-[16px] max-lg:leading-[22px] lg:text-[24px] leading-tight lg:leading-[50px] ${
+                            className={`font-poppins font-medium max-lg:text-[20px] max-lg:leading-[28px] lg:text-[24px] leading-tight lg:leading-[50px] ${
                               a ? "text-[#7658A0]" : "text-black"
                             }`}
                           >
@@ -737,12 +737,12 @@ export default function ChoosePlanPage() {
                           </div>
                         </div>
                         <div
-                          className={`font-poppins font-semibold max-lg:text-[16px] max-lg:leading-[22px] lg:text-[24px] leading-tight lg:leading-[30px] max-lg:self-start ${
+                          className={`font-poppins font-semibold max-lg:text-[20px] max-lg:leading-[28px] lg:text-[24px] leading-tight lg:leading-[30px] max-lg:self-start ${
                             a ? "text-[#1E1E1E]" : "text-black"
                           }`}
                         >
                           ₹{o.p != null && !Number.isNaN(Number(o.p)) ? o.p : "—"}
-                          <span className="max-lg:text-[16px] max-lg:leading-[22px] text-xs text-[#6E6E6E] ml-2">
+                          <span className="max-lg:text-[20px] max-lg:leading-[28px] text-xs text-[#6E6E6E] ml-2">
                             /month
                           </span>
                         </div>
