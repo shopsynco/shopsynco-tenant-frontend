@@ -12,6 +12,8 @@ interface InvoiceDetailModalProps {
   transactionId: string | null;
 }
 
+const POPPINS = '"Poppins", sans-serif';
+
 const COMPANY_FROM = {
   name: "Shop Synco. Pvt.",
   street: "123 Business Street",
@@ -35,7 +37,7 @@ function formatDisplayDate(date: Date): string {
 
 function billingPeriodLabel(
   dateStr?: string | null,
-  description?: string | null
+  description?: string | null,
 ): string {
   if (!dateStr) return "—";
   const start = parseInvoiceDate(dateStr);
@@ -60,6 +62,12 @@ function formatCurrency(amount: number, currency = "INR"): string {
     maximumFractionDigits: 2,
   });
   return `${symbol} ${formatted}`;
+}
+
+function formatPaymentMethod(method?: string | null): string {
+  const raw = String(method || "").trim();
+  if (!raw) return "Credit Card";
+  return raw.replace(/_/g, " ");
 }
 
 function lineItemsFromInvoice(invoice: InvoiceDetail) {
@@ -101,8 +109,19 @@ export default function InvoiceDetailModal({
 
   const siteId = useMemo(
     () => localStorage.getItem("store_slug")?.trim() || "—",
-    [isOpen]
+    [isOpen],
   );
+
+  useEffect(() => {
+    const id = "font-poppins-invoice-modal";
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap";
+    document.head.appendChild(link);
+  }, []);
 
   useEffect(() => {
     if (!isOpen || !transactionId) {
@@ -149,9 +168,18 @@ export default function InvoiceDetailModal({
 
   const lineItems = invoice ? lineItemsFromInvoice(invoice) : [];
   const subtotal = Number(invoice?.amount) || 0;
-  const tax = 0;
+  const tax = Math.round(subtotal * 0.1 * 100) / 100;
   const total = subtotal + tax;
   const currency = invoice?.currency ?? "INR";
+
+  const metaTextClass =
+    "text-[10px] leading-relaxed text-black lg:text-[14px] lg:leading-[22px]";
+  const sectionLabelClass =
+    "text-[10px] font-semibold text-[#757575] lg:text-[14px]";
+  const tableHeadClass =
+    "pb-2 pr-2 text-[10px] font-semibold text-black lg:pb-3 lg:pr-4 lg:text-[12px]";
+  const tableCellClass =
+    "py-2 pr-2 text-[10px] text-black lg:py-4 lg:pr-4 lg:text-[16px]";
 
   return (
     <div
@@ -161,6 +189,7 @@ export default function InvoiceDetailModal({
     >
       <div
         className="relative w-full max-w-[900px] max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-xl"
+        style={{ fontFamily: POPPINS }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -187,7 +216,7 @@ export default function InvoiceDetailModal({
           </svg>
         </button>
 
-        <div className="p-4 sm:p-8 lg:p-10">
+        <div className="p-4 sm:p-8 lg:px-12 lg:py-10">
           {loading && (
             <p className="py-16 text-center text-sm text-gray-500">
               Loading invoice…
@@ -208,14 +237,14 @@ export default function InvoiceDetailModal({
 
               <h2
                 id="invoice-modal-title"
-                className="mt-4 text-[16px] font-bold uppercase tracking-wide text-black lg:mt-6 lg:text-[28px]"
+                className="mt-4 text-[16px] font-bold uppercase tracking-wide text-black lg:mt-6 lg:text-[28px] lg:leading-tight"
               >
                 Invoice
               </h2>
 
-              <div className="mt-4 grid gap-6 lg:mt-8 lg:grid-cols-2 lg:gap-10">
-                <div className="space-y-4 text-[10px] leading-relaxed text-black lg:text-[14px]">
-                  <div className="space-y-1">
+              <div className="mt-4 grid gap-8 lg:mt-10 lg:grid-cols-2 lg:gap-12">
+                <div className="space-y-6">
+                  <div className={`space-y-1.5 ${metaTextClass}`}>
                     <p>
                       <span className="font-medium">Invoice ID:</span>{" "}
                       {invoice.gateway_transaction_id ||
@@ -239,11 +268,9 @@ export default function InvoiceDetailModal({
                     </p>
                   </div>
 
-                  <div className="space-y-1 pt-2">
-                    <p className="text-[10px] font-semibold text-gray-600 lg:text-[14px]">
-                      Payment Information
-                    </p>
-                    <p>{invoice.payment_method || "Card"}</p>
+                  <div className={`space-y-1.5 ${metaTextClass}`}>
+                    <p className={sectionLabelClass}>Payment Information</p>
+                    <p>{formatPaymentMethod(invoice.payment_method)}</p>
                     <p>
                       <span className="font-medium">Transaction ID:</span>{" "}
                       {invoice.transaction_id || "—"}
@@ -254,9 +281,9 @@ export default function InvoiceDetailModal({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-[10px] leading-relaxed text-black lg:grid-cols-1 lg:gap-6 lg:text-right lg:text-[14px]">
-                  <div>
-                    <p className="font-semibold text-gray-600">From:</p>
+                <div className="flex flex-col gap-8 text-left lg:items-end lg:text-right">
+                  <div className={metaTextClass}>
+                    <p className={sectionLabelClass}>From</p>
                     <p>{COMPANY_FROM.name}</p>
                     <p>{COMPANY_FROM.street}</p>
                     <p>{COMPANY_FROM.city}</p>
@@ -264,11 +291,11 @@ export default function InvoiceDetailModal({
                     <p>GSTIN / VAT ID: {COMPANY_FROM.taxId}</p>
                   </div>
 
-                  <div>
-                    <p className="font-semibold text-gray-600">Billing to:</p>
+                  <div className={metaTextClass}>
+                    <p className={sectionLabelClass}>Billing to</p>
                     <p>{billingName}</p>
                     <p>{billingEmail}</p>
-                    <p className="text-gray-600">Tax ID: (if provided)</p>
+                    <p className="text-[#757575]">Tax ID: (if provided)</p>
                   </div>
                 </div>
               </div>
@@ -276,19 +303,17 @@ export default function InvoiceDetailModal({
               <div className="mt-6 border-t border-gray-200 pt-4 lg:mt-10 lg:pt-6">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-200 text-left">
-                      <th className="pb-2 pr-2 text-[10px] font-semibold text-black lg:pb-3 lg:pr-4 lg:text-[12px]">
+                    <tr className="border-b border-gray-200">
+                      <th className={`${tableHeadClass} text-left`}>
                         Description
                       </th>
-                      <th className="pb-2 pr-2 text-right text-[10px] font-semibold text-black lg:pb-3 lg:pr-4 lg:text-[12px]">
+                      <th className={`${tableHeadClass} text-center lg:text-right`}>
                         Unit Price ({currency})
                       </th>
-                      <th className="pb-2 pr-2 text-center text-[10px] font-semibold text-black lg:pb-3 lg:pr-4 lg:text-[12px]">
+                      <th className={`${tableHeadClass} text-right`}>
                         Quantity
                       </th>
-                      <th className="pb-2 text-right text-[10px] font-semibold text-black lg:pb-3 lg:text-[12px]">
-                        Amount
-                      </th>
+                      <th className={`${tableHeadClass} text-right`}>Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -297,19 +322,19 @@ export default function InvoiceDetailModal({
                         key={item.description}
                         className="border-b border-gray-100"
                       >
-                        <td className="py-2 pr-2 text-[10px] text-black lg:py-4 lg:pr-4 lg:text-[16px]">
+                        <td className={`${tableCellClass} text-left`}>
                           {item.description}
                         </td>
-                        <td className="py-2 pr-2 text-right text-[10px] text-black lg:py-4 lg:pr-4 lg:text-[16px]">
+                        <td className={`${tableCellClass} text-center lg:text-right`}>
                           {formatCurrency(item.unitPrice, currency)}
                         </td>
-                        <td className="py-2 pr-2 text-center text-[10px] text-black lg:py-4 lg:pr-4 lg:text-[16px]">
+                        <td className={`${tableCellClass} text-right`}>
                           {item.quantity}
                         </td>
-                        <td className="py-2 text-right text-[10px] text-black lg:py-4 lg:text-[16px]">
+                        <td className={`${tableCellClass} text-right`}>
                           {formatCurrency(
                             item.unitPrice * item.quantity,
-                            currency
+                            currency,
                           )}
                         </td>
                       </tr>
@@ -317,35 +342,39 @@ export default function InvoiceDetailModal({
                   </tbody>
                 </table>
 
-                <p className="mt-3 text-[8px] text-black/60 lg:mt-4 lg:text-[12px]">
+                <p className="mt-3 text-[8px] text-[#757575] lg:mt-4 lg:text-[12px]">
                   {featuresLabel(invoice.plan)}
                 </p>
 
                 <div className="mt-6 flex justify-end lg:mt-8">
-                  <div className="w-full max-w-xs space-y-2 text-[10px] text-black lg:text-[14px]">
-                    <div className="flex justify-between">
+                  <div className="w-full max-w-[280px] space-y-2 text-[10px] text-black lg:text-[14px]">
+                    <div className="flex justify-between gap-4">
                       <span>Subtotal:</span>
-                      <span>{formatCurrency(subtotal, currency)}</span>
+                      <span className="tabular-nums">
+                        {formatCurrency(subtotal, currency)}
+                      </span>
                     </div>
-                    {tax > 0 && (
-                      <div className="flex justify-between">
-                        <span>Tax (10% VAT):</span>
-                        <span>{formatCurrency(tax, currency)}</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between gap-4">
+                      <span>Tax (10% VAT):</span>
+                      <span className="tabular-nums">
+                        {formatCurrency(tax, currency)}
+                      </span>
+                    </div>
                     <div className="border-t border-gray-200 pt-3">
-                      <div className="flex justify-between text-[12px] font-bold lg:text-[18px]">
+                      <div className="flex justify-between gap-4 text-[12px] font-bold lg:text-[18px]">
                         <span>Total:</span>
-                        <span>{formatCurrency(total, currency)}</span>
+                        <span className="tabular-nums">
+                          {formatCurrency(total, currency)}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <footer className="mt-8 border-t border-gray-100 pt-4 text-center text-[8px] leading-relaxed text-gray-400 lg:mt-12 lg:pt-6 lg:text-[12px]">
-                <p>Thank you for choosing Your SaaS Company.</p>
-                <p>For support, contact us at support@yourcompany.com</p>
+              <footer className="mt-8 border-t border-gray-100 pt-4 text-center text-[8px] leading-relaxed text-[#9CA3AF] lg:mt-12 lg:pt-6 lg:text-[12px]">
+                <p>Thank you for choosing Shop Synco.</p>
+                <p>For support, contact us at {COMPANY_FROM.email}</p>
               </footer>
             </>
           )}
