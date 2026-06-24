@@ -180,6 +180,10 @@ export default function InvoiceDetailModal({
     "pb-2 pr-2 text-[10px] font-semibold text-black lg:pb-3 lg:pr-4 lg:text-[12px]";
   const tableCellClass =
     "py-2 pr-2 text-[10px] text-black lg:py-4 lg:pr-4 lg:text-[16px]";
+  const unitPriceHeadClass =
+    "pb-2 px-1 text-center text-[10px] font-semibold text-black lg:pb-3 lg:px-4 lg:text-[12px]";
+  const unitPriceCellClass =
+    "py-2 px-1 text-center text-[10px] tabular-nums text-black lg:py-4 lg:px-4 lg:text-[16px]";
 
   return (
     <div
@@ -307,7 +311,7 @@ export default function InvoiceDetailModal({
                       <th className={`${tableHeadClass} text-left`}>
                         Description
                       </th>
-                      <th className={`${tableHeadClass} text-center lg:text-right`}>
+                      <th className={unitPriceHeadClass}>
                         Unit Price ({currency})
                       </th>
                       <th className={`${tableHeadClass} text-right`}>
@@ -325,7 +329,7 @@ export default function InvoiceDetailModal({
                         <td className={`${tableCellClass} text-left`}>
                           {item.description}
                         </td>
-                        <td className={`${tableCellClass} text-center lg:text-right`}>
+                        <td className={unitPriceCellClass}>
                           {formatCurrency(item.unitPrice, currency)}
                         </td>
                         <td className={`${tableCellClass} text-right`}>

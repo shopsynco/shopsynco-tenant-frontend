@@ -220,7 +220,7 @@ export default function InvoicesPage() {
         </div>
 
         {/* Help Box */}
-        <div className="mt-8 rounded-2xl border border-[#8B6BB6] bg-white p-6 text-gray-700 w-full max-w-[445px]">
+        <div className="mt-4 md:mt-8 rounded-2xl border border-[#8B6BB6] bg-white p-6 text-gray-700 w-full max-w-[445px]">
           <div className="flex items-center gap-2 mb-2">
             <HelpCircle size={24} className="text-[#6A3CB1]" />
             <h4 className="font-semibold text-gray-800">
