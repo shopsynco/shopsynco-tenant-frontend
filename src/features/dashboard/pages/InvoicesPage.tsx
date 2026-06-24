@@ -101,7 +101,7 @@ export default function InvoicesPage() {
         </div>
 
         {/* Mobile invoice cards */}
-        <div className="md:hidden space-y-3">
+        <div className="md:hidden space-y-5">
           {loading ? (
             <p className="text-center py-6 text-gray-500">Loading invoices...</p>
           ) : invoices.length === 0 ? (
