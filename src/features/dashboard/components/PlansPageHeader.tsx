@@ -40,7 +40,7 @@ export default function PlansPageHeader() {
           Back to dashboard
         </button>
       ) : (
-        <p className="text-xs sm:text-sm text-gray-500 max-w-[220px] sm:max-w-none text-right">
+        <p className="rounded-lg border border-[#E2DAFF] bg-[#F5F1FF] px-3 py-2 text-xs sm:text-sm font-semibold text-[#5A2D9D] max-w-[240px] sm:max-w-md text-right leading-snug">
           Complete plan and payment to access your dashboard.
         </p>
       )}

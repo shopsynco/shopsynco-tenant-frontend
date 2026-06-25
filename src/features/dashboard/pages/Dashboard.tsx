@@ -30,6 +30,10 @@ import FeatureStorePage from "../components/FeatureModal";
 import FeedbackModal from "../components/FeedbackModal";
 import Header from "../components/dashboardHeader";
 import SupportContactBanner from "../components/SupportContactBanner";
+import OnboardingChecklist from "../components/onboarding/OnboardingChecklist";
+import QuickStartGuide from "../components/onboarding/QuickStartGuide";
+import SetupWizard from "../components/onboarding/SetupWizard";
+import { useOnboardingProgress } from "../../../lib/onboarding/useOnboardingProgress";
 
 export default function Dashboard() {
   const [isFeatureStoreOpen, setIsFeatureStoreOpen] = useState(false);
@@ -84,6 +88,9 @@ export default function Dashboard() {
     domainHost && !domainHost.startsWith("http")
       ? `https://${domainHost}`
       : domainHost;
+
+  const { progress: onboardingProgress, markShareStepComplete } =
+    useOnboardingProgress(domainUrl);
 
   const openManagerDashboard = () => {
     const base = resolveTenantManagerBaseUrl();
@@ -337,6 +344,19 @@ export default function Dashboard() {
             </button>
           </div>
         )}
+
+        <section className="max-lg:order-2 grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-6 items-start">
+          <OnboardingChecklist
+            progress={onboardingProgress}
+            onShareAction={markShareStepComplete}
+          />
+          <QuickStartGuide progress={onboardingProgress} />
+        </section>
+
+        <SetupWizard
+          progress={onboardingProgress}
+          onShareAction={markShareStepComplete}
+        />
 
         {!dashboardLoading && (
           <div className="hidden lg:block">
