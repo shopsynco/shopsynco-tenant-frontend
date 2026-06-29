@@ -337,6 +337,9 @@ export default function Header() {
             aria-label="Quick Access menu"
           >
             <div className="flex w-full items-center justify-between border-b border-white/20 px-5 py-5">
+              <h2 className="m-0 text-left text-[16px] font-semibold leading-none text-white">
+                Quick Access
+              </h2>
               <button
                 type="button"
                 onClick={closeMenu}
@@ -345,9 +348,6 @@ export default function Header() {
               >
                 <X size={24} strokeWidth={2} aria-hidden />
               </button>
-              <h2 className="m-0 flex-1 text-right text-[16px] font-semibold leading-none text-white">
-                Quick Access
-              </h2>
             </div>
 
             <nav className="flex flex-col gap-3 p-5">

@@ -3,5 +3,6 @@ export const ONBOARDING_MANAGER_PATHS = {
   storeDetails: "/settings/store-details",
   addProduct: "/products/add",
   addCategory: "/products/categories/add",
-  contentManagement: "/content",
+  contentManagement: "/content?tab=saved",
+  paymentsBilling: "/settings/payments-billings",
 } as const;

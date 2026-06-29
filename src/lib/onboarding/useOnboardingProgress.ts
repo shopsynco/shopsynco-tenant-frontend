@@ -14,6 +14,7 @@ const EMPTY_STEPS: Record<OnboardingStepId, boolean> = {
   "add-product": false,
   "add-category": false,
   "customize-website": false,
+  "connect-razorpay": false,
   "share-website": false,
 };
 
@@ -51,28 +52,29 @@ async function fetchProductCount(): Promise<number> {
 
 async function fetchWebsiteCustomized(): Promise<boolean> {
   try {
-    const data = await onboardingApi.getLayout();
-    const layout = (data as { layout?: Record<string, unknown> })?.layout || data;
-    const templateId = String(
-      (layout as { storefront_template_id?: string; storefrontTemplateId?: string })
-        ?.storefront_template_id ||
-        (layout as { storefrontTemplateId?: string })?.storefrontTemplateId ||
-        "",
-    ).trim();
-    if (templateId) return true;
-  } catch {
-    // fall through
-  }
-
-  try {
     const data = await onboardingApi.getSavedStyles();
     const styles = data?.saved_styles || [];
-    if (styles.some((s: { is_published?: boolean }) => Boolean(s.is_published))) return true;
+    return Array.isArray(styles) && styles.length > 0;
   } catch {
-    // fall through
+    return false;
   }
+}
 
-  return false;
+async function fetchRazorpayConnected(): Promise<boolean> {
+  try {
+    const data = await onboardingApi.getPaymentGateways();
+    const rawList = Array.isArray(data)
+      ? data
+      : data?.gateways || data?.results || data?.data || [];
+    const razorpay = (rawList as Array<{ id?: string; provider?: string; is_connected?: boolean; connected?: boolean }>).find(
+      (gateway) =>
+        String(gateway.provider || "").toLowerCase() === "razorpay" ||
+        String(gateway.id || "").trim().toLowerCase() === "razorpay",
+    );
+    return Boolean(razorpay?.is_connected ?? razorpay?.connected);
+  } catch {
+    return false;
+  }
 }
 
 export function useOnboardingProgress(fallbackDomain?: string) {
@@ -86,12 +88,13 @@ export function useOnboardingProgress(fallbackDomain?: string) {
     setError(null);
 
     try {
-      const [detailsResult, productCountResult, categoriesResult, customizedResult] =
+      const [detailsResult, productCountResult, categoriesResult, customizedResult, razorpayResult] =
         await Promise.allSettled([
           onboardingApi.getStoreDetails(),
           fetchProductCount(),
           onboardingApi.getCategories(),
           fetchWebsiteCustomized(),
+          fetchRazorpayConnected(),
         ]);
 
       const details = detailsResult.status === "fulfilled" ? detailsResult.value : null;
@@ -104,6 +107,8 @@ export function useOnboardingProgress(fallbackDomain?: string) {
         : 0;
       const customized =
         customizedResult.status === "fulfilled" ? customizedResult.value : false;
+      const razorpayConnected =
+        razorpayResult.status === "fulfilled" ? razorpayResult.value : false;
 
       const resolvedUrl = resolveStoreUrl(fallbackDomain);
       const shareCompleted = isStoreShareCompleted() && Boolean(resolvedUrl);
@@ -113,6 +118,7 @@ export function useOnboardingProgress(fallbackDomain?: string) {
         "add-product": productCount > 0,
         "add-category": categoryCount > 0,
         "customize-website": customized,
+        "connect-razorpay": razorpayConnected,
         "share-website": shareCompleted,
       };
 

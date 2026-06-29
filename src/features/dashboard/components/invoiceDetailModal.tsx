@@ -176,14 +176,23 @@ export default function InvoiceDetailModal({
     "text-[10px] leading-relaxed text-black lg:text-[14px] lg:leading-[22px]";
   const sectionLabelClass =
     "text-[10px] font-semibold text-[#757575] lg:text-[14px]";
-  const tableHeadClass =
-    "pb-2 pr-2 text-[10px] font-semibold text-black lg:pb-3 lg:pr-4 lg:text-[12px]";
-  const tableCellClass =
-    "py-2 pr-2 text-[10px] text-black lg:py-4 lg:pr-4 lg:text-[16px]";
+  const descriptionHeadClass =
+    "pb-2 pr-2 text-left text-[10px] font-semibold text-black lg:pb-3 lg:pr-6 lg:text-[12px]";
+  const descriptionCellClass =
+    "py-2 pr-2 text-left text-[10px] text-black lg:py-4 lg:pr-6 lg:text-[16px]";
+  const numericColClass = "w-[72px] sm:w-[88px] lg:w-[140px]";
   const unitPriceHeadClass =
-    "pb-2 px-1 text-center text-[10px] font-semibold text-black lg:pb-3 lg:px-4 lg:text-[12px]";
+    "pb-2 px-2 text-center text-[10px] font-semibold text-black sm:px-3 lg:pb-3 lg:px-4 lg:text-right lg:text-[12px]";
   const unitPriceCellClass =
-    "py-2 px-1 text-center text-[10px] tabular-nums text-black lg:py-4 lg:px-4 lg:text-[16px]";
+    "py-2 px-2 text-center text-[10px] tabular-nums text-black sm:px-3 lg:py-4 lg:px-4 lg:text-right lg:text-[16px]";
+  const quantityHeadClass =
+    "pb-2 px-2 text-center text-[10px] font-semibold text-black sm:px-3 lg:pb-3 lg:px-4 lg:text-[12px]";
+  const quantityCellClass =
+    "py-2 px-2 text-center text-[10px] tabular-nums text-black sm:px-3 lg:py-4 lg:px-4 lg:text-[16px]";
+  const amountHeadClass =
+    "pb-2 px-2 text-center text-[10px] font-semibold text-black sm:px-3 lg:pb-3 lg:px-4 lg:text-[12px]";
+  const amountCellClass =
+    "py-2 px-2 text-center text-[10px] tabular-nums text-black sm:px-3 lg:py-4 lg:px-4 lg:text-[16px]";
 
   return (
     <div
@@ -305,19 +314,21 @@ export default function InvoiceDetailModal({
               </div>
 
               <div className="mt-6 border-t border-gray-200 pt-4 lg:mt-10 lg:pt-6">
-                <table className="w-full border-collapse">
+                <table className="w-full table-fixed border-collapse">
+                  <colgroup>
+                    <col />
+                    <col className={numericColClass} />
+                    <col className={numericColClass} />
+                    <col className={numericColClass} />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className={`${tableHeadClass} text-left`}>
-                        Description
-                      </th>
+                      <th className={descriptionHeadClass}>Description</th>
                       <th className={unitPriceHeadClass}>
                         Unit Price ({currency})
                       </th>
-                      <th className={`${tableHeadClass} text-right`}>
-                        Quantity
-                      </th>
-                      <th className={`${tableHeadClass} text-right`}>Amount</th>
+                      <th className={quantityHeadClass}>Quantity</th>
+                      <th className={amountHeadClass}>Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -326,16 +337,14 @@ export default function InvoiceDetailModal({
                         key={item.description}
                         className="border-b border-gray-100"
                       >
-                        <td className={`${tableCellClass} text-left`}>
+                        <td className={descriptionCellClass}>
                           {item.description}
                         </td>
                         <td className={unitPriceCellClass}>
                           {formatCurrency(item.unitPrice, currency)}
                         </td>
-                        <td className={`${tableCellClass} text-right`}>
-                          {item.quantity}
-                        </td>
-                        <td className={`${tableCellClass} text-right`}>
+                        <td className={quantityCellClass}>{item.quantity}</td>
+                        <td className={amountCellClass}>
                           {formatCurrency(
                             item.unitPrice * item.quantity,
                             currency,

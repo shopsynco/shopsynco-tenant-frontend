@@ -28,9 +28,16 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     id: "customize-website",
     title: "Customize Your Website",
     description:
-      "Update banners, homepage sections, about us, contact details, and store content.",
+      "Save a custom style in Content Management (Saved Style tab) after editing banners, homepage sections, and store pages.",
     buttonLabel: "Customize Website",
     managerPath: ONBOARDING_MANAGER_PATHS.contentManagement,
+  },
+  {
+    id: "connect-razorpay",
+    title: "Connect Razorpay",
+    description: "Add your Razorpay keys so customers can pay online at checkout.",
+    buttonLabel: "Connect Razorpay",
+    managerPath: ONBOARDING_MANAGER_PATHS.paymentsBilling,
   },
   {
     id: "share-website",
