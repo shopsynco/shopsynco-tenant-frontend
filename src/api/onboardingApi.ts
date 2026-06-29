@@ -33,4 +33,9 @@ export const onboardingApi = {
     const { data } = await axiosInstance.get("api/content/saved-styles/");
     return data;
   },
+
+  async getPaymentGateways() {
+    const { data } = await axiosInstance.get("api/manager/billing/payment-gateways/");
+    return data;
+  },
 };

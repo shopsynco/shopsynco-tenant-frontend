@@ -40,7 +40,11 @@ const WIZARD_COPY: Record<
   },
   "customize-website": {
     title: "Customize your website",
-    text: "Update banners, homepage content, and store information.",
+    text: "Save a custom style in Content Management after editing your storefront.",
+  },
+  "connect-razorpay": {
+    title: "Connect Razorpay",
+    text: "Add your Razorpay keys so customers can pay online at checkout.",
   },
   "share-website": {
     title: "Share your website",

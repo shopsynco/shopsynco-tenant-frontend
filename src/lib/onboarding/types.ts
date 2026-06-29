@@ -3,6 +3,7 @@ export type OnboardingStepId =
   | "add-product"
   | "add-category"
   | "customize-website"
+  | "connect-razorpay"
   | "share-website";
 
 export interface OnboardingStepDefinition {

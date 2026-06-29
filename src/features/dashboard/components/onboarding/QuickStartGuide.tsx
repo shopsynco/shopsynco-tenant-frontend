@@ -16,6 +16,7 @@ const QUICK_LABELS: Record<string, string> = {
   "add-product": "First Product",
   "add-category": "Category",
   "customize-website": "Website Customized",
+  "connect-razorpay": "Razorpay Connected",
   "share-website": "Store Shared",
 };
 
