@@ -99,7 +99,11 @@ export default function StoreSetupPage() {
   ) => {
     const { name, value } = e.target;
     const key = name as keyof FormData;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue =
+      name === "domain"
+        ? value.toLowerCase().replace(/\s+/g, "")
+        : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
     setFieldErrors((prev) => {
       const next = { ...prev };
       delete next[key];
@@ -126,10 +130,12 @@ export default function StoreSetupPage() {
 
     if (!category) nextErrors.product_service = "Please select a category.";
 
-    if (!domainValue) nextErrors.domain = "Domain is required.";
-    else if (!DOMAIN_PATTERN.test(domainValue)) {
+    if (!domainValue) {
       nextErrors.domain =
-        "Use 3–63 characters: lowercase letters, numbers, and hyphens only (no spaces).";
+        "Enter your business or store name in small letters (e.g. mybakery).";
+    } else if (!DOMAIN_PATTERN.test(domainValue)) {
+      nextErrors.domain =
+        "Use 3–63 small letters, numbers, or hyphens only — no spaces or capitals (e.g. my-bakery).";
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -361,21 +367,28 @@ export default function StoreSetupPage() {
             </div>
           </div>
 
-          {/* Domain */}
-
+          {/* Store web address */}
           <div className="w-full">
-            <label className="block text-left text-sm font-medium text-[#719CBF] mb-2">
-              Domain
+            <label
+              htmlFor="store-domain"
+              className="block text-left text-sm font-medium text-[#719CBF] mb-2"
+            >
+              Domain/Your store link — business name in small letters
             </label>
 
             <div className="flex flex-col sm:flex-row items-stretch gap-0 w-full">
               {/* editable prefix */}
               <input
+                id="store-domain"
                 type="text"
                 name="domain"
-                placeholder="my-store"
+                placeholder="e.g. mybakery"
                 value={formData.domain}
                 onChange={handleChange}
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                aria-describedby="store-domain-hint"
                 aria-invalid={Boolean(fieldErrors.domain)}
                 className={`w-full sm:flex-1 rounded-xl sm:rounded-l-xl sm:rounded-r-none px-5 py-4 border sm:border-r-0
            text-black placeholder:text-gray-500
@@ -398,6 +411,29 @@ export default function StoreSetupPage() {
                 .shopsynco.com
               </span>
             </div>
+            <p
+              id="store-domain-hint"
+              className="text-left text-xs text-gray-600 mt-2 leading-relaxed"
+            >
+              {formData.domain.trim() ? (
+                <>
+                  Type your shop or business name in{" "}
+                  <span className="font-medium">small letters</span> — no spaces.
+                  Your customers will visit:{" "}
+                  <span className="font-medium text-[#719CBF]">
+                    {formData.domain.trim().toLowerCase()}.shopsynco.com
+                  </span>
+                </>
+              ) : (
+                <>
+                  Type your shop or business name in{" "}
+                  <span className="font-medium">small letters</span> — no spaces.
+                  Example: if your store is &quot;My Bakery&quot;, type{" "}
+                  <span className="font-medium text-[#719CBF]">mybakery</span> →
+                  mybakery.shopsynco.com
+                </>
+              )}
+            </p>
             {fieldErrors.domain ? (
               <p className="text-left text-sm text-red-600 mt-1">{fieldErrors.domain}</p>
             ) : null}
