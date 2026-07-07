@@ -10,19 +10,19 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     managerPath: ONBOARDING_MANAGER_PATHS.storeDetails,
   },
   {
+    id: "add-category",
+    title: "Add Category",
+    description: "Organize your products into categories.",
+    buttonLabel: "Add Category",
+    managerPath: ONBOARDING_MANAGER_PATHS.addCategory,
+  },
+  {
     id: "add-product",
     title: "Add Your First Product",
     description: "Add your first product with price, image, and details.",
     buttonLabel: "Add Product",
     estimatedTime: "2 minutes",
     managerPath: ONBOARDING_MANAGER_PATHS.addProduct,
-  },
-  {
-    id: "add-category",
-    title: "Add Category",
-    description: "Organize your products into categories.",
-    buttonLabel: "Add Category",
-    managerPath: ONBOARDING_MANAGER_PATHS.addCategory,
   },
   {
     id: "customize-website",
