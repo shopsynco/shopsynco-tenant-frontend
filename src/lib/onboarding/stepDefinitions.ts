@@ -1,4 +1,4 @@
-import { ONBOARDING_MANAGER_PATHS } from "./routes";
+import { ONBOARDING_MANAGER_PATHS, resolveCustomizeWebsitePath } from "./routes";
 import type { OnboardingStepDefinition, OnboardingStepId } from "./types";
 
 export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
@@ -30,7 +30,7 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     description:
       "Save a custom style in Content Management (Saved Style tab) after editing banners, homepage sections, and store pages.",
     buttonLabel: "Customize Website",
-    managerPath: ONBOARDING_MANAGER_PATHS.contentManagement,
+    managerPath: resolveCustomizeWebsitePath(false),
   },
   {
     id: "connect-razorpay",

@@ -82,6 +82,7 @@ export function useOnboardingProgress(fallbackDomain?: string) {
   const [error, setError] = useState<string | null>(null);
   const [steps, setSteps] = useState<Record<OnboardingStepId, boolean>>(EMPTY_STEPS);
   const [storeUrl, setStoreUrl] = useState("");
+  const [hasSavedContentStyles, setHasSavedContentStyles] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -124,10 +125,12 @@ export function useOnboardingProgress(fallbackDomain?: string) {
 
       setSteps(nextSteps);
       setStoreUrl(resolvedUrl);
+      setHasSavedContentStyles(customized);
     } catch {
       setError("Unable to load setup progress. You can still continue from the checklist.");
       setSteps(EMPTY_STEPS);
       setStoreUrl(resolveStoreUrl(fallbackDomain));
+      setHasSavedContentStyles(false);
     } finally {
       setLoading(false);
     }
@@ -161,6 +164,7 @@ export function useOnboardingProgress(fallbackDomain?: string) {
     allComplete,
     nextIncompleteStepId,
     storeUrl,
+    hasSavedContentStyles,
     loading,
     error,
   };

@@ -16,7 +16,7 @@ type OnboardingChecklistProps = {
 };
 
 export default function OnboardingChecklist({ progress, onShareAction }: OnboardingChecklistProps) {
-  const { steps, completedCount, totalCount, allComplete, nextIncompleteStepId, storeUrl, loading, error } =
+  const { steps, completedCount, totalCount, allComplete, nextIncompleteStepId, storeUrl, hasSavedContentStyles, loading, error } =
     progress;
 
   useEffect(() => {
@@ -94,6 +94,7 @@ export default function OnboardingChecklist({ progress, onShareAction }: Onboard
             completed={steps[step.id]}
             isNext={step.id === nextIncompleteStepId}
             storeUrl={storeUrl}
+            hasSavedContentStyles={hasSavedContentStyles}
             onStepClick={trackOnboardingStepClicked}
             onShareAction={onShareAction}
           />

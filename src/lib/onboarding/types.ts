@@ -22,6 +22,7 @@ export interface OnboardingProgressState {
   allComplete: boolean;
   nextIncompleteStepId: OnboardingStepId | null;
   storeUrl: string;
+  hasSavedContentStyles: boolean;
   loading: boolean;
   error: string | null;
 }
