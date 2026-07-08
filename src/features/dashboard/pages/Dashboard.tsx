@@ -17,8 +17,8 @@ import {
 } from "../../../api/mainapi/statusapi";
 import {
   defaultTenantHostFromSlug,
-  resolveTenantManagerBaseUrl,
 } from "../../../api/axios_config";
+import { openManagerDashboardPath } from "../../../lib/onboarding/managerNavigation";
 import { ensureTenantStoreSlugForApi } from "../../../utils/tenantStoreSlug";
 import { saveStorefrontHost } from "../../../utils/storefrontHost";
 import {
@@ -93,14 +93,7 @@ export default function Dashboard() {
     useOnboardingProgress(domainUrl);
 
   const openManagerDashboard = () => {
-    const base = resolveTenantManagerBaseUrl();
-    if (!base) {
-      window.alert(
-        "Manager dashboard URL is not configured. Set VITE_TENANT_MANAGER_ORIGIN in your environment.",
-      );
-      return;
-    }
-    window.open(`${base}/store-overview`, "_blank", "noopener,noreferrer");
+    openManagerDashboardPath("/store-overview");
   };
 
   useEffect(() => {
