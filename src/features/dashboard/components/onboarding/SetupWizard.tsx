@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import StoreShareActions from "./StoreShareActions";
 import { ONBOARDING_STEPS } from "../../../../lib/onboarding/stepDefinitions";
+import { resolveCustomizeWebsitePath } from "../../../../lib/onboarding/routes";
 import {
   trackOnboardingWizardOpened,
   trackOnboardingWizardSkipped,
@@ -58,7 +59,7 @@ function firstIncompleteIndex(steps: OnboardingProgressState["steps"]): number {
 }
 
 export default function SetupWizard({ progress, onShareAction }: SetupWizardProps) {
-  const { steps, allComplete, storeUrl, loading } = progress;
+  const { steps, allComplete, storeUrl, hasSavedContentStyles, loading } = progress;
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const hasAttemptedOpen = useRef(false);
@@ -102,6 +103,10 @@ export default function SetupWizard({ progress, onShareAction }: SetupWizardProp
   if (!open || !currentStep || !wizardCopy || allComplete) return null;
 
   const isShareStep = currentStep.id === "share-website";
+  const customizePath =
+    currentStep.id === "customize-website"
+      ? resolveCustomizeWebsitePath(hasSavedContentStyles)
+      : currentStep.managerPath;
   const progressPct = Math.round((stepNumber / totalSteps) * 100);
 
   return (
@@ -153,7 +158,7 @@ export default function SetupWizard({ progress, onShareAction }: SetupWizardProp
               onClick={() => {
                 trackOnboardingStepClicked(currentStep.id);
                 closeForSession();
-                openManagerDashboardPath(currentStep.managerPath);
+                openManagerDashboardPath(customizePath);
               }}
               className="inline-flex w-full items-center justify-center rounded-lg bg-[#6A3CB1] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#5a32a0]"
             >

@@ -1,6 +1,7 @@
 import { CheckCircle2, Circle } from "lucide-react";
 import StoreShareActions from "./StoreShareActions";
 import { openManagerDashboardPath } from "../../../../lib/onboarding/managerNavigation";
+import { resolveCustomizeWebsitePath } from "../../../../lib/onboarding/routes";
 import type { OnboardingStepDefinition, OnboardingShareAction } from "../../../../lib/onboarding/types";
 
 type OnboardingStepItemProps = {
@@ -8,6 +9,7 @@ type OnboardingStepItemProps = {
   completed: boolean;
   isNext: boolean;
   storeUrl: string;
+  hasSavedContentStyles: boolean;
   onStepClick?: (stepId: OnboardingStepDefinition["id"]) => void;
   onShareAction?: (action: OnboardingShareAction) => void;
 };
@@ -17,10 +19,15 @@ export default function OnboardingStepItem({
   completed,
   isNext,
   storeUrl,
+  hasSavedContentStyles,
   onStepClick,
   onShareAction,
 }: OnboardingStepItemProps) {
   const isShareStep = step.id === "share-website";
+  const destination =
+    step.id === "customize-website"
+      ? resolveCustomizeWebsitePath(hasSavedContentStyles)
+      : step.managerPath;
 
   return (
     <div
@@ -64,7 +71,7 @@ export default function OnboardingStepItem({
                   type="button"
                   onClick={() => {
                     onStepClick?.(step.id);
-                    openManagerDashboardPath(step.managerPath);
+                    openManagerDashboardPath(destination);
                   }}
                   className="inline-flex items-center justify-center rounded-lg bg-[#6A3CB1] px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#5a32a0] transition-colors"
                 >
