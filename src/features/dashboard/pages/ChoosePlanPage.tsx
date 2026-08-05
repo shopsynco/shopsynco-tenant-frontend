@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Check, Loader2 } from "lucide-react";
-import { fetchPlans, getPricingQuote, startPlanTrial, startPlanTrialErrorMessage } from "../../../api/mainapi/planapi";
+import { fetchPlans, getPricingQuote } from "../../../api/mainapi/planapi";
 import { useNavigate } from "react-router-dom";
 import PlansPageHeader from "../components/PlansPageHeader";
 import { syncTenantPortalSession } from "../../../api/auth/sessionApi";
 import {
   canExitPlansToDashboard,
-  markTenantSubscriptionActive,
   openedPlansFromDashboard,
   resolvePostLoginNavigationPath,
 } from "../../../utils/planFlow";
@@ -14,7 +13,6 @@ import {
   trackMetaPixelInitiateCheckout,
   trackMetaPixelSubscribedButtonClick,
 } from "../../../lib/metaPixel";
-import { showError } from "../../../components/swalHelper";
 
 interface BillingPeriodOption {
   months: number;
@@ -57,16 +55,13 @@ const CATALOG_HIGHLIGHTS: Record<string, string[]> = {
     "Up to 120 products",
     "1 staff account (owner only)",
     "Email support (48 h)",
-    "7-day free plan trial",
-    "7-day Feature Store trials",
   ],
   growth: [
     "Up to 1,000 products",
     "3 staff accounts",
     "Marketing engine (coupons, loyalty, abandoned cart)",
     "Email + Chat support (24 h)",
-    "7-day free plan trial",
-    "4% Feature Store discount · 14-day trials",
+    "4% Feature Store discount",
   ],
   pro: [
     "Unlimited products",
@@ -74,8 +69,7 @@ const CATALOG_HIGHLIGHTS: Record<string, string[]> = {
     "API access & advanced custom reports",
     "Priority Email + Chat support (4 h)",
     "Dedicated onboarding session",
-    "7-day free plan trial",
-    "8% Feature Store discount · 14-day trials",
+    "8% Feature Store discount",
   ],
 };
 
@@ -108,34 +102,18 @@ function effectivePlanHighlights(plan: Plan): string[] {
   return [...(CATALOG_HIGHLIGHTS[resolvePlanSlug(plan)] ?? cleaned)];
 }
 
-function buildPlanFeatureLines(plan: Plan, showPlanTrial = true): string[] {
-  let features = effectivePlanHighlights(plan);
-  if (!showPlanTrial) {
-    features = features.filter(
-      (line) => !line.toLowerCase().includes("free plan trial"),
-    );
-  }
+function withoutTrialMarketing(lines: string[]): string[] {
+  return lines.filter((line) => !line.toLowerCase().includes("trial"));
+}
+
+function buildPlanFeatureLines(plan: Plan): string[] {
+  let features = withoutTrialMarketing(effectivePlanHighlights(plan));
 
   const discount = Number(plan.feature_store_discount_pct ?? 0);
-  const fsTrialDays = Number(plan.feature_store_trial_days ?? 0);
-  let benefitLine: string | null = null;
-  if (discount > 0 && fsTrialDays > 0) {
-    benefitLine = `${discount}% Feature Store discount · ${fsTrialDays}-day trials`;
-  } else if (fsTrialDays > 0) {
-    benefitLine = `${fsTrialDays}-day Feature Store trials`;
-  }
-  if (
-    benefitLine &&
-    !features.some((line) => line.toLowerCase().includes("feature store"))
-  ) {
-    features = [...features, benefitLine];
-  }
-
-  if (showPlanTrial) {
-    const planTrialDays = Number(plan.trial_days ?? 7);
-    const trialLine = `${planTrialDays}-day free plan trial`;
-    if (!features.some((line) => line.toLowerCase().includes("free plan trial"))) {
-      features = [trialLine, ...features];
+  if (discount > 0) {
+    const benefitLine = `${discount}% Feature Store discount`;
+    if (!features.some((line) => line.toLowerCase().includes("feature store"))) {
+      features = [...features, benefitLine];
     }
   }
 
@@ -219,12 +197,10 @@ const PlanCard = ({
   plan,
   isSelected,
   onSelect,
-  showPlanTrial = true,
 }: {
   plan: Plan;
   isSelected: boolean;
   onSelect: () => void;
-  showPlanTrial?: boolean;
 }) => {
   const [showMore, setShowMore] = useState(false);
   const v: CardVariant =
@@ -234,7 +210,7 @@ const PlanCard = ({
       ? plan.variant
       : "yellow";
   const colors = CARD_VARIANTS[v];
-  const featureLines = buildPlanFeatureLines(plan, showPlanTrial);
+  const featureLines = buildPlanFeatureLines(plan);
   const visibleFeatures = showMore ? featureLines : featureLines.slice(0, 2);
   const canExpand = featureLines.length > 2;
 
@@ -335,8 +311,6 @@ export default function ChoosePlanPage() {
   const [error, setError] = useState("");
   const [plansError, setPlansError] = useState<string | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
-  const [startingTrial, setStartingTrial] = useState(false);
-  const [planTrialEligible, setPlanTrialEligible] = useState(true);
   const [plansLoading, setPlansLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -420,9 +394,8 @@ export default function ChoosePlanPage() {
           const maxAttempts = 3;
           for (let attempt = 1; attempt <= maxAttempts && !cancelled; attempt += 1) {
             try {
-              const { plans: fetched, planTrial } = await fetchPlans();
+              const { plans: fetched } = await fetchPlans();
               if (cancelled) return;
-              setPlanTrialEligible(planTrial.eligible);
               const withVariants = normalizePlans(fetched);
               if (withVariants.length > 0 || attempt === maxAttempts) {
                 applyPlans(withVariants);
@@ -514,33 +487,6 @@ export default function ChoosePlanPage() {
     );
   };
 
-  const trialDays = selectedPlan?.trial_days ?? 7;
-
-  const goFreeTrial = async () => {
-    if (!selectedPlan?.id) return;
-    setError("");
-    setStartingTrial(true);
-    try {
-      const result = await startPlanTrial(String(selectedPlan.id));
-      markTenantSubscriptionActive();
-      if (result.subscription?.id) {
-        localStorage.setItem("subscription_id", String(result.subscription.id));
-      }
-      navigate("/payment-success", {
-        state: {
-          successType: "trial",
-          trialDays: result.trial_days,
-          trialEnd: result.trial_end,
-        },
-      });
-    } catch (err: unknown) {
-      const { title, message } = startPlanTrialErrorMessage(err);
-      showError(title, message);
-    } finally {
-      setStartingTrial(false);
-    }
-  };
-
   const sortedPlans = useMemo(() => {
     return [...plans].sort((a, b) => {
       const diff = planTierSortIndex(a.name) - planTierSortIndex(b.name);
@@ -604,14 +550,7 @@ export default function ChoosePlanPage() {
               Choose Your Plan
             </h1>
             <p className="font-poppins text-base sm:text-lg lg:text-[20px] leading-relaxed lg:leading-[30px] text-[#6E6E6E] mb-6">
-              {planTrialEligible ? (
-                <>
-                  Pick the plan that fits your business — every plan includes a{" "}
-                  <strong>{trialDays}-day free trial</strong>, no payment required to start.
-                </>
-              ) : (
-                <>Pick the plan that fits your business and continue with payment.</>
-              )}
+              Pick the plan that fits your business and continue with payment.
             </p>
 
             {plansError && (
@@ -623,28 +562,6 @@ export default function ChoosePlanPage() {
               <p className="text-amber-700 text-sm mb-4" role="status">
                 {quoteError}
               </p>
-            )}
-
-            {planTrialEligible && (
-              <div className="mb-6 lg:hidden">
-                <button
-                  type="button"
-                  onClick={goFreeTrial}
-                  disabled={
-                    startingTrial ||
-                    loading ||
-                    plansLoading ||
-                    !selectedPlan?.id
-                  }
-                  className="flex w-full items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 max-lg:py-[14px] max-lg:h-auto h-14 px-8"
-                >
-                  {startingTrial
-                    ? "Starting trial..."
-                    : plansLoading
-                    ? "Loading plans..."
-                    : `Start ${trialDays}-day free trial`}
-                </button>
-              </div>
             )}
 
             {/* Cards – parent stays hook-safe */}
@@ -661,7 +578,6 @@ export default function ChoosePlanPage() {
                   <PlanCard
                     key={String(plan.id ?? plan.name)}
                     plan={plan}
-                    showPlanTrial={planTrialEligible}
                     isSelected={String(selectedPlan?.id) === String(plan.id)}
                     onSelect={() => setSelectedPlan(plan)}
                   />
@@ -814,27 +730,6 @@ export default function ChoosePlanPage() {
                 <h3 className="font-poppins font-semibold text-[28px] lg:text-[32px] leading-[30px] text-black my-6 mx-6">
                   Order Summary
                 </h3>
-                {planTrialEligible && (
-                  <div className="px-6 mb-4 hidden lg:block">
-                    <button
-                      type="button"
-                      onClick={goFreeTrial}
-                      disabled={
-                        startingTrial ||
-                        loading ||
-                        plansLoading ||
-                        !selectedPlan?.id
-                      }
-                      className="flex w-full items-center justify-center rounded-[10px] bg-[#75AB66] text-white font-poppins font-semibold disabled:opacity-50 max-lg:py-[14px] max-lg:h-auto h-14 px-8"
-                    >
-                      {startingTrial
-                        ? "Starting trial..."
-                        : plansLoading
-                        ? "Loading plans..."
-                        : `Start ${trialDays}-day free trial`}
-                    </button>
-                  </div>
-                )}
                 <div className="space-y-3 text-sm text-[#4B4B4B] px-6">
                   <div className="flex justify-between">
                     <span className="font-poppins text-[16px] lg:text-[20px] leading-[30px] text-black">
