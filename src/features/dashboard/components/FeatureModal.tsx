@@ -147,16 +147,11 @@ export default function FeatureStorePage({
   const handleConfirmCheckout = () => {
     if (billableSelectedFeatures.length === 0) return;
 
-    const trialDays = planBenefits?.feature_store_trial_days ?? 7;
     const featureNames = billableSelectedFeatures.map((f) => f.name).join(", ");
-    const trialLine =
-      trialDays > 0
-        ? `Your ${trialDays}-day free trial is active. Billing of ₹${totalInclGst.toFixed(0)}/mo starts after the trial unless you remove the add-on.`
-        : `Your selected add-ons are now active on your plan.`;
 
     showSuccess(
       "Add-ons activated",
-      `${featureNames} ${billableSelectedFeatures.length === 1 ? "is" : "are"} ready to use. ${trialLine}`,
+      `${featureNames} ${billableSelectedFeatures.length === 1 ? "is" : "are"} ready to use on your plan.`,
       () => handleClose(),
     );
   };
@@ -345,9 +340,8 @@ export default function FeatureStorePage({
                   ) : null}
                   <p>
                     {planBenefits.feature_store_discount_pct > 0
-                      ? `${planBenefits.feature_store_discount_pct}% off Feature Store add-ons · `
-                      : ""}
-                    {planBenefits.feature_store_trial_days}-day free trials on paid add-ons
+                      ? `${planBenefits.feature_store_discount_pct}% off Feature Store add-ons`
+                      : "Feature Store add-ons available on your plan"}
                   </p>
                 </div>
               )}
@@ -517,13 +511,6 @@ export default function FeatureStorePage({
               <h3 className="font-semibold text-gray-800 mb-4">
                 Confirm Your Add-Ons
               </h3>
-              {planBenefits && planBenefits.feature_store_trial_days > 0 ? (
-                <p className="mb-4 rounded-lg border border-[#E8DFFB] bg-[#F9F6FF] px-4 py-3 text-sm text-[#4B3F72]">
-                  Paid add-ons include a {planBenefits.feature_store_trial_days}-day free
-                  trial. You can use them immediately; payment is only required after the
-                  trial ends.
-                </p>
-              ) : null}
               <div className="space-y-3 mb-6">
                 {billableSelectedFeatures.map((f) => (
                   <div

@@ -55,9 +55,7 @@ ${H(3, "Subscription Plans &amp; Billing")}
   <li>Subscriptions renew automatically unless cancelled before the renewal date.</li>
   <li>Applicable taxes (GST or other levies) will be added as required by law.</li>
   <li>Feature Store add-ons are billed monthly and may be cancelled separately from the base plan.</li>
-  <li>All subscription plans include a <strong>7-day free trial</strong> with no upfront payment. During the trial, <strong>no ShopSynco platform transaction fees</strong> are charged on storefront orders.</li>
-  <li>After the trial, month 1 of your plan is paid separately at checkout. From month 2 onward, subscription, platform transaction fees, and active Feature Store add-ons are combined on a <strong>unified platform bill</strong> every 30 days (see Section 4).</li>
-  <li>Free trials for Feature Store add-ons (7 days for Starter; 14 days for Growth and Pro) require no upfront payment. If not cancelled before the trial ends, paid billing commences automatically.</li>
+  <li>Month 1 of your plan is paid at checkout. From month 2 onward, subscription, platform transaction fees, and active Feature Store add-ons are combined on a <strong>unified platform bill</strong> every 30 days (see Section 4).</li>
 </ul>
 
 ${H(4, "Transaction Fees &amp; Platform Billing")}
@@ -99,7 +97,6 @@ ${H(4, "Transaction Fees &amp; Platform Billing")}
   </table>
 </div>
 <p class="mb-3"><strong>How platform fees are collected:</strong> ShopSynco platform fees are <strong>accrued on each completed order</strong> during your billing period and included on your <strong>unified platform bill</strong> (subscription + transaction fees + Feature Store apps), issued every 30 days after your first plan payment. You pay the bill once via <strong>Manage Billing</strong> in the tenant dashboard. Customer order payments (Razorpay settlements, COD collections, etc.) go to you separately; platform fees are not deducted at checkout.</p>
-<p class="mb-3"><strong>Free trial:</strong> No ShopSynco platform transaction fees are charged on orders placed during your 7-day free plan trial.</p>
 <p class="mb-3"><strong>Non-payment / bypass attempts:</strong> Deliberately routing sales outside ShopSynco or failing to pay outstanding platform bills constitutes a material breach of these Terms and may result in account suspension, recovery of outstanding fees, and legal action.</p>
 <p class="mb-3"><strong>Platform transaction fees on unified bills are non-refundable</strong> once the underlying order has completed, including where the customer later receives a refund, cancels, or initiates a chargeback. You bear the cost of customer refunds from your own proceeds.</p>
 <p class="mb-4"><strong>Fee revisions:</strong> ShopSynco may revise platform transaction fee percentages with 30 days&rsquo; written notice. Continued use of the platform after the effective date of a fee change constitutes your acceptance of the revised rates.</p>
@@ -199,7 +196,7 @@ ${H(1, "No Refund Policy")}
   <li>If you purchase an annual plan and choose to stop using ShopSynco after one month, you will <strong>not</strong> receive a refund for the remaining eleven months.</li>
   <li>If you are on a monthly plan and cancel part-way through the month, you will <strong>not</strong> receive a prorated refund for unused days.</li>
   <li>If your account is terminated for violation of our Terms (including the Prohibited Products policy), you will <strong>not</strong> receive any refund of subscription fees paid, regardless of the remaining period.</li>
-  <li>Feature Store free trials that convert to paid subscriptions are subject to the same no-refund rule once the trial period has ended and billing has commenced.</li>
+  <li>Feature Store add-ons that convert to paid subscriptions are subject to the same no-refund rule once billing has commenced.</li>
   <li>Prepaid multi-month discounts (6-month, yearly, 2-year) are not refundable in part or in full.</li>
 </ul>
 

@@ -208,7 +208,7 @@ export default function ManageBillingPage() {
                 <h4 className="font-semibold text-gray-800">How billing works</h4>
               </div>
               <ul className="text-sm text-gray-600 space-y-2 leading-relaxed list-disc pl-4">
-                <li>Month 1 plan is paid at checkout after your free trial.</li>
+                <li>Month 1 plan is paid at checkout when you subscribe.</li>
                 <li>
                   Every 30 days you receive one bill: subscription, transaction
                   fees, and Feature Store apps.
