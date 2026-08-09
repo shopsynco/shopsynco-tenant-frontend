@@ -13,6 +13,11 @@ import {
   saveStorefrontFromSetupTenant,
   saveStorefrontHostFromDomainLabel,
 } from "../../../utils/storefrontHost";
+import { syncTenantPortalSession } from "../../../api/auth/sessionApi";
+import {
+  resolvePostLoginNavigationPath,
+  resolveStoreSetupComplete,
+} from "../../../utils/planFlow";
 interface FormData {
   store_name: string;
   product_service: string;
@@ -78,6 +83,27 @@ export default function StoreSetupPage() {
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const session = await syncTenantPortalSession();
+        if (cancelled) return;
+        // Renew/extend after expiry should never re-ask for domain on an existing store.
+        if (!session.requires_store_setup) {
+          navigate(resolvePostLoginNavigationPath(session), { replace: true });
+        }
+      } catch {
+        if (!cancelled && resolveStoreSetupComplete()) {
+          navigate("/dashboard", { replace: true });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   useEffect(() => {
     const loadCategoryOptions = async () => {
