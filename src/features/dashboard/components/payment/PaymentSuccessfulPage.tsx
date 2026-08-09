@@ -1,9 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import bgImage from "../../../../assets/backgroundsuccess.png";
 import shopLogo from "../../../../assets/Name-Logo.png";
 import { CheckCircle } from "lucide-react";
-import { markTenantSubscriptionActive } from "../../../../utils/planFlow";
+import {
+  markTenantSubscriptionActive,
+  resolvePostLoginNavigationPath,
+  resolveStoreSetupComplete,
+} from "../../../../utils/planFlow";
+import { syncTenantPortalSession } from "../../../../api/auth/sessionApi";
 import {
   SUPPORT_PHONE_DISPLAY,
   SUPPORT_PHONE_TEL,
@@ -28,6 +33,12 @@ function formatTrialEnd(iso?: string): string | null {
   });
 }
 
+function ctaLabelForPath(path: string): string {
+  if (path === "/dashboard") return "Go to Dashboard";
+  if (path === "/setup-store-contact") return "Continue Setup";
+  return "Set Up My Store";
+}
+
 export default function PaymentSuccessPage() {
   const location = useLocation();
   const state = (location.state ?? {}) as SuccessLocationState;
@@ -35,8 +46,36 @@ export default function PaymentSuccessPage() {
   const trialDays = state.trialDays ?? 7;
   const trialEndLabel = formatTrialEnd(state.trialEnd);
 
+  const [nextPath, setNextPath] = useState("/setup-store");
+  const [ctaLabel, setCtaLabel] = useState("Set Up My Store");
+  const [isExistingStore, setIsExistingStore] = useState(false);
+
   useEffect(() => {
     markTenantSubscriptionActive();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const session = await syncTenantPortalSession();
+        if (cancelled) return;
+        const path = resolvePostLoginNavigationPath(session);
+        const existing = !session.requires_store_setup;
+        setNextPath(path);
+        setCtaLabel(ctaLabelForPath(path));
+        setIsExistingStore(existing);
+      } catch {
+        if (cancelled) return;
+        if (resolveStoreSetupComplete()) {
+          setNextPath("/dashboard");
+          setCtaLabel("Go to Dashboard");
+          setIsExistingStore(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -76,12 +115,16 @@ export default function PaymentSuccessPage() {
             </p>
             {trialEndLabel ? (
               <p className="text-gray-500 text-sm mb-6">
-                Trial ends on {trialEndLabel}. Set up your store now to get the most from
-                ShopSynco.
+                Trial ends on {trialEndLabel}.
+                {isExistingStore
+                  ? " Your store is ready — continue to the dashboard."
+                  : " Set up your store now to get the most from ShopSynco."}
               </p>
             ) : (
               <p className="text-gray-500 text-sm mb-6">
-                Set up your store now to get the most from ShopSynco.
+                {isExistingStore
+                  ? "Your store is ready — continue to the dashboard."
+                  : "Set up your store now to get the most from ShopSynco."}
               </p>
             )}
           </>
@@ -91,16 +134,18 @@ export default function PaymentSuccessPage() {
               Payment successful!
             </h2>
             <p className="text-gray-600 mb-6">
-              Great! Your journey begins here. Time to set up your store and make it shine.
+              {isExistingStore
+                ? "Your plan is active again. Continue to your existing store dashboard."
+                : "Great! Your journey begins here. Time to set up your store and make it shine."}
             </p>
           </>
         )}
 
         <Link
-          to="/setup-store"
+          to={nextPath}
           className="bg-blue-600 text-white py-3 px-6 rounded-full text-lg font-semibold hover:bg-blue-700 transition duration-300 inline-block"
         >
-          Set Up My Store
+          {ctaLabel}
         </Link>
 
         {isTrial && (
