@@ -46,8 +46,8 @@ export default function PaymentSuccessPage() {
   const trialDays = state.trialDays ?? 7;
   const trialEndLabel = formatTrialEnd(state.trialEnd);
 
-  const [nextPath, setNextPath] = useState("/setup-store");
-  const [ctaLabel, setCtaLabel] = useState("Set Up My Store");
+  const [nextPath, setNextPath] = useState<string | null>(null);
+  const [ctaLabel, setCtaLabel] = useState("Continue");
   const [isExistingStore, setIsExistingStore] = useState(false);
 
   useEffect(() => {
@@ -69,6 +69,9 @@ export default function PaymentSuccessPage() {
           setNextPath("/dashboard");
           setCtaLabel("Go to Dashboard");
           setIsExistingStore(true);
+        } else {
+          setNextPath("/plans");
+          setCtaLabel("Back to Plans");
         }
       }
     })();
@@ -141,12 +144,18 @@ export default function PaymentSuccessPage() {
           </>
         )}
 
-        <Link
-          to={nextPath}
-          className="bg-blue-600 text-white py-3 px-6 rounded-full text-lg font-semibold hover:bg-blue-700 transition duration-300 inline-block"
-        >
-          {ctaLabel}
-        </Link>
+        {nextPath ? (
+          <Link
+            to={nextPath}
+            className="bg-blue-600 text-white py-3 px-6 rounded-full text-lg font-semibold hover:bg-blue-700 transition duration-300 inline-block"
+          >
+            {ctaLabel}
+          </Link>
+        ) : (
+          <span className="inline-block bg-blue-600/60 text-white py-3 px-6 rounded-full text-lg font-semibold">
+            Loading…
+          </span>
+        )}
 
         {isTrial && (
           <p className="mt-6 text-sm text-gray-600">

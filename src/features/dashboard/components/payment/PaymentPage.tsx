@@ -13,8 +13,10 @@ import { getPricingQuote } from "../../../../api/mainapi/planapi";
 import { showError } from "../../../../components/swalHelper";
 import {
   markTenantSubscriptionActive,
+  resolvePostLoginNavigationPath,
   setPlansEntryFromCheckout,
 } from "../../../../utils/planFlow";
+import { syncTenantPortalSession } from "../../../../api/auth/sessionApi";
 import {
   resolveMetaPixelUserDataForPurchase,
   trackMetaPixelPaymentSuccess,
@@ -244,13 +246,43 @@ export default function PaymentPage() {
           }
           throw new Error("Payment verification failed");
         } catch (verifyErr: unknown) {
-          const ve = verifyErr as { response?: { data?: { error?: string; message?: string } } };
+          // Razorpay already charged — reconcile quickly in case verify/webhook activated
+          // the plan but the HTTP verify call failed (timeout, 500 after activate, etc.).
+          try {
+            let confirmed = false;
+            for (let i = 0; i < 4; i += 1) {
+              const statusRes = await getPaymentStatus(activeSubscriptionId);
+              if (statusRes.status === "success") {
+                confirmed = true;
+                break;
+              }
+              if (statusRes.status === "failed") break;
+              await new Promise((resolve) => setTimeout(resolve, 1500));
+            }
+            if (!confirmed) {
+              const session = await syncTenantPortalSession().catch(() => null);
+              confirmed = Boolean(session?.has_active_subscription);
+            }
+            if (confirmed) {
+              await fireVerifiedPaymentPixel(response.razorpay_payment_id);
+              await Swal.fire("Success", "Payment successful!", "success");
+              goPaymentSuccess();
+              return;
+            }
+          } catch {
+            /* fall through to error */
+          }
+          const ve = verifyErr as {
+            response?: { data?: { error?: string; message?: string } };
+          };
+          const detail =
+            ve?.response?.data?.error ||
+            ve?.response?.data?.message ||
+            "Payment verification failed.";
           Swal.fire(
             "Error",
-            ve?.response?.data?.error ||
-              ve?.response?.data?.message ||
-              "Payment verification failed.",
-            "error"
+            `${detail} If Razorpay shows the payment as successful, do not pay again — refresh or contact support with payment id ${response.razorpay_payment_id}.`,
+            "error",
           );
         }
       },
@@ -261,6 +293,15 @@ export default function PaymentPage() {
       },
     });
     razorpay.open();
+  };
+
+  const handleCancel = async () => {
+    try {
+      const session = await syncTenantPortalSession();
+      navigate(resolvePostLoginNavigationPath(session), { replace: true });
+    } catch {
+      navigate("/plans", { replace: true });
+    }
   };
 
   const handlePayClick = async () => {
@@ -377,7 +418,7 @@ export default function PaymentPage() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() => void handleCancel()}
                 className="flex items-center justify-center rounded-[10px] bg-[#EEE9F5] text-[#1E1E1E] font-poppins font-semibold px-6 py-3"
               >
                 Cancel
