@@ -9,6 +9,10 @@ const REFRESH_URL = `${BASE_URL}api/jwt/refresh/`;
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
+  // Without this a stalled backend leaves the UI spinning forever with no way
+  // out. A timeout surfaces as an error the callers' existing catch/reconcile
+  // paths can act on - notably payment verify, which polls for confirmation.
+  timeout: 30000,
 });
 
 // ✅ Attach Access Token + Auto Inject Store Slug into URL (with skip list)
