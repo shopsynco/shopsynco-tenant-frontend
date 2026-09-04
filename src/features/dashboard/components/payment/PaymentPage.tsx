@@ -225,14 +225,14 @@ export default function PaymentPage() {
           });
           if (verification.success === true) {
             if (verification.status === "success") {
-              await fireVerifiedPaymentPixel(response.razorpay_payment_id);
+              void fireVerifiedPaymentPixel(response.razorpay_payment_id);
               await Swal.fire("Success", "Payment successful!", "success");
               goPaymentSuccess();
               return;
             }
             const confirmed = await waitForPaymentConfirmation(activeSubscriptionId);
             if (confirmed) {
-              await fireVerifiedPaymentPixel(response.razorpay_payment_id);
+              void fireVerifiedPaymentPixel(response.razorpay_payment_id);
               await Swal.fire("Success", "Payment successful!", "success");
               goPaymentSuccess();
               return;
@@ -264,7 +264,7 @@ export default function PaymentPage() {
               confirmed = Boolean(session?.has_active_subscription);
             }
             if (confirmed) {
-              await fireVerifiedPaymentPixel(response.razorpay_payment_id);
+              void fireVerifiedPaymentPixel(response.razorpay_payment_id);
               await Swal.fire("Success", "Payment successful!", "success");
               goPaymentSuccess();
               return;
